@@ -9,6 +9,8 @@ app_version := "0.0.1"
 userinterface_subdir := "userinterface"
 server_subdir := "server"
 release_subdir := "release"
+ssl_dir := "sslcerts"
+env_file := ".env"
 ui_dist_dir := "userinterface/dist"
 server_dist_dir := "server/dist"
 linux_bin := "llmapp"
@@ -46,8 +48,8 @@ build:
 
 createarchive:
     @echo "Creating archive..."
-    @cd {{server_subdir}} && zip -r {{app_name}}-{{app_version}}.zip {{windows_bin}}
-    @cd {{server_subdir}} && tar -czvf {{app_name}}-{{app_version}}.tar.gz {{linux_bin}}
+    @cd {{server_subdir}} && zip -r {{app_name}}-{{app_version}}.zip {{windows_bin}} {{env_file}} {{ssl_dir}}
+    @cd {{server_subdir}} && tar -czvf {{app_name}}-{{app_version}}.tar.gz {{linux_bin}} {{env_file}} {{ssl_dir}}
     @echo "Creating archive Done!"
 
 release:

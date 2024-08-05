@@ -26,3 +26,13 @@
 - `openssl req -x509 -newkey rsa:4096 -keyout ./sslcerts/nginx.key -out ./sslcerts/nginx.crt -days 365 -nodes -subj "/C=US/ST=NY/L=New York/O=LLM/OU=LLM/CN=example.com"`
 
 * Modify Country, State, Locality, Organization, Organization Unit, Common Name, Email Address in the above command.
+
+### Screenshots
+
+![Chat Screen](screen-captures/chat-screen.png)
+
+![Settings Screen](screen-captures/chat-settings.png)
+
+![Download Screen](screen-captures/chat-download-options.png)
+
+![Delete Confirmation](screen-captures/chat-delete-confirm.png)

@@ -28,15 +28,16 @@ type Config struct {
 func main() {
 	// withUserInput()
 	log.SetFlags(log.LstdFlags | log.Lshortfile)
-	c := Config{
-		WebPort: webPort,
-		LlmUrl:  url,
-	}
 
 	appEnv, err := appenv.ReadConfig()
 	if err == nil {
 		url = appEnv.LlmUrl
 		webPort = appEnv.AppPort
+	}
+
+	c := Config{
+		WebPort: webPort,
+		LlmUrl:  url,
 	}
 
 	err = c.startServer()

@@ -36,7 +36,6 @@ buildui:
 
 buildserver:
     @echo "Building server..."
-    @cd {{server_subdir}} && rm {{linux_bin}} {{windows_bin}}
     @cd {{server_subdir}} && go mod tidy
     @cd {{server_subdir}} && GOOS=linux GOARCH=amd64 go build -o {{linux_bin}}
     @cd {{server_subdir}} && GOOS=windows GOARCH=amd64 go build -o {{windows_bin}}
@@ -62,5 +61,5 @@ release:
 clean:
     @rm -Rf {{server_dist_dir}}
     @rm -Rf {{ui_dist_dir}}
-    @rm -Rf {{zip_name}}
-    @rm -Rf {{tar_name}}
+    @rm -Rf {{app_name}}-{{app_version}}.zip
+    @rm -Rf {{app_name}}-{{app_version}}.tar.gz

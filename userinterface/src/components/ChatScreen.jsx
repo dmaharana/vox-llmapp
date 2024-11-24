@@ -88,7 +88,6 @@ export default function ChatScreen() {
   };
 
   const handleStopGeneration = async () => {
-    console.log("cancelToken", cancelToken);
     const params = new URLSearchParams({
       token: cancelToken,
     });
@@ -98,10 +97,8 @@ export default function ChatScreen() {
     });
 
     const rsp = await response.json();
-    console.log(rsp);
 
     if (rsp?.data?.error === false) {
-      console.error(rsp.data.message);
       setCancelToken(null);
       setWaitingResponse(false);
     }

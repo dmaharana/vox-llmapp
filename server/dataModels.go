@@ -40,11 +40,12 @@ type Conversation struct {
 }
 
 type ResponseData struct {
-	Response  string  `json:"response,omitempty"`
-	Message   Message `json:"message,omitempty"`
-	Model     string  `json:"model"`
-	CreatedAt string  `json:"created_at"`
-	Done      bool    `json:"done"`
+	Response    string  `json:"response,omitempty"`
+	Message     Message `json:"message,omitempty"`
+	Model       string  `json:"model"`
+	CreatedAt   string  `json:"created_at"`
+	Done        bool    `json:"done"`
+	CancelToken string  `json:"cancelToken,omitempty"`
 }
 
 type Message struct {

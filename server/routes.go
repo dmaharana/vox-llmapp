@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"embed"
 	"io/fs"
 	"log"
@@ -17,6 +18,7 @@ const (
 	buildDir = "dist"
 	// buildDir = "build"
 	// buildDir = "static/ui/dist"
+	sessionDataKey = "sessionData"
 )
 
 //go:embed dist
@@ -28,6 +30,8 @@ func (c *Config) routes() http.Handler {
 	mux.Use(middleware.RealIP)
 	mux.Use(middleware.Logger)
 	mux.Use(middleware.Recoverer)
+
+	mux.Use(c.sessionMiddleware)
 
 	// specify who is allowed to connect to our API service
 	mux.Use(cors.Handler(cors.Options{
@@ -52,7 +56,16 @@ func (c *Config) routes() http.Handler {
 
 	mux.Post("/api/chat", c.ChatResponse)
 	mux.Get("/api/models", c.GetModels)
+	mux.Delete("/api/cancel", c.CancelRequest)
 
 	c.Mux = mux
 	return mux
+}
+
+func (c *Config) sessionMiddleware(next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		// Do stuff here
+		ctx := context.WithValue(r.Context(), sessionDataKey, c)
+		next.ServeHTTP(w, r.WithContext(ctx))
+	})
 }

@@ -1,8 +1,10 @@
 package main
 
 import (
+	"context"
 	"llmserver/appenv"
 	"log"
+	"sync"
 
 	"github.com/go-chi/chi/v5"
 )
@@ -20,9 +22,11 @@ var (
 )
 
 type Config struct {
-	Mux     *chi.Mux
-	WebPort string
-	LlmUrl  string
+	Mux             *chi.Mux
+	WebPort         string
+	LlmUrl          string
+	ContextMap      map[string]context.CancelFunc
+	TokenToCtxMutex *sync.Mutex
 }
 
 func main() {
@@ -36,8 +40,10 @@ func main() {
 	}
 
 	c := Config{
-		WebPort: webPort,
-		LlmUrl:  url,
+		WebPort:         webPort,
+		LlmUrl:          url,
+		ContextMap:      make(map[string]context.CancelFunc),
+		TokenToCtxMutex: &sync.Mutex{},
 	}
 
 	err = c.startServer()

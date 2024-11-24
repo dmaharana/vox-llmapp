@@ -17,6 +17,7 @@ import ModelSelect from "./ModelSelect";
 import ChatSettings from "./ChatSettings";
 import { DEFAULT_MESSAGES } from "./Constants";
 import ClearChat from "./ClearChat";
+import StopGenerationButton from "./StopGenerationButton";
 
 export default function ChatScreen() {
   const [conversation, setConversation] = useState([]);
@@ -39,6 +40,7 @@ export default function ChatScreen() {
   );
   const [waitingResponse, setWaitingResponse] = useState(false);
   const [currentMsgId, setCurrentMsgId] = useState(1);
+  const [cancelToken, setCancelToken] = useState();
 
   // console.log(model);
 
@@ -54,11 +56,6 @@ export default function ChatScreen() {
       assistant: "Thinking...",
       resTime: "",
     };
-
-    // setConversation((p) =>
-    //   p.map((m) => (m.id === id ? { ...m, newMessage } : m))
-    // );
-    // ? { ...m, assistant: newMessage.assistant, model: newMessage.model }
 
     setConversation((p) =>
       p.map((m) =>
@@ -90,6 +87,26 @@ export default function ChatScreen() {
     }
   };
 
+  const handleStopGeneration = async () => {
+    console.log("cancelToken", cancelToken);
+    const params = new URLSearchParams({
+      token: cancelToken,
+    });
+
+    const response = await fetch(`/api/cancel?${params}`, {
+      method: "DELETE",
+    });
+
+    const rsp = await response.json();
+    console.log(rsp);
+
+    if (rsp?.data?.error === false) {
+      console.error(rsp.data.message);
+      setCancelToken(null);
+      setWaitingResponse(false);
+    }
+  };
+
   const handleSubmit = async (e) => {
     e.preventDefault();
     let newMsgId = 1;
@@ -117,6 +134,31 @@ export default function ChatScreen() {
 
     callLlmService(newMessage);
   };
+
+  function parseMultipleJson(data) {
+    const result = [];
+    let start = data.indexOf("{");
+    let open = 0;
+
+    for (let i = start; i < data.length; i++) {
+      if (data[i] === "{") {
+        open++;
+      } else if (data[i] === "}") {
+        open--;
+        if (open === 0) {
+          try {
+            const jsonObject = JSON.parse(data.substring(start, i + 1));
+            result.push(jsonObject);
+            start = i + 1;
+          } catch (error) {
+            console.error("Error parsing JSON:", error);
+          }
+        }
+      }
+    }
+
+    return result;
+  }
 
   const callLlmService = async (message) => {
     // console.log(conversation);
@@ -182,33 +224,37 @@ export default function ChatScreen() {
         }
 
         const chunkValue = decoder.decode(value, { stream: true });
-        try {
-          // const chunkValue = decoder.decode(value);
-          const cJson = JSON.parse(chunkValue);
+        const chunkParts = parseMultipleJson(chunkValue);
 
+        chunkParts.forEach((cJson) => {
           // console.log(cJson);
-          if (cJson["response"]) {
-            text += cJson["response"];
+          try {
+            if (cJson["cancelToken"]) {
+              setCancelToken(cJson["cancelToken"]);
+            }
+            if (cJson["response"]) {
+              text += cJson["response"];
+            }
+            const endTime = new Date().getTime();
+            const resTime = (endTime - startTime) / 1000;
+            setConversation((p) =>
+              p.map((m) =>
+                m.id === msgId
+                  ? {
+                      ...m,
+                      systemPrompt,
+                      assistant: text,
+                      model,
+                      resTime: `${resTime.toFixed(2)}s`,
+                    }
+                  : m
+              )
+            );
+          } catch (error) {
+            console.error(error);
+            console.log(part);
           }
-          const endTime = new Date().getTime();
-          const resTime = (endTime - startTime) / 1000;
-          setConversation((p) =>
-            p.map((m) =>
-              m.id === msgId
-                ? {
-                    ...m,
-                    systemPrompt,
-                    assistant: text,
-                    model,
-                    resTime: `${resTime.toFixed(2)}s`,
-                  }
-                : m
-            )
-          );
-        } catch (error) {
-          console.error(error);
-          console.log(chunkValue);
-        }
+        });
       }
     } catch (error) {
       console.error(error);
@@ -307,6 +353,12 @@ export default function ChatScreen() {
               >
                 <IoMdSend size={40} />
               </Button>
+            )}
+
+            {waitingResponse && (
+              <StopGenerationButton
+                handleStopGeneration={handleStopGeneration}
+              />
             )}
           </HStack>
           <HStack>

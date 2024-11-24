@@ -14,8 +14,15 @@ import {
   EditIcon,
   ChevronDownIcon,
   ChevronUpIcon,
+  CloseIcon,
 } from "@chakra-ui/icons";
-export function UserMsg({ msg, msgId, handleQueryUpdate, waitingResponse }) {
+export function UserMsg({
+  msg,
+  msgId,
+  handleQueryUpdate,
+  waitingResponse,
+  handleDeleteMessage,
+}) {
   const [isEditing, setIsEditing] = useState(false);
   const { hasCopied, onCopy } = useClipboard(msg);
   const [isExpanded, setIsExpanded] = useState(false);
@@ -23,6 +30,7 @@ export function UserMsg({ msg, msgId, handleQueryUpdate, waitingResponse }) {
   const editMessage = "Edit message";
   const expandMessage = "Show more";
   const collapseMessage = "Show less";
+  const deleteMessage = "Delete conversation";
   const standardTextLen = 200;
 
   const toggleExpand = () => {
@@ -113,6 +121,19 @@ export function UserMsg({ msg, msgId, handleQueryUpdate, waitingResponse }) {
                 <CopyIcon />
               </Tooltip>
             )
+          }
+          variant="ghost"
+        />
+        <Button
+          size="xs"
+          colorScheme="red"
+          onClick={() => handleDeleteMessage(msgId)}
+          ml={2}
+          isDisabled={waitingResponse}
+          leftIcon={
+            <Tooltip label={deleteMessage}>
+              <CloseIcon />
+            </Tooltip>
           }
           variant="ghost"
         />

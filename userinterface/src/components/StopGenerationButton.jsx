@@ -2,10 +2,11 @@ import { IconButton, Spinner, Tooltip } from "@chakra-ui/react";
 import { LuSquare } from "react-icons/lu";
 
 function StopGenerationButton({ handleStopGeneration }) {
+  const toolTipMessage = "Stop generation";
   return (
     <>
       <Spinner size="md" />
-      <Tooltip label="Stop generation" hasArrow placement="right">
+      <Tooltip label={toolTipMessage} hasArrow placement="right">
         <IconButton
           aria-label="Stop"
           icon={<LuSquare />}

@@ -271,6 +271,10 @@ export default function ChatScreen() {
     setConversation({});
   };
 
+  const handleDeleteMessage = (id) => {
+    setConversation((p) => p.filter((m) => m.id !== id));
+  };
+
   return (
     <Box>
       <VStack h={"90vh"} bg={"gray.50"} py={4} px={2} borderRadius={"2rem"}>
@@ -298,6 +302,7 @@ export default function ChatScreen() {
                     msgId={m.id}
                     waitingResponse={waitingResponse}
                     handleQueryUpdate={handleQueryUpdate}
+                    handleDeleteMessage={handleDeleteMessage}
                   />
                 )}
                 {m.assistant && (

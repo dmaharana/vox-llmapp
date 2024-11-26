@@ -17,7 +17,7 @@ import {
 } from "@chakra-ui/react";
 import { SettingsIcon } from "@chakra-ui/icons";
 import IncludeHistorySwitch from "./IncludeHistorySwitch";
-
+import { DEFAULT_MESSAGES } from "./Constants";
 function ChatSettings({
   systemPrompt,
   setSystemPrompt,
@@ -29,7 +29,6 @@ function ChatSettings({
     setSystemPrompt(e.target.value);
   }
 
-  const toolTipMessage = "Edit settings";
   const { isOpen, onOpen, onClose } = useDisclosure();
   const [scrollBehavior, setScrollBehavior] = useState("inside");
 
@@ -38,7 +37,7 @@ function ChatSettings({
   return (
     // <Box p={2} borderRadius={"md"} mb={2} align={"start"}>
     <>
-      <Tooltip label={toolTipMessage} fontSize={"xs"}>
+      <Tooltip label={DEFAULT_MESSAGES.editSettingMessage} fontSize={"xs"}>
         <IconButton
           icon={<SettingsIcon />}
           size="lg"

@@ -16,6 +16,9 @@ import {
   ChevronUpIcon,
   CloseIcon,
 } from "@chakra-ui/icons";
+
+import { DEFAULT_MESSAGES } from "./Constants";
+
 export function UserMsg({
   msg,
   msgId,
@@ -26,11 +29,6 @@ export function UserMsg({
   const [isEditing, setIsEditing] = useState(false);
   const { hasCopied, onCopy } = useClipboard(msg);
   const [isExpanded, setIsExpanded] = useState(false);
-  const copyMessage = "Copy to clipboard";
-  const editMessage = "Edit message";
-  const expandMessage = "Show more";
-  const collapseMessage = "Show less";
-  const deleteMessage = "Delete conversation";
   const standardTextLen = 200;
 
   const toggleExpand = () => {
@@ -76,11 +74,11 @@ export function UserMsg({
                   variant="ghost"
                 >
                   {isExpanded ? (
-                    <Tooltip label={collapseMessage}>
+                    <Tooltip label={DEFAULT_MESSAGES.collapseMessage}>
                       <ChevronUpIcon />
                     </Tooltip>
                   ) : (
-                    <Tooltip label={expandMessage}>
+                    <Tooltip label={DEFAULT_MESSAGES.expandMessage}>
                       <ChevronDownIcon />
                     </Tooltip>
                   )}
@@ -100,7 +98,7 @@ export function UserMsg({
             isEditing ? (
               <CheckIcon />
             ) : (
-              <Tooltip label={editMessage}>
+              <Tooltip label={DEFAULT_MESSAGES.editMessage}>
                 <EditIcon />
               </Tooltip>
             )
@@ -117,7 +115,7 @@ export function UserMsg({
             hasCopied ? (
               <CheckIcon />
             ) : (
-              <Tooltip label={copyMessage}>
+              <Tooltip label={DEFAULT_MESSAGES.copyMessage}>
                 <CopyIcon />
               </Tooltip>
             )
@@ -131,7 +129,7 @@ export function UserMsg({
           ml={2}
           isDisabled={waitingResponse}
           leftIcon={
-            <Tooltip label={deleteMessage}>
+            <Tooltip label={DEFAULT_MESSAGES.deleteMessage}>
               <CloseIcon />
             </Tooltip>
           }

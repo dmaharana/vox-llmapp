@@ -15,9 +15,9 @@ import {
   Tooltip,
   useDisclosure,
 } from "@chakra-ui/react";
+import { DEFAULT_MESSAGES } from "./Constants";
 
 function ClearChat({ handleClearChat, waitingResponse }) {
-  const toolTipMessage = "Clear Chat";
   const { isOpen, onToggle, onClose } = useDisclosure();
   return (
     // <Box
@@ -35,7 +35,11 @@ function ClearChat({ handleClearChat, waitingResponse }) {
       placement="top"
     >
       <PopoverTrigger>
-        <Tooltip label={toolTipMessage} hasArrow placement="right">
+        <Tooltip
+          label={DEFAULT_MESSAGES.clearChatMessage}
+          hasArrow
+          placement="right"
+        >
           <IconButton
             icon={<DeleteIcon />}
             size="lg"
@@ -55,9 +59,7 @@ function ClearChat({ handleClearChat, waitingResponse }) {
       >
         <PopoverHeader fontWeight="semibold">Confirmation</PopoverHeader>
         <PopoverCloseButton />
-        <PopoverBody>
-          Are you sure you want to continue with your action?
-        </PopoverBody>
+        <PopoverBody>{DEFAULT_MESSAGES.clearChatConfirmMessage}</PopoverBody>
         <PopoverFooter display="flex" justifyContent="flex-end">
           <ButtonGroup size="sm">
             <Button variant="outline" onClick={onClose}>

@@ -1,3 +1,4 @@
+import { useState } from "react";
 import {
   Avatar,
   Box,
@@ -8,11 +9,19 @@ import {
   Tooltip,
   useClipboard,
 } from "@chakra-ui/react";
-import { CopyIcon, CheckIcon, RepeatIcon } from "@chakra-ui/icons";
+import {
+  CopyIcon,
+  CheckIcon,
+  RepeatIcon,
+  RepeatClockIcon,
+  ViewOffIcon,
+} from "@chakra-ui/icons";
 import ReactMarkdown from "markdown-to-jsx";
 import ChakraUIRenderer from "chakra-ui-markdown-renderer";
+import { DEFAULT_MESSAGES } from "./Constants";
 
 import avatarImage from "../assets/assistant.png"; // Update the path to point to your avatar image
+import AssistantHistory from "./AssistantHistory";
 
 export function AssistantMsg({
   msg,
@@ -23,12 +32,17 @@ export function AssistantMsg({
   resTime,
   currentMsgId,
   defaultMsg,
+  chatHistory,
 }) {
   const { hasCopied, onCopy } = useClipboard(msg);
 
-  const resTimeMessage = "Response time in seconds";
-  const reSubmitMessage = "Regenerate response";
-  const copyMessage = "Copy to clipboard";
+  const conversation = chatHistory?.find(
+    (conv) => conv.id === convId
+  )?.messages;
+  const count = conversation?.filter(
+    (msg) => msg.role === DEFAULT_MESSAGES.assistantRole
+  )?.length;
+  const [isExpanded, setIsExpanded] = useState(false);
 
   return (
     <Box bg={"gray.50"} p={2} borderRadius={"md"} mb={2} w={"100%"}>
@@ -65,13 +79,31 @@ export function AssistantMsg({
         </Box>
       </HStack>
       <HStack spacing={1} justifyContent={"flex-end"}>
-        {currentMsgId !== convId ? (
-          <Tooltip label={resTimeMessage}>
-            <Text fontSize="sm" fontWeight="bold" color="blue">
-              {resTime}
-            </Text>
-          </Tooltip>
-        ) : null}
+        {typeof count === "undefined" ? null : (
+          <Button
+            size="xs"
+            colorScheme="blue"
+            onClick={() => setIsExpanded(!isExpanded)}
+            ml={2}
+            leftIcon={
+              !isExpanded ? (
+                <Tooltip
+                  label={
+                    DEFAULT_MESSAGES.showHistoryMessage + " (" + count + ")"
+                  }
+                >
+                  <RepeatClockIcon />
+                </Tooltip>
+              ) : (
+                <Tooltip label={DEFAULT_MESSAGES.hideHistoryMessage}>
+                  <ViewOffIcon />
+                </Tooltip>
+              )
+            }
+            variant="ghost"
+          />
+        )}
+
         <Button
           size="xs"
           colorScheme="blue"
@@ -83,13 +115,22 @@ export function AssistantMsg({
             waitingResponse && currentMsgId === convId ? (
               <Spinner size="xs" />
             ) : (
-              <Tooltip label={reSubmitMessage}>
+              <Tooltip label={DEFAULT_MESSAGES.reSubmitMessage}>
                 <RepeatIcon />
               </Tooltip>
             )
           }
           variant="ghost"
         />
+
+        {currentMsgId !== convId ? (
+          <Tooltip label={DEFAULT_MESSAGES.resTimeMessage}>
+            <Text fontSize="sm" fontWeight="bold" color="blue">
+              {resTime}
+            </Text>
+          </Tooltip>
+        ) : null}
+
         {waitingResponse && currentMsgId === convId ? null : (
           <Button
             size="xs"
@@ -102,7 +143,7 @@ export function AssistantMsg({
               hasCopied ? (
                 <CheckIcon />
               ) : (
-                <Tooltip label={copyMessage}>
+                <Tooltip label={DEFAULT_MESSAGES.copyMessage}>
                   <CopyIcon />
                 </Tooltip>
               )
@@ -111,6 +152,12 @@ export function AssistantMsg({
           />
         )}
       </HStack>
+      {isExpanded && <br />}
+      {isExpanded && (
+        // <Box w={"100%"} align={"start"}>
+        <AssistantHistory conversation={conversation} />
+        // </Box>
+      )}
     </Box>
   );
 }

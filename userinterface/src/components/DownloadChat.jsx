@@ -14,15 +14,13 @@ import {
   Tooltip,
   useDisclosure,
 } from "@chakra-ui/react";
+import { DEFAULT_FILENAMES } from "./Constants";
 
-function DownloadChat({ conversation, waitingResponse }) {
+function DownloadChat({ conversation, waitingResponse, convHistory }) {
   // conversation has fields: id, model, systemPrompt, user, assistant, resTime
   // download conversation as a csv and json
 
   const { isOpen, onToggle, onClose } = useDisclosure();
-
-  const filename = "conversation.csv";
-  const jsonFilename = "conversation.json";
 
   const csvHeader = "id,model,systemPrompt,user,assistant,resTime";
   const handleDownloadCsv = (conversation) => {
@@ -44,20 +42,30 @@ function DownloadChat({ conversation, waitingResponse }) {
     const url = URL.createObjectURL(blob);
     const link = document.createElement("a");
     link.setAttribute("href", url);
-    link.setAttribute("download", filename);
+    link.setAttribute("download", DEFAULT_FILENAMES.csv);
     link.click();
   };
 
-  const handleDownloadJson = (conversation) => {
+  const handleDownloadConversationJson = (conversation, filename) => {
     const blob = new Blob([JSON.stringify(conversation, null, 2)], {
-      type: "text/csv",
+      type: "text/json",
     });
     const url = URL.createObjectURL(blob);
     const link = document.createElement("a");
     link.setAttribute("href", url);
-    link.setAttribute("download", jsonFilename);
+    link.setAttribute("download", filename);
     link.click();
   };
+
+  const handleDownloadJson = () => {
+    // combine conversation and convHistory into one json, with conv and history keys
+    const jumboJson = {
+      conversation: conversation,
+      history: convHistory,
+    };
+    handleDownloadConversationJson(jumboJson, DEFAULT_FILENAMES.json);
+  };
+
   return (
     // <Box p={4} borderRadius="md" color="gray.500" fontSize="sm">
     <Popover isOpen={isOpen} onClose={onClose} placement="left">
@@ -95,7 +103,7 @@ function DownloadChat({ conversation, waitingResponse }) {
             <Button
               colorScheme={"purple"}
               size="sm"
-              onClick={() => handleDownloadJson(conversation)}
+              onClick={handleDownloadJson}
             >
               JSON
             </Button>

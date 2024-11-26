@@ -18,6 +18,7 @@ import ChatSettings from "./ChatSettings";
 import { DEFAULT_MESSAGES } from "./Constants";
 import ClearChat from "./ClearChat";
 import StopGenerationButton from "./StopGenerationButton";
+import UploadChat from "./UploadChat";
 
 export default function ChatScreen() {
   const [conversation, setConversation] = useState([]);
@@ -42,13 +43,53 @@ export default function ChatScreen() {
   const [currentMsgId, setCurrentMsgId] = useState(1);
   const [cancelToken, setCancelToken] = useState();
 
-  // console.log(model);
-
   // handle resubmit for a message with given id
   const handleResubmit = async (id) => {
     // find the message with the given id
     setCurrentMsgId(id);
     const message = conversation.find((msg) => msg.id === id);
+    const assistantMessage = message.assistant;
+
+    // save the existing assistant message into the history object with the same conversation id, so that the history can be shown to the user
+    const convHistoryItem = convHistory.find((item) => item.id === id);
+    if (assistantMessage !== "Thinking..." && assistantMessage !== "") {
+      if (convHistoryItem) {
+        setConvHistory((p) =>
+          p.map((item) =>
+            item.id === id
+              ? {
+                  ...item,
+                  messages: [
+                    ...item.messages,
+                    {
+                      role: "assistant",
+                      model: message.model,
+                      content: assistantMessage,
+                      resTime: message.resTime,
+                    },
+                  ],
+                }
+              : item
+          )
+        );
+      } else {
+        setConvHistory((p) => [
+          ...p,
+          {
+            id: id,
+            messages: [
+              {
+                role: "assistant",
+                model: message.model,
+                content: assistantMessage,
+                resTime: message.resTime,
+              },
+            ],
+          },
+        ]);
+      }
+    }
+
     const newMessage = {
       id: id,
       user: message.user,
@@ -101,6 +142,7 @@ export default function ChatScreen() {
     if (rsp?.data?.error === false) {
       setCancelToken(null);
       setWaitingResponse(false);
+      setCurrentMsgId(0);
     }
   };
 
@@ -205,6 +247,9 @@ export default function ChatScreen() {
               : m
           )
         );
+
+        setWaitingResponse(false);
+        setCurrentMsgId(0);
         return;
       }
 
@@ -257,8 +302,27 @@ export default function ChatScreen() {
       console.error(error);
     } finally {
       setWaitingResponse(false);
-      setCurrentMsgId(0);
+      setCancelToken(null);
+      // if assistant message is empty, set the assistant message to "Something went wrong. Please try again."
+
+      const currentConv = conversation.find((m) => m.id === message.id);
+      if (currentConv.assistant === "") {
+        setConversation((p) =>
+          p.map((m) =>
+            m.id === message.id
+              ? {
+                  ...m,
+                  assistant: DEFAULT_MESSAGES.noResponseMessage,
+                  model,
+                  resTime: "0s",
+                }
+              : m
+          )
+        );
+      }
     }
+
+    setCurrentMsgId(0);
   };
 
   const handleKeyPress = (e) => {
@@ -269,10 +333,12 @@ export default function ChatScreen() {
 
   const handleClearChat = () => {
     setConversation({});
+    setConvHistory([]);
   };
 
   const handleDeleteMessage = (id) => {
     setConversation((p) => p.filter((m) => m.id !== id));
+    setConvHistory((p) => p.filter((m) => m.id !== id));
   };
 
   return (
@@ -315,6 +381,7 @@ export default function ChatScreen() {
                     waitingResponse={waitingResponse}
                     currentMsgId={currentMsgId}
                     defaultMsg={initialAssistantMessage}
+                    chatHistory={convHistory}
                   />
                 )}
               </Box>
@@ -377,6 +444,7 @@ export default function ChatScreen() {
               <DownloadChat
                 conversation={conversation}
                 waitingResponse={waitingResponse}
+                convHistory={convHistory}
               />
             )}
             {conversation.length > 0 && (
@@ -385,6 +453,12 @@ export default function ChatScreen() {
                 waitingResponse={waitingResponse}
               />
             )}
+            <UploadChat
+              setConversation={setConversation}
+              waitingResponse={waitingResponse}
+              setCurrentMsgId={setCurrentMsgId}
+              setConvHistory={setConvHistory}
+            />
           </HStack>
         </Box>
       </VStack>

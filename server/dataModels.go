@@ -1,54 +1,79 @@
 package main
 
-type Models struct {
-	Models []Model `json:"models"`
-}
+type (
+	Models struct {
+		Models []Model `json:"models"`
+	}
 
-type Model struct {
-	Name    string      `json:"name"`
-	Model   string      `json:"model"`
-	Details ModelDetail `json:"details"`
-}
+	Model struct {
+		Name    string      `json:"name"`
+		Model   string      `json:"model"`
+		Details ModelDetail `json:"details"`
+	}
 
-type ModelDetail struct {
-	ParentModel       string   `json:"parent_model"`
-	Format            string   `json:"format"`
-	Family            string   `json:"family"`
-	Families          []string `json:"families"`
-	ParameterSize     string   `json:"parameter_size"`
-	QuantizationLevel string   `json:"quantization_level"`
-}
+	ModelDetail struct {
+		ParentModel       string   `json:"parent_model"`
+		Format            string   `json:"format"`
+		Family            string   `json:"family"`
+		Families          []string `json:"families"`
+		ParameterSize     string   `json:"parameter_size"`
+		QuantizationLevel string   `json:"quantization_level"`
+	}
 
-type RequestData struct {
-	Model    string    `json:"model"`
-	Prompt   string    `json:"prompt,omitempty"`
-	Messages []Message `json:"messages,omitempty"`
-}
+	RequestData struct {
+		Model    string         `json:"model"`
+		Prompt   string         `json:"prompt,omitempty"`
+		Raw      bool           `json:"raw" default:"false"`
+		Messages []Message      `json:"messages,omitempty"`
+		Stream   bool           `json:"stream" default:"true"`
+		Options  RequestOptions `json:"options,omitempty"`
+	}
 
-type RequestPayload struct {
-	Model          string         `json:"model"`
-	Prompt         string         `json:"prompt"`
-	ChatMessages   []Conversation `json:"conversation,omitempty"`
-	IncludeHistory bool           `json:"includeHistory"`
-	SystemPrompt   string         `json:"systemPrompt"`
-}
+	RequestOptions struct {
+		NumKeep     int     `json:"num_keep,omitempty"`
+		Seed        int     `json:"seed,omitempty"`
+		Temperature float32 `json:"temperature,omitempty"`
+		NumContext  int     `json:"num_ctx,omitempty"`
+		NumBatch    int     `json:"num_batch,omitempty"`
+	}
 
-type Conversation struct {
-	Id       int16  `json:"id"`
-	Prompt   string `json:"user"`
-	Response string `json:"assistant"`
-}
+	RequestPayload struct {
+		Model          string         `json:"model"`
+		Prompt         string         `json:"prompt"`
+		Raw            bool           `json:"raw,omitempty"`
+		ChatMessages   []Conversation `json:"conversation,omitempty"`
+		IncludeHistory bool           `json:"includeHistory"`
+		SystemPrompt   string         `json:"systemPrompt"`
+		Stream         bool           `json:"stream,omitempty"`
+		Temperature    float32        `json:"temperature,omitempty"`
+		NumContext     int            `json:"num_ctx,omitempty"`
+	}
 
-type ResponseData struct {
-	Response    string  `json:"response,omitempty"`
-	Message     Message `json:"message,omitempty"`
-	Model       string  `json:"model"`
-	CreatedAt   string  `json:"created_at"`
-	Done        bool    `json:"done"`
-	CancelToken string  `json:"cancelToken,omitempty"`
-}
+	Conversation struct {
+		Id       int16  `json:"id"`
+		Prompt   string `json:"user"`
+		Response string `json:"assistant"`
+	}
 
-type Message struct {
-	Role    string `json:"role"`
-	Content string `json:"content"`
-}
+	ResponseData struct {
+		Response    string  `json:"response,omitempty"`
+		Message     Message `json:"message,omitempty"`
+		Model       string  `json:"model"`
+		CreatedAt   string  `json:"created_at"`
+		Done        bool    `json:"done"`
+		CancelToken string  `json:"cancelToken,omitempty"`
+	}
+
+	Message struct {
+		Role    string `json:"role,omitempty"`
+		Content string `json:"content,omitempty"`
+	}
+)
+
+const (
+	defaultTemperature = 0.7
+	defaultNumContext  = 2048
+	defaultNumBatch    = 1
+	defaultNumKeep     = 5
+	defaultSeed        = 42
+)

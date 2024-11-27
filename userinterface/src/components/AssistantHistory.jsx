@@ -14,7 +14,7 @@ function AssistantHistory({ conversation }) {
             ?.reverse()
             ?.map((msg, index) => (
               <AssistantHistoryMessage
-                key={msg.id + index}
+                key={`${msg.id}_${index}`}
                 msg={msg}
                 count={count}
                 index={index}

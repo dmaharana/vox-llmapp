@@ -47,11 +47,12 @@ export default function ChatScreen() {
   const handleResubmit = async (id) => {
     // find the message with the given id
     setCurrentMsgId(id);
-    const message = conversation.find((msg) => msg.id === id);
-    const assistantMessage = message.assistant;
+    const message = conversation?.find((msg) => msg.id === id);
+    const assistantMessage = message?.assistant;
 
     // save the existing assistant message into the history object with the same conversation id, so that the history can be shown to the user
-    const convHistoryItem = convHistory.find((item) => item.id === id);
+    const convHistoryItem = convHistory?.find((item) => item.id === id);
+
     if (assistantMessage !== "Thinking..." && assistantMessage !== "") {
       if (convHistoryItem) {
         setConvHistory((p) =>
@@ -73,8 +74,7 @@ export default function ChatScreen() {
           )
         );
       } else {
-        setConvHistory((p) => [
-          ...p,
+        setConvHistory([
           {
             id: id,
             messages: [
@@ -306,7 +306,9 @@ export default function ChatScreen() {
       // if assistant message is empty, set the assistant message to "Something went wrong. Please try again."
 
       const currentConv = conversation.find((m) => m.id === message.id);
-      if (currentConv.assistant === "") {
+      console.log("msg id", message.id, "currentConv", currentConv);
+
+      if (currentConv?.assistant === "") {
         setConversation((p) =>
           p.map((m) =>
             m.id === message.id
@@ -320,9 +322,10 @@ export default function ChatScreen() {
           )
         );
       }
-    }
 
-    setCurrentMsgId(0);
+      // reset current message id
+      setCurrentMsgId(0);
+    }
   };
 
   const handleKeyPress = (e) => {

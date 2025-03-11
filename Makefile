@@ -44,8 +44,8 @@ buildui:
 buildserver:
 	@echo "Building server..."
 	cd $(SERVER_SUBDIR) && go mod tidy
-	cd $(SERVER_SUBDIR) && GOOS=linux GOARCH=amd64 go build -o $(LINUX_BIN)
-	cd $(SERVER_SUBDIR) && GOOS=windows GOARCH=amd64 go build -o $(WINDOWS_BIN)
+	cd $(SERVER_SUBDIR) && GOOS=linux GOARCH=amd64 go build -tags netgo -ldflags '-s -w' -o $(LINUX_BIN)
+	cd $(SERVER_SUBDIR) && GOOS=windows GOARCH=amd64 go build -tags netgo -ldflags '-s -w' -o $(WINDOWS_BIN)
 	@echo "Building server Done!"
 
 build: buildui buildserver

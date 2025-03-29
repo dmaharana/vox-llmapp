@@ -329,7 +329,12 @@ export default function ChatScreen() {
   };
 
   const handleKeyPress = (e) => {
-    if (e.key === "Enter" && e.ctrlKey) {
+    if (e.key === "Enter" && e.shiftKey) {
+      // Allow default behavior for Shift+Enter (new line)
+      return;
+    }
+    if (e.key === "Enter") {
+      e.preventDefault();
       handleSubmit(e);
     }
   };
@@ -406,7 +411,7 @@ export default function ChatScreen() {
           <HStack bg={"green.50"}>
             <Textarea
               isDisabled={waitingResponse}
-              placeholder="Enter your query here, Ctrl+Enter to send"
+              placeholder="Press Enter to send | Shift+Enter for new line"
               value={query}
               onChange={(e) => setQuery(e.target.value)}
               onKeyDown={(e) => handleKeyPress(e)}

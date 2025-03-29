@@ -19,7 +19,17 @@ const (
 	tokenLength    = 32
 	qToken         = "token"
 	cancelTokenKey = "cancelToken"
+	minQueryLength = 20 // Minimum length before we refine the query
 )
+
+// refineShortQuery enhances short user queries to get better responses
+func refineShortQuery(query string) string {
+	if len(query) >= minQueryLength {
+		return query
+	}
+	return fmt.Sprintf("Please provide a detailed response to: \"%s\". "+
+		"Expand on the topic with relevant information and examples.", query)
+}
 
 func (app *Config) ChatResponse(w http.ResponseWriter, r *http.Request) {
 	// request payload from client
@@ -31,7 +41,12 @@ func (app *Config) ChatResponse(w http.ResponseWriter, r *http.Request) {
 	}
 
 	log.Printf("Received model: %s", reqPayload.Model)
-	log.Printf("Received question: %s", reqPayload.Prompt)
+	log.Printf("Original question: %s", reqPayload.Prompt)
+	
+	// Refine short queries
+	reqPayload.Prompt = refineShortQuery(reqPayload.Prompt)
+	log.Printf("Processed question: %s", reqPayload.Prompt)
+	
 	log.Printf("Payload: %+v", reqPayload)
 
 	// responses := []string{}

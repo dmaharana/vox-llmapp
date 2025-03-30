@@ -1,6 +1,15 @@
-import { Box, HStack, Text, Textarea, Input, Button, IconButton } from "@chakra-ui/react";
+import {
+  Box,
+  HStack,
+  Text,
+  Textarea,
+  Input,
+  Button,
+  IconButton,
+} from "@chakra-ui/react";
 import { EditIcon, DeleteIcon } from "@chakra-ui/icons";
 import { useState } from "react";
+import PropTypes from 'prop-types';
 
 export function PromptItem({
   prompt,
@@ -9,7 +18,7 @@ export function PromptItem({
   onDelete,
   onUse,
   isEditing,
-  onSaveEdit
+  onSaveEdit,
 }) {
   const [editName, setEditName] = useState(prompt.name);
   const [editContent, setEditContent] = useState(prompt.content);
@@ -39,20 +48,13 @@ export function PromptItem({
               >
                 Save
               </Button>
-              <Button
-                size="sm"
-                variant="outline"
-                onClick={() => onEdit(null)}
-              >
+              <Button size="sm" variant="outline" onClick={() => onEdit(null)}>
                 Cancel
               </Button>
             </>
           ) : (
             <>
-              <Button
-                size="sm"
-                onClick={onUse}
-              >
+              <Button size="sm" onClick={onUse}>
                 Use
               </Button>
               <IconButton
@@ -85,12 +87,30 @@ export function PromptItem({
         />
       ) : (
         <Text fontSize="sm" mt={2}>
-          {!searchQuery ? prompt.content : 
-            prompt.content.split(new RegExp(`(${searchQuery})`, "gi"))
-              .map((part, i) => i % 2 === 1 ? <mark key={i}>{part}</mark> : part)
-          }
+          {!searchQuery
+            ? prompt.content
+            : prompt.content
+                .split(
+                  new RegExp(
+                    `(${searchQuery.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")})`,
+                    "gi"
+                  )
+                )
+                .map((part, i) =>
+                  i % 2 === 1 ? <mark key={i}>{part}</mark> : part
+                )}
         </Text>
       )}
     </Box>
   );
 }
+
+PromptItem.propTypes = {
+  prompt: PropTypes.object.isRequired,
+  searchQuery: PropTypes.string,
+  onEdit: PropTypes.func.isRequired,
+  onDelete: PropTypes.func.isRequired,
+  onUse: PropTypes.func.isRequired,
+  isEditing: PropTypes.bool,
+  onSave: PropTypes.func.isRequired,
+};

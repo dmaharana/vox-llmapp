@@ -22,10 +22,10 @@ import {
   AlertDialogOverlay,
   IconButton,
 } from "@chakra-ui/react";
-import { EditIcon, DeleteIcon } from "@chakra-ui/icons";
-import { PiUploadLight } from "react-icons/pi";
+import { AddIcon, EditIcon, DeleteIcon } from "@chakra-ui/icons";
 import { PromptSearch } from "./PromptLibrary/PromptSearch";
 import { ImportExportButtons } from "./PromptLibrary/ImportExportButtons";
+import { PromptItem } from "./PromptLibrary/PromptItem";
 
 import { useRef } from "react";
 
@@ -221,125 +221,46 @@ export default function PromptLibrary({
                     prompt.content.toLowerCase().includes(query)
                   );
                 })
-                .map((prompt, index) => (
-                  <Box
-                    key={prompt.id || index}
-                    p={2}
-                    borderWidth="1px"
-                    borderRadius="md"
-                  >
-                    <HStack justify="space-between">
-                      {editingPrompt === prompt.id ? (
-                        <Input
-                          value={editName}
-                          onChange={(e) => setEditName(e.target.value)}
-                          size="sm"
-                          fontWeight="bold"
-                        />
-                      ) : (
-                        <Text fontWeight="bold">{prompt.name}</Text>
-                      )}
-                      <HStack>
-                        {editingPrompt === prompt.id ? (
-                          <>
-                            <Button
-                              size="sm"
-                              colorScheme="green"
-                              onClick={() => {
-                                setPrompts(
-                                  prompts.map((p) =>
-                                    p.id === prompt.id
-                                      ? {
-                                          ...p,
-                                          name: editName,
-                                          content: editContent,
-                                        }
-                                      : p
-                                  )
-                                );
-                                setEditingPrompt(null);
-                              }}
-                            >
-                              Save
-                            </Button>
-                            <Button
-                              size="sm"
-                              variant="outline"
-                              onClick={() => setEditingPrompt(null)}
-                            >
-                              Cancel
-                            </Button>
-                          </>
-                        ) : (
-                          <>
-                            <Button
-                              size="sm"
-                              onClick={() => {
-                                setSystemPrompt(prompt.content);
-                                onClose();
-                              }}
-                            >
-                              Use
-                            </Button>
-                            <IconButton
-                              icon={<EditIcon />}
-                              size="sm"
-                              colorScheme="blue"
-                              variant="ghost"
-                              aria-label="Edit prompt"
-                              onClick={() => {
-                                setEditingPrompt(prompt.id);
-                                setEditName(prompt.name);
-                                setEditContent(prompt.content);
-                              }}
-                            />
-                            <IconButton
-                              icon={<DeleteIcon />}
-                              size="sm"
-                              colorScheme="red"
-                              variant="ghost"
-                              aria-label="Delete prompt"
-                              onClick={() => handleDeletePrompt(prompt.id)}
-                            />
-                          </>
-                        )}
-                      </HStack>
-                    </HStack>
-                    {editingPrompt === prompt.id ? (
-                      <Textarea
-                        value={editContent}
-                        onChange={(e) => setEditContent(e.target.value)}
-                        fontSize="sm"
-                        mt={2}
-                        resize="vertical"
-                      />
-                    ) : (
-                      <Text fontSize="sm" mt={2}>
-                        {(() => {
-                          if (!searchQuery) return prompt.content;
-                          const regex = new RegExp(`(${searchQuery})`, "gi");
-                          return prompt.content
-                            .split(regex)
-                            .map((part, i) =>
-                              i % 2 === 1 ? <mark key={i}>{part}</mark> : part
-                            );
-                        })()}
-                      </Text>
-                    )}
-                  </Box>
+                .map((prompt) => (
+                  <PromptItem
+                    key={prompt.id}
+                    prompt={prompt}
+                    searchQuery={searchQuery}
+                    isEditing={editingPrompt === prompt.id}
+                    onEdit={(id) => {
+                      setEditingPrompt(id);
+                      setEditName(prompt.name);
+                      setEditContent(prompt.content);
+                    }}
+                    onSave={(id, name, content) => {
+                      setPrompts((prev) =>
+                        prev.map((p) =>
+                          p.id === id ? { ...p, name, content } : p
+                        )
+                      );
+                      setEditingPrompt(null);
+                    }}
+                    onDelete={handleDeletePrompt}
+                    onUse={(content) => {
+                      setSystemPrompt(content);
+                      onClose();
+                    }}
+                  />
                 ))}
             </VStack>
           </Box>
         </ModalBody>
         <ModalFooter>
-          <ImportExportButtons
-            handleExportPrompts={handleExportPrompts}
-            handleImportPrompts={handleImportPrompts}
-            fileInputRef={fileInputRef}
-          />
-          <Button colorScheme="blue" onClick={onClose}>
-            Close
-          </Button>
+          <HStack spacing={3}>
+            <ImportExportButtons
+              handleExportPrompts={handleExportPrompts}
+              handleImportPrompts={handleImportPrompts}
+              fileInputRef={fileInputRef}
+            />
+            <Button colorScheme="blue" onClick={onClose}>
+              Close
+            </Button>
+          </HStack>
         </ModalFooter>
       </ModalContent>
 

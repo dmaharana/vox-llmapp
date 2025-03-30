@@ -6,12 +6,19 @@ export function AddPromptForm({ onAddPrompt }) {
   const [newPromptName, setNewPromptName] = useState("");
   const [newPromptContent, setNewPromptContent] = useState("");
 
+  const generateId = () => {
+    if (typeof crypto !== 'undefined' && crypto.randomUUID) {
+      return crypto.randomUUID();
+    }
+    return Date.now().toString(36) + Math.random().toString(36).substr(2);
+  };
+
   const handleAdd = () => {
     if (newPromptName && newPromptContent) {
       onAddPrompt({
-        id: crypto.randomUUID(),
+        id: generateId(),
         name: newPromptName,
-        content: newPromptContent,
+        content: newPromptContent
       });
       setNewPromptName("");
       setNewPromptContent("");
@@ -46,3 +53,7 @@ export function AddPromptForm({ onAddPrompt }) {
     </Box>
   );
 }
+
+AddPromptForm.propTypes = {
+  onAddPrompt: PropTypes.func.isRequired
+};

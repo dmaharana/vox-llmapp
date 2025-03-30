@@ -8,8 +8,8 @@ export function AddPromptForm({ onAddPrompt }) {
   const [newPromptContent, setNewPromptContent] = useState("");
 
   const generateId = () => {
-    if (typeof crypto !== "undefined" && crypto.randomUUID) {
-      return crypto.randomUUID();
+    if (typeof crypto !== "undefined" && generateUUID()) {
+      return generateUUID();
     }
     return Date.now().toString(36) + Math.random().toString(36).substr(2);
   };

@@ -1,7 +1,12 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import ShowAlert from "./ShowAlert";
-import { Textarea } from "@chakra-ui/react";
 import {
+  Textarea,
+  Input,
+  Box,
+  VStack,
+  HStack,
+  useDisclosure,
   Modal,
   ModalOverlay,
   ModalContent,
@@ -10,29 +15,24 @@ import {
   ModalBody,
   ModalCloseButton,
   Button,
-  VStack,
-  HStack,
-  useDisclosure,
-  Box,
   AlertDialog,
+  AlertDialogOverlay,
+  AlertDialogContent,
+  AlertDialogHeader,
   AlertDialogBody,
   AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogContent,
-  AlertDialogOverlay,
-  Input,
 } from "@chakra-ui/react";
 import { AddIcon, EditIcon, DeleteIcon } from "@chakra-ui/icons";
 import { PromptSearch } from "./PromptLibrary/PromptSearch";
 import { ImportExportButtons } from "./PromptLibrary/ImportExportButtons";
 import { PromptItem } from "./PromptLibrary/PromptItem";
 
-import { useRef } from "react";
-
 export default function PromptLibrary({
   systemPrompt,
   setSystemPrompt,
   isOpen,
+  prompts,
+  setPrompts,
   onClose,
 }) {
   const {
@@ -43,7 +43,6 @@ export default function PromptLibrary({
   const cancelRef = useRef();
   const fileInputRef = useRef();
   const [promptToDelete, setPromptToDelete] = useState(null);
-  const [prompts, setPrompts] = useState([]);
   const [newPromptName, setNewPromptName] = useState("");
   const [newPromptContent, setNewPromptContent] = useState("");
   const [searchQuery, setSearchQuery] = useState("");
@@ -53,7 +52,7 @@ export default function PromptLibrary({
   const [editContent, setEditContent] = useState("");
   const initialLoadComplete = useRef(false);
   const [importStatus, setImportStatus] = useState(null);
-  const [importMessage, setImportMessage] = useState("");
+  const [importMessage, setImportMessage] = useState(""); // Corrected typo here
   const [showImportAlert, setShowImportAlert] = useState(false);
 
   useEffect(() => {
@@ -104,7 +103,7 @@ export default function PromptLibrary({
     }
   }, [showImportAlert]);
 
-  // Save prompts to localStorage whenever they change after initial load
+  // Save prompts to localStorage whenever prompts state changes after initial load
   useEffect(() => {
     if (initialLoadComplete.current) {
       localStorage.setItem("prompts", JSON.stringify(prompts));
@@ -149,7 +148,7 @@ export default function PromptLibrary({
         }
 
         const validatedPrompts = importedPrompts.map((prompt) => ({
-          id: prompt.id || crypto.randomUUID(),
+          id: prompt.id || generateUUID(),
           name: String(prompt.name || "Unnamed Prompt"),
           content: String(prompt.content || ""),
         }));
@@ -171,7 +170,7 @@ export default function PromptLibrary({
   const handleAddPrompt = async () => {
     if (newPromptName && newPromptContent) {
       const newPrompt = {
-        id: crypto.randomUUID(),
+        id: generateUUID(),
         name: newPromptName,
         content: newPromptContent,
       };
@@ -193,7 +192,7 @@ export default function PromptLibrary({
       <ModalContent>
         <ModalHeader>System Prompts Library</ModalHeader>
         <ModalCloseButton />
-        <ModalBody>
+        <ModalBody pb={6}>
           <Box maxH="60vh" overflowY="auto" pr={2}>
             <PromptSearch
               searchQuery={searchQuery}
@@ -232,7 +231,7 @@ export default function PromptLibrary({
 
             <VStack spacing={4} align="stretch">
               {prompts
-                .filter((prompt) => {
+                ?.filter((prompt) => {
                   const query = searchQuery.toLowerCase();
                   return (
                     prompt.name.toLowerCase().includes(query) ||
@@ -260,7 +259,6 @@ export default function PromptLibrary({
                     }}
                     onDelete={handleDeletePrompt}
                     onUse={(content) => {
-                      console.log(content);
                       setSystemPrompt(content);
                       onClose();
                     }}

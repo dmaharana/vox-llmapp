@@ -26,6 +26,8 @@ import { DEFAULT_MESSAGES } from "./Constants";
 function ChatSettings({
   systemPrompt,
   setSystemPrompt,
+  prompts,
+  setPrompts,
   includeHistory,
   setIncludeHistory,
   waitingResponse,
@@ -112,6 +114,8 @@ function ChatSettings({
       <PromptLibrary
         systemPrompt={systemPrompt}
         setSystemPrompt={setSystemPrompt}
+        prompts={prompts}
+        setPrompts={setPrompts}
         isOpen={isLibraryOpen}
         onClose={onLibraryClose}
       />

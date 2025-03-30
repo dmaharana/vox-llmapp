@@ -2,12 +2,20 @@ import { useState } from "react";
 import {
   Box,
   Button,
+  Card,
   HStack,
+  Icon,
+  IconButton,
+  List,
+  ListItem,
   Spacer,
+  Stack,
   Text,
   Textarea,
+  Tooltip,
   VStack,
 } from "@chakra-ui/react";
+import { MdModelTraining, MdSystemUpdateAlt } from "react-icons/md";
 import { IoMdSend } from "react-icons/io";
 import { BeatLoader } from "react-spinners";
 import { UserMsg } from "./UserMsg";
@@ -19,6 +27,7 @@ import { DEFAULT_MESSAGES } from "./Constants";
 import ClearChat from "./ClearChat";
 import StopGenerationButton from "./StopGenerationButton";
 import UploadChat from "./UploadChat";
+import { EditIcon } from "@chakra-ui/icons";
 
 export default function ChatScreen() {
   const [isLibraryOpen, setIsLibraryOpen] = useState(false);
@@ -26,8 +35,10 @@ export default function ChatScreen() {
   const [query, setQuery] = useState("");
   const [model, setModel] = useState("");
   const [systemPrompt, setSystemPrompt] = useState(
+    // Removed duplicate state definition
     DEFAULT_MESSAGES.SYSTEM_PROMPT
   );
+  const [prompts, setPrompts] = useState([]);
   const [includeHistory, setIncludeHistory] = useState(true);
   const [convHistory, setConvHistory] = useState([]);
   const [convId, setConvId] = useState(1);
@@ -352,11 +363,11 @@ export default function ChatScreen() {
 
   return (
     <Box>
-      <VStack 
-        h={"90vh"} 
-        bg={"gray.50"} 
-        py={4} 
-        px={2} 
+      <VStack
+        h={"90vh"}
+        bg={"gray.50"}
+        py={4}
+        px={2}
         borderRadius={"2rem"}
         justifyContent="space-between"
       >
@@ -374,10 +385,11 @@ export default function ChatScreen() {
         >
           Vox
         </Text>
-        <VStack 
-          h={"100%"} 
-          w={"100%"} 
-          bg={"blue.50"} 
+        <VStack
+          flex="1"
+          h="100%"
+          w={"100%"}
+          bg={"blue.50"}
           overflowY={"auto"}
           justifyContent={conversation.length > 0 ? "flex-start" : "center"}
         >
@@ -414,50 +426,128 @@ export default function ChatScreen() {
                 <Text fontSize="2xl" fontWeight="bold" color="gray.600">
                   What would you like to know today?
                 </Text>
-                
-                <Box 
-                  bg="white" 
-                  p={4} 
-                  borderRadius="md" 
-                  boxShadow="md" 
-                  w="80%"
-                  borderWidth="1px"
+
+                <Box
+                  width="100%"
+                  maxW="container.md"
+                  p={4}
+                  borderRadius="xl"
+                  borderWidth={2}
                   borderColor="blue.200"
                   bgGradient="linear(to-b, blue.50, white)"
+                  boxShadow="0px 4px 24px rgba(149, 203, 255, 0.25)"
                 >
-                  <VStack spacing={4}>
-                    <Text fontSize="lg" fontWeight="bold" color="blue.600">
-                      Current settings:
-                    </Text>
-                    <HStack>
-                      <Text fontWeight="semibold" color="blue.700">Model:</Text>
-                      <Text color="blue.800">{model || "Not selected"}</Text>
-                    </HStack>
-                    <HStack>
-                      <Text fontWeight="semibold" color="blue.700">System Prompt:</Text>
-                      <Text noOfLines={2} color="blue.800">{systemPrompt}</Text>
-                    </HStack>
-                    
-                    <Button 
-                      colorScheme="blue" 
-                      variant="solid"
-                      onClick={() => setIsLibraryOpen(true)}
-                      _hover={{ bg: 'blue.600' }}
-                    >
-                      Choose System Prompt
-                    </Button>
-                  </VStack>
+                  <Stack spacing={4}>
+                    <List spacing={3}>
+                      <ListItem display="flex" alignItems="center">
+                        <Icon
+                          as={MdModelTraining}
+                          color="blue.600"
+                          boxSize={6}
+                          mr={3}
+                          filter="drop-shadow(0 2px 2px rgba(0, 0, 0, 0.1))"
+                        />
+                        <Box flex="1">
+                          <Text
+                            fontSize="sm"
+                            color="blue.700"
+                            mb={0}
+                            fontWeight="normal"
+                          >
+                            Model:
+                          </Text>
+                          <Text
+                            fontSize="md"
+                            color="blue.900"
+                            fontWeight="semibold"
+                            noOfLines={1}
+                            textShadow="0 1px 2px rgba(0, 0, 0, 0.05)"
+                          >
+                            {model || "No model chosen yet"}
+                          </Text>
+                        </Box>
+                      </ListItem>
+
+                      <ListItem display="flex" alignItems="flex-start">
+                        <Icon
+                          as={MdSystemUpdateAlt}
+                          color="blue.600"
+                          boxSize={6}
+                          mr={3}
+                          mt={1}
+                          filter="drop-shadow(0 2px 2px rgba(0, 0, 0, 0.1))"
+                        />
+                        <Box flex="1">
+                          <Text
+                            fontSize="sm"
+                            color="blue.700"
+                            mb={0}
+                            fontWeight="normal"
+                          >
+                            System Prompt:
+                          </Text>
+                          <Box
+                            position="relative"
+                            borderRadius="lg"
+                            p={3}
+                            bg="white"
+                            borderWidth={1}
+                            borderColor="blue.100"
+                            boxShadow="inner 0 2px 4px rgba(0, 0, 0, 0.05)"
+                          >
+                            <Text
+                              fontSize="md"
+                              color="blue.800"
+                              noOfLines={3}
+                              lineHeight="tall"
+                              position="relative"
+                              zIndex={1}
+                            >
+                              {(() => {
+                                const matchedPrompt = prompts?.find(
+                                  (p) => p.content === systemPrompt
+                                );
+                                if (matchedPrompt) {
+                                  return matchedPrompt.name;
+                                } else if (
+                                  systemPrompt ===
+                                  DEFAULT_MESSAGES.SYSTEM_PROMPT
+                                ) {
+                                  return "Default System Prompt";
+                                } else {
+                                  return "Custom System Prompt";
+                                }
+                              })()}
+
+                              <IconButton
+                                size="xs"
+                                position="absolute"
+                                top={0}
+                                right={0}
+                                zIndex={2}
+                                icon={<EditIcon />}
+                                colorScheme="blue"
+                                variant="ghost"
+                                onClick={() => setIsLibraryOpen(true)}
+                              />
+                            </Text>
+                          </Box>
+                        </Box>
+                      </ListItem>
+                    </List>
+                  </Stack>
                 </Box>
-                
+
                 <Text fontSize="sm" color="gray.500" fontStyle="italic">
-                  Type your question below or select a system prompt to get started
+                  Type your question below or select a system prompt to get
+                  started
                 </Text>
               </VStack>
             </Box>
           )}
         </VStack>
 
-        <Box w={"100%"} bg={"green.50"}>
+        <Box w={"100%"} bg={"green.50"} mt="auto">
           <HStack bg={"green.50"}>
             <Textarea
               isDisabled={waitingResponse}
@@ -474,7 +564,7 @@ export default function ChatScreen() {
               <Button
                 colorScheme={"purple"}
                 type="submit"
-                variant={"ghost"}
+                variant="ghost"
                 isDisabled={!query || waitingResponse}
                 onClick={(e) => handleSubmit(e)}
               >
@@ -492,6 +582,8 @@ export default function ChatScreen() {
             <ChatSettings
               systemPrompt={systemPrompt}
               setSystemPrompt={setSystemPrompt}
+              prompts={prompts}
+              setPrompts={setPrompts}
               includeHistory={includeHistory}
               setIncludeHistory={setIncludeHistory}
               waitingResponse={waitingResponse}

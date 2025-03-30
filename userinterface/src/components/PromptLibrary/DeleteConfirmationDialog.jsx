@@ -1,12 +1,12 @@
-import PropTypes from 'prop-types';
-import { 
+import PropTypes from "prop-types";
+import {
   AlertDialog,
   AlertDialogBody,
   AlertDialogFooter,
   AlertDialogContent,
   AlertDialogOverlay,
   AlertDialogHeader,
-  Button
+  Button,
 } from "@chakra-ui/react";
 import { useRef } from "react";
 
@@ -45,5 +45,5 @@ export function DeleteConfirmationDialog({ isOpen, onClose, onConfirm }) {
 DeleteConfirmationDialog.propTypes = {
   isOpen: PropTypes.bool.isRequired,
   onClose: PropTypes.func.isRequired,
-  onConfirm: PropTypes.func.isRequired
+  onConfirm: PropTypes.func.isRequired,
 };

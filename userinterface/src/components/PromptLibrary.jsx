@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import ShowAlert from "./ShowAlert";
 import { Textarea } from "@chakra-ui/react";
 import {
   Modal,
@@ -11,7 +12,6 @@ import {
   Button,
   VStack,
   HStack,
-  Text,
   useDisclosure,
   Box,
   AlertDialog,
@@ -20,7 +20,7 @@ import {
   AlertDialogHeader,
   AlertDialogContent,
   AlertDialogOverlay,
-  IconButton,
+  Input,
 } from "@chakra-ui/react";
 import { AddIcon, EditIcon, DeleteIcon } from "@chakra-ui/icons";
 import { PromptSearch } from "./PromptLibrary/PromptSearch";
@@ -52,6 +52,9 @@ export default function PromptLibrary({
   const [editName, setEditName] = useState("");
   const [editContent, setEditContent] = useState("");
   const initialLoadComplete = useRef(false);
+  const [importStatus, setImportStatus] = useState(null);
+  const [importMessage, setImportMessage] = useState("");
+  const [showImportAlert, setShowImportAlert] = useState(false);
 
   useEffect(() => {
     const savedPrompts = localStorage.getItem("prompts");
@@ -76,6 +79,8 @@ export default function PromptLibrary({
         const promptsWithIds = serverPrompts.map((prompt) => ({
           ...prompt,
           id: prompt.id || crypto.randomUUID(),
+          name: String(prompt.name || "Unnamed Prompt"),
+          content: String(prompt.content || ""),
         }));
         localStorage.setItem("prompts", JSON.stringify(promptsWithIds));
         setPrompts(promptsWithIds);
@@ -89,6 +94,15 @@ export default function PromptLibrary({
       initialLoadComplete.current = true;
     }
   }, [prompts]);
+
+  useEffect(() => {
+    if (showImportAlert) {
+      const timer = setTimeout(() => {
+        setShowImportAlert(false);
+      }, 3000);
+      return () => clearTimeout(timer);
+    }
+  }, [showImportAlert]);
 
   // Save prompts to localStorage whenever they change after initial load
   useEffect(() => {
@@ -136,15 +150,19 @@ export default function PromptLibrary({
 
         const validatedPrompts = importedPrompts.map((prompt) => ({
           id: prompt.id || crypto.randomUUID(),
-          name: prompt.name || "Unnamed Prompt",
-          content: prompt.content || "",
+          name: String(prompt.name || "Unnamed Prompt"),
+          content: String(prompt.content || ""),
         }));
 
         setPrompts(validatedPrompts);
-        alert("Prompts imported successfully!");
+        setImportStatus("success");
+        setImportMessage("Prompts imported successfully!");
+        setShowImportAlert(true);
       } catch (error) {
         console.error("Import error:", error);
-        alert("Failed to import prompts: Invalid file format");
+        setImportStatus("error");
+        setImportMessage("Failed to import: Invalid file format");
+        setShowImportAlert(true);
       }
     };
     reader.readAsText(file);
@@ -242,6 +260,7 @@ export default function PromptLibrary({
                     }}
                     onDelete={handleDeletePrompt}
                     onUse={(content) => {
+                      console.log(content);
                       setSystemPrompt(content);
                       onClose();
                     }}
@@ -250,6 +269,18 @@ export default function PromptLibrary({
             </VStack>
           </Box>
         </ModalBody>
+
+        {showImportAlert && (
+          <ShowAlert
+            status={importStatus}
+            title={
+              importStatus === "success" ? "Import Successful" : "Import Error"
+            }
+            message={importMessage}
+            resetStates={() => setShowImportAlert(false)}
+          />
+        )}
+
         <ModalFooter>
           <HStack spacing={3}>
             <ImportExportButtons

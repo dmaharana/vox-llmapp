@@ -7,9 +7,9 @@ import {
   Button,
   IconButton,
 } from "@chakra-ui/react";
-import { EditIcon, DeleteIcon } from "@chakra-ui/icons";
+import { EditIcon, DeleteIcon, CheckIcon } from "@chakra-ui/icons";
 import { useState } from "react";
-import PropTypes from 'prop-types';
+import PropTypes from "prop-types";
 
 export function PromptItem({
   prompt,
@@ -43,7 +43,7 @@ export function PromptItem({
                 size="sm"
                 colorScheme="green"
                 onClick={() => {
-                  onSaveEdit(prompt.id, editName, editContent);
+                  onSave(prompt.id, editName, editContent);
                 }}
               >
                 Save
@@ -54,9 +54,15 @@ export function PromptItem({
             </>
           ) : (
             <>
-              <Button size="sm" onClick={onUse}>
-                Use
-              </Button>
+              <IconButton
+                icon={<CheckIcon />}
+                size="sm"
+                colorScheme="green"
+                variant="ghost"
+                aria-label="Use prompt"
+                onClick={() => onUse(prompt.content)}
+              />
+
               <IconButton
                 icon={<EditIcon />}
                 size="sm"
@@ -65,6 +71,7 @@ export function PromptItem({
                 aria-label="Edit prompt"
                 onClick={() => onEdit(prompt.id)}
               />
+
               <IconButton
                 icon={<DeleteIcon />}
                 size="sm"
@@ -88,8 +95,8 @@ export function PromptItem({
       ) : (
         <Text fontSize="sm" mt={2}>
           {!searchQuery
-            ? prompt.content
-            : prompt.content
+            ? String(prompt.content)
+            : String(prompt.content)
                 .split(
                   new RegExp(
                     `(${searchQuery.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")})`,

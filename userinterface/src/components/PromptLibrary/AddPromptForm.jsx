@@ -1,3 +1,4 @@
+import PropTypes from "prop-types";
 import { Input, Textarea, Button, Box } from "@chakra-ui/react";
 import { AddIcon } from "@chakra-ui/icons";
 import { useState } from "react";
@@ -7,7 +8,7 @@ export function AddPromptForm({ onAddPrompt }) {
   const [newPromptContent, setNewPromptContent] = useState("");
 
   const generateId = () => {
-    if (typeof crypto !== 'undefined' && crypto.randomUUID) {
+    if (typeof crypto !== "undefined" && crypto.randomUUID) {
       return crypto.randomUUID();
     }
     return Date.now().toString(36) + Math.random().toString(36).substr(2);
@@ -18,7 +19,7 @@ export function AddPromptForm({ onAddPrompt }) {
       onAddPrompt({
         id: generateId(),
         name: newPromptName,
-        content: newPromptContent
+        content: newPromptContent,
       });
       setNewPromptName("");
       setNewPromptContent("");
@@ -55,5 +56,5 @@ export function AddPromptForm({ onAddPrompt }) {
 }
 
 AddPromptForm.propTypes = {
-  onAddPrompt: PropTypes.func.isRequired
+  onAddPrompt: PropTypes.func.isRequired,
 };

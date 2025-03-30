@@ -43,7 +43,7 @@ export function PromptItem({
                 size="sm"
                 colorScheme="green"
                 onClick={() => {
-                  onSave(prompt.id, editName, editContent);
+                  onSaveEdit(prompt.id, editName, editContent);
                 }}
               >
                 Save
@@ -119,5 +119,5 @@ PromptItem.propTypes = {
   onDelete: PropTypes.func.isRequired,
   onUse: PropTypes.func.isRequired,
   isEditing: PropTypes.bool,
-  onSave: PropTypes.func.isRequired,
+  onSaveEdit: PropTypes.func.isRequired,
 };

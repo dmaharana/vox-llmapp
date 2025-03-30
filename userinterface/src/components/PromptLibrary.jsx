@@ -250,7 +250,7 @@ export default function PromptLibrary({
                       setEditName(prompt.name);
                       setEditContent(prompt.content);
                     }}
-                    onSave={(id, name, content) => {
+                    onSaveEdit={(id, name, content) => {
                       setPrompts((prev) =>
                         prev.map((p) =>
                           p.id === id ? { ...p, name, content } : p

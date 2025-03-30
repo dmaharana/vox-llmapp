@@ -25,7 +25,15 @@ import {
   AlertDialogContent,
   AlertDialogOverlay,
 } from "@chakra-ui/react";
-import { AddIcon, SearchIcon, EditIcon, DeleteIcon } from "@chakra-ui/icons";
+import {
+  AddIcon,
+  SearchIcon,
+  EditIcon,
+  DeleteIcon,
+  DownloadIcon,
+} from "@chakra-ui/icons";
+import { PiUploadLight } from "react-icons/pi";
+
 import { useRef } from "react";
 
 export default function PromptLibrary({
@@ -40,6 +48,7 @@ export default function PromptLibrary({
     onClose: onDeleteDialogClose,
   } = useDisclosure();
   const cancelRef = useRef();
+  const fileInputRef = useRef();
   const [promptToDelete, setPromptToDelete] = useState(null);
   const [prompts, setPrompts] = useState([]);
   const [newPromptName, setNewPromptName] = useState("");
@@ -104,6 +113,48 @@ export default function PromptLibrary({
     setPrompts((prev) => prev.filter((p) => p.id !== promptToDelete));
     onDeleteDialogClose();
     setPromptToDelete(null);
+  };
+
+  const handleExportPrompts = () => {
+    const blob = new Blob([JSON.stringify(prompts, null, 2)], {
+      type: "application/json",
+    });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = `prompts_export_${
+      new Date().toISOString().split("T")[0]
+    }.json`;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
+  };
+
+  const handleImportPrompts = (file) => {
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      try {
+        const importedPrompts = JSON.parse(e.target.result);
+
+        if (!Array.isArray(importedPrompts)) {
+          throw new Error("Invalid format: Expected array of prompts");
+        }
+
+        const validatedPrompts = importedPrompts.map((prompt) => ({
+          id: prompt.id || crypto.randomUUID(),
+          name: prompt.name || "Unnamed Prompt",
+          content: prompt.content || "",
+        }));
+
+        setPrompts(validatedPrompts);
+        alert("Prompts imported successfully!");
+      } catch (error) {
+        console.error("Import error:", error);
+        alert("Failed to import prompts: Invalid file format");
+      }
+    };
+    reader.readAsText(file);
   };
 
   const handleAddPrompt = async () => {
@@ -305,9 +356,39 @@ export default function PromptLibrary({
           </Box>
         </ModalBody>
         <ModalFooter>
-          <Button colorScheme="blue" mr={3} onClick={onClose}>
-            Close
-          </Button>
+          <HStack spacing={3}>
+            <Button
+              leftIcon={<DownloadIcon />}
+              onClick={handleExportPrompts}
+              variant="outline"
+              title="Export all prompts as JSON"
+            >
+              Export
+            </Button>
+            <Button
+              leftIcon={<PiUploadLight />}
+              onClick={() => fileInputRef.current.click()}
+              variant="outline"
+              title="Import prompts from JSON file"
+            >
+              Import
+            </Button>
+            <Input
+              type="file"
+              hidden
+              ref={fileInputRef}
+              onChange={(e) => {
+                if (e.target.files[0]) {
+                  handleImportPrompts(e.target.files[0]);
+                  e.target.value = null; // Reset input to allow re-uploading same file
+                }
+              }}
+              accept=".json"
+            />
+            <Button colorScheme="blue" onClick={onClose}>
+              Close
+            </Button>
+          </HStack>
         </ModalFooter>
       </ModalContent>
 

@@ -54,7 +54,8 @@ func (c *Config) routes() http.Handler {
 		mux.Handle("/*", http.StripPrefix("/", http.FileServer(http.FS(staticFilesSubDir))))
 	}
 
-	mux.Post("/api/chat", c.ChatResponse)
+	mux.Get("/api/prompts", c.GetSystemPrompts)
+	mux.Post("/api/chat", c.ChatResponse) 
 	mux.Get("/api/models", c.GetModels)
 	mux.Delete("/api/cancel", c.CancelRequest)
 

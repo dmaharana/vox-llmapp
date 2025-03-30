@@ -49,32 +49,51 @@ export default function PromptLibrary({
   const [editingPrompt, setEditingPrompt] = useState(null);
   const [editName, setEditName] = useState("");
   const [editContent, setEditContent] = useState("");
-  const [lastTimestamp, setLastTimestamp] = useState(Date.now());
-  const [sequence, setSequence] = useState(0);
+  const initialLoadComplete = useRef(false);
 
   useEffect(() => {
-    async function fetchPrompts() {
-      try {
-        const response = await fetch("/api/prompts");
-        if (!response.ok) throw new Error("Failed to fetch prompts");
-        const data = await response.json();
-        // set unique id for each prompt
-        const now = Date.now();
-        setLastTimestamp(now);
-        let suffix = now === lastTimestamp ? sequence + 1 : 0;
-        data.prompts.forEach((prompt) => {
-          suffix++;
-          const uniqueID = `${now}-${suffix}`;
-          prompt.id = uniqueID;
-        });
-
-        setPrompts(data.prompts || []);
-      } catch (error) {
-        console.error("Error fetching prompts:", error);
+    const savedPrompts = localStorage.getItem("prompts");
+    if (savedPrompts) {
+      const parsedPrompts = JSON.parse(savedPrompts);
+      if (parsedPrompts.length > 0) {
+        setPrompts(parsedPrompts);
+        return;
       }
     }
-    fetchPrompts();
+
+    console.log("No prompts found in localStorage, fetching from server...");
+
+    // Fetch default prompts from server if localStorage is empty or has empty array
+    fetch("/api/prompts")
+      .then((response) => {
+        if (!response.ok) throw new Error("Failed to fetch prompts");
+        return response.json();
+      })
+      .then((data) => {
+        const serverPrompts = data.prompts || [];
+        const promptsWithIds = serverPrompts.map((prompt) => ({
+          ...prompt,
+          id: prompt.id || crypto.randomUUID(),
+        }));
+        localStorage.setItem("prompts", JSON.stringify(promptsWithIds));
+        setPrompts(promptsWithIds);
+      })
+      .catch((error) => console.error("Prompt fetch error:", error));
   }, []);
+
+  // Mark initial load complete after first valid prompts load
+  useEffect(() => {
+    if (prompts.length > 0 && !initialLoadComplete.current) {
+      initialLoadComplete.current = true;
+    }
+  }, [prompts]);
+
+  // Save prompts to localStorage whenever they change after initial load
+  useEffect(() => {
+    if (initialLoadComplete.current) {
+      localStorage.setItem("prompts", JSON.stringify(prompts));
+    }
+  }, [prompts]);
 
   const handleDeletePrompt = (promptId) => {
     setPromptToDelete(promptId);
@@ -82,38 +101,21 @@ export default function PromptLibrary({
   };
 
   const confirmDelete = () => {
-    setPrompts((prevPrompts) =>
-      prevPrompts.filter((p) => (p.id === promptToDelete ? false : true))
-    );
+    setPrompts((prev) => prev.filter((p) => p.id !== promptToDelete));
     onDeleteDialogClose();
     setPromptToDelete(null);
   };
 
   const handleAddPrompt = async () => {
     if (newPromptName && newPromptContent) {
-      const now = Date.now();
-      const suffix = now === lastTimestamp ? sequence + 1 : 0;
-      const uniqueID = `${now}-${suffix}`;
-
       const newPrompt = {
-        id: uniqueID,
+        id: crypto.randomUUID(),
         name: newPromptName,
         content: newPromptContent,
       };
-      setPrompts([...prompts, newPrompt]);
+      setPrompts((prev) => [...prev, newPrompt]);
       setNewPromptName("");
       setNewPromptContent("");
-
-      // TODO: Uncomment when API endpoint is ready to store new prompts
-      // try {
-      //   await fetch("/api/prompts", {
-      //     method: "POST",
-      //     headers: { "Content-Type": "application/json" },
-      //     body: JSON.stringify(newPrompt),
-      //   });
-      // } catch (error) {
-      //   console.error("Error saving prompt:", error);
-      // }
     }
   };
 

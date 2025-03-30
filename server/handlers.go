@@ -19,7 +19,34 @@ const (
 	tokenLength    = 32
 	qToken         = "token"
 	cancelTokenKey = "cancelToken"
+	minQueryLength = 20 // Minimum length before we refine the query
+	
+	defaultPrompts = `{
+		"prompts": [
+			{
+				"name": "Default Assistant",
+				"content": "You are a helpful assistant. Answer as concisely as possible."
+			},
+			{
+				"name": "Code Expert", 
+				"content": "You are an expert programmer. Provide code examples and explanations."
+			},
+			{
+				"name": "Creative Writer",
+				"content": "You are a creative writer. Provide imaginative and detailed responses."
+			}
+		]
+	}`
 )
+
+// refineShortQuery enhances short user queries to get better responses
+func refineShortQuery(query string) string {
+	if len(query) >= minQueryLength {
+		return query
+	}
+	return fmt.Sprintf("Please provide a detailed response to: \"%s\". "+
+		"Expand on the topic with relevant information and examples.", query)
+}
 
 func (app *Config) ChatResponse(w http.ResponseWriter, r *http.Request) {
 	// request payload from client
@@ -31,7 +58,12 @@ func (app *Config) ChatResponse(w http.ResponseWriter, r *http.Request) {
 	}
 
 	log.Printf("Received model: %s", reqPayload.Model)
-	log.Printf("Received question: %s", reqPayload.Prompt)
+	log.Printf("Original question: %s", reqPayload.Prompt)
+	
+	// Refine short queries
+	reqPayload.Prompt = refineShortQuery(reqPayload.Prompt)
+	log.Printf("Processed question: %s", reqPayload.Prompt)
+	
 	log.Printf("Payload: %+v", reqPayload)
 
 	// responses := []string{}
@@ -228,6 +260,22 @@ func (app *Config) GetModels(w http.ResponseWriter, r *http.Request) {
 	jsonresp.Data = models
 
 	app.writeJSON(w, http.StatusOK, jsonresp)
+}
+
+func (app *Config) GetSystemPrompts(w http.ResponseWriter, r *http.Request) {
+	var prompts struct {
+		Prompts []struct {
+			Name    string `json:"name"`
+			Content string `json:"content"`
+		} `json:"prompts"`
+	}
+	
+	if err := json.Unmarshal([]byte(defaultPrompts), &prompts); err != nil {
+		app.errorJSON(w, err)
+		return
+	}
+	
+	app.writeJSON(w, http.StatusOK, prompts)
 }
 
 func createMessages(payload RequestPayload) []Message {

@@ -21,6 +21,7 @@ import StopGenerationButton from "./StopGenerationButton";
 import UploadChat from "./UploadChat";
 
 export default function ChatScreen() {
+  const [isLibraryOpen, setIsLibraryOpen] = useState(false);
   const [conversation, setConversation] = useState([]);
   const [query, setQuery] = useState("");
   const [model, setModel] = useState("");
@@ -351,7 +352,14 @@ export default function ChatScreen() {
 
   return (
     <Box>
-      <VStack h={"90vh"} bg={"gray.50"} py={4} px={2} borderRadius={"2rem"}>
+      <VStack 
+        h={"90vh"} 
+        bg={"gray.50"} 
+        py={4} 
+        px={2} 
+        borderRadius={"2rem"}
+        justifyContent="space-between"
+      >
         <Text
           fontFamily={"Gothic"}
           fontSize={"2.0rem"}
@@ -366,7 +374,13 @@ export default function ChatScreen() {
         >
           Vox
         </Text>
-        <VStack h={"100vh"} w={"100%"} bg={"blue.150"} overflowY={"auto"}>
+        <VStack 
+          h={"100%"} 
+          w={"100%"} 
+          bg={"blue.50"} 
+          overflowY={"auto"}
+          justifyContent={conversation.length > 0 ? "flex-start" : "center"}
+        >
           {conversation.length > 0 ? (
             conversation.map((m) => (
               <Box key={m.id} w={"100%"}>
@@ -395,12 +409,48 @@ export default function ChatScreen() {
               </Box>
             ))
           ) : (
-            <Box w={"100%"} bg={"purple.50"}>
-              <VStack h={"100vh"} w={"100%"} bg={"blue.150"} overflowY={"auto"}>
-                {initialAssistantMessage}
-
-                <Text fontSize={"lg"} color={"gray.600"} as={"i"}>
-                  Start a conversation...
+            <Box w={"100%"} textAlign="center" p={8}>
+              <VStack spacing={6}>
+                <Text fontSize="2xl" fontWeight="bold" color="gray.600">
+                  What would you like to know today?
+                </Text>
+                
+                <Box 
+                  bg="white" 
+                  p={4} 
+                  borderRadius="md" 
+                  boxShadow="md" 
+                  w="80%"
+                  borderWidth="1px"
+                  borderColor="blue.200"
+                  bgGradient="linear(to-b, blue.50, white)"
+                >
+                  <VStack spacing={4}>
+                    <Text fontSize="lg" fontWeight="bold" color="blue.600">
+                      Current settings:
+                    </Text>
+                    <HStack>
+                      <Text fontWeight="semibold" color="blue.700">Model:</Text>
+                      <Text color="blue.800">{model || "Not selected"}</Text>
+                    </HStack>
+                    <HStack>
+                      <Text fontWeight="semibold" color="blue.700">System Prompt:</Text>
+                      <Text noOfLines={2} color="blue.800">{systemPrompt}</Text>
+                    </HStack>
+                    
+                    <Button 
+                      colorScheme="blue" 
+                      variant="solid"
+                      onClick={() => setIsLibraryOpen(true)}
+                      _hover={{ bg: 'blue.600' }}
+                    >
+                      Choose System Prompt
+                    </Button>
+                  </VStack>
+                </Box>
+                
+                <Text fontSize="sm" color="gray.500" fontStyle="italic">
+                  Type your question below or select a system prompt to get started
                 </Text>
               </VStack>
             </Box>
@@ -445,6 +495,9 @@ export default function ChatScreen() {
               includeHistory={includeHistory}
               setIncludeHistory={setIncludeHistory}
               waitingResponse={waitingResponse}
+              isLibraryOpen={isLibraryOpen}
+              setIsLibraryOpen={setIsLibraryOpen}
+              onLibraryClose={() => setIsLibraryOpen(false)}
             />
             <ModelSelect model={model} setModel={setModel} />
             <Spacer />

@@ -14,9 +14,14 @@ import {
   ModalHeader,
   ModalOverlay,
   useDisclosure,
+  Menu,
+  MenuButton,
+  MenuList,
+  MenuItem,
 } from "@chakra-ui/react";
 import { SettingsIcon } from "@chakra-ui/icons";
 import IncludeHistorySwitch from "./IncludeHistorySwitch";
+import PromptLibrary from "./PromptLibrary";
 import { DEFAULT_MESSAGES } from "./Constants";
 function ChatSettings({
   systemPrompt,
@@ -24,36 +29,43 @@ function ChatSettings({
   includeHistory,
   setIncludeHistory,
   waitingResponse,
+  isLibraryOpen,
+  setIsLibraryOpen,
+  onLibraryClose,
 }) {
   function handleChange(e) {
     setSystemPrompt(e.target.value);
   }
 
-  const { isOpen, onOpen, onClose } = useDisclosure();
-  const [scrollBehavior, setScrollBehavior] = useState("inside");
-
+  const { isOpen: isSettingsOpen, onOpen: onSettingsOpen, onClose: onSettingsClose } = useDisclosure();
   const btnRef = useRef(null);
 
   return (
-    // <Box p={2} borderRadius={"md"} mb={2} align={"start"}>
     <>
-      <Tooltip label={DEFAULT_MESSAGES.editSettingMessage} fontSize={"xs"}>
-        <IconButton
+      <Menu>
+        <MenuButton
+          as={IconButton}
           icon={<SettingsIcon />}
           size="lg"
           variant="ghost"
           color="green.500"
           ref={btnRef}
           isDisabled={waitingResponse}
-          onClick={onOpen}
         />
-      </Tooltip>
+        <MenuList>
+          <MenuItem onClick={onSettingsOpen}>Settings</MenuItem>
+          <MenuItem onClick={() => {
+            onSettingsClose();
+            setIsLibraryOpen(true);
+          }}>Prompt Library</MenuItem>
+        </MenuList>
+      </Menu>
 
       <Modal
-        onClose={onClose}
+        onClose={onSettingsClose}
         finalFocusRef={btnRef}
-        isOpen={isOpen}
-        scrollBehavior={scrollBehavior}
+        isOpen={isSettingsOpen}
+        scrollBehavior="inside"
       >
         <ModalOverlay />
         <ModalContent>
@@ -66,6 +78,17 @@ function ChatSettings({
               value={systemPrompt}
               onChange={(e) => handleChange(e)}
             />
+            <Button
+              mt={2}
+              size="sm"
+              variant="outline"
+              onClick={() => {
+                onSettingsClose();
+                setIsLibraryOpen(true);
+              }}
+            >
+              Select from Library
+            </Button>
             <IncludeHistorySwitch
               includeHistory={includeHistory}
               setIncludeHistory={setIncludeHistory}
@@ -73,10 +96,17 @@ function ChatSettings({
             />
           </ModalBody>
           <ModalFooter>
-            <Button onClick={onClose}>Close</Button>
+            <Button onClick={onSettingsClose}>Close</Button>
           </ModalFooter>
         </ModalContent>
       </Modal>
+
+      <PromptLibrary
+        systemPrompt={systemPrompt}
+        setSystemPrompt={setSystemPrompt}
+        isOpen={isLibraryOpen}
+        onClose={onLibraryClose}
+      />
     </>
     // </Box>
   );

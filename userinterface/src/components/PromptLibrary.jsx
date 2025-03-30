@@ -49,10 +49,18 @@ export default function PromptLibrary({
     async function fetchPrompts() {
       try {
         const response = await fetch("/api/prompts");
+        if (!response.ok) throw new Error("Failed to fetch prompts");
         const data = await response.json();
         setPrompts(data.prompts || []);
       } catch (error) {
         console.error("Error fetching prompts:", error);
+        // TODO: Add toast notification
+        // toast({
+        //   title: "Error loading prompts",
+        //   status: "error",
+        //   duration: 5000,
+        //   isClosable: true,
+        // });
       }
     }
     fetchPrompts();
@@ -69,14 +77,23 @@ export default function PromptLibrary({
     setPromptToDelete(null);
   };
 
-  const handleAddPrompt = () => {
+  const handleAddPrompt = async () => {
     if (newPromptName && newPromptContent) {
-      setPrompts([
-        ...prompts,
-        { name: newPromptName, content: newPromptContent },
-      ]);
+      const newPrompt = { name: newPromptName, content: newPromptContent };
+      setPrompts([...prompts, newPrompt]);
       setNewPromptName("");
       setNewPromptContent("");
+      
+      // TODO: Uncomment when API endpoint is ready
+      // try {
+      //   await fetch("/api/prompts", {
+      //     method: "POST",
+      //     headers: { "Content-Type": "application/json" },
+      //     body: JSON.stringify(newPrompt),
+      //   });
+      // } catch (error) {
+      //   console.error("Error saving prompt:", error);
+      // }
     }
   };
 
@@ -94,12 +111,6 @@ export default function PromptLibrary({
                 <HStack justify="space-between">
                   <Text fontWeight="bold">{prompt.name}</Text>
                   <HStack>
-                    <IconButton
-                      icon={<DragHandleIcon />}
-                      size="sm"
-                      variant="ghost"
-                      aria-label="Reorder"
-                    />
                     <Button
                       size="sm"
                       onClick={() => {
@@ -144,6 +155,7 @@ export default function PromptLibrary({
               leftIcon={<AddIcon />}
               colorScheme="blue"
               onClick={handleAddPrompt}
+              isDisabled={!newPromptName || !newPromptContent}
             >
               Add Prompt
             </Button>

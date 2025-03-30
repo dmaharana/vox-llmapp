@@ -30,19 +30,15 @@ function ChatSettings({
   setIncludeHistory,
   waitingResponse,
   isLibraryOpen,
+  setIsLibraryOpen,
   onLibraryClose,
 }) {
   function handleChange(e) {
     setSystemPrompt(e.target.value);
   }
 
-  const { isOpen, onOpen, onClose } = useDisclosure();
+  const { isOpen: isSettingsOpen, onOpen: onSettingsOpen, onClose: onSettingsClose } = useDisclosure();
   const btnRef = useRef(null);
-
-  const onLibraryOpen = () => {
-    onLibraryClose();
-    onOpen();
-  };
 
   return (
     <>
@@ -57,15 +53,18 @@ function ChatSettings({
           isDisabled={waitingResponse}
         />
         <MenuList>
-          <MenuItem onClick={onOpen}>Settings</MenuItem>
-          <MenuItem onClick={onLibraryOpen}>Prompt Library</MenuItem>
+          <MenuItem onClick={onSettingsOpen}>Settings</MenuItem>
+          <MenuItem onClick={() => {
+            onSettingsClose();
+            setIsLibraryOpen(true);
+          }}>Prompt Library</MenuItem>
         </MenuList>
       </Menu>
 
       <Modal
-        onClose={onClose}
+        onClose={onSettingsClose}
         finalFocusRef={btnRef}
-        isOpen={isOpen}
+        isOpen={isSettingsOpen}
         scrollBehavior="inside"
       >
         <ModalOverlay />
@@ -84,8 +83,8 @@ function ChatSettings({
               size="sm"
               variant="outline"
               onClick={() => {
-                onLibraryOpen();
-                onClose();
+                onSettingsClose();
+                setIsLibraryOpen(true);
               }}
             >
               Select from Library
@@ -97,7 +96,7 @@ function ChatSettings({
             />
           </ModalBody>
           <ModalFooter>
-            <Button onClick={onClose}>Close</Button>
+            <Button onClick={onSettingsClose}>Close</Button>
           </ModalFooter>
         </ModalContent>
       </Modal>

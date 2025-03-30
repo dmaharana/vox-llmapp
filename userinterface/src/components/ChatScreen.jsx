@@ -496,6 +496,7 @@ export default function ChatScreen() {
               setIncludeHistory={setIncludeHistory}
               waitingResponse={waitingResponse}
               isLibraryOpen={isLibraryOpen}
+              setIsLibraryOpen={setIsLibraryOpen}
               onLibraryClose={() => setIsLibraryOpen(false)}
             />
             <ModelSelect model={model} setModel={setModel} />

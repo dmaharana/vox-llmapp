@@ -1,8 +1,6 @@
 import { useState, useEffect } from "react";
 import { Textarea } from "@chakra-ui/react";
 import {
-  InputGroup,
-  InputLeftElement,
   Modal,
   ModalOverlay,
   ModalContent,
@@ -14,8 +12,6 @@ import {
   VStack,
   HStack,
   Text,
-  Input,
-  IconButton,
   useDisclosure,
   Box,
   AlertDialog,
@@ -24,15 +20,12 @@ import {
   AlertDialogHeader,
   AlertDialogContent,
   AlertDialogOverlay,
+  IconButton,
 } from "@chakra-ui/react";
-import {
-  AddIcon,
-  SearchIcon,
-  EditIcon,
-  DeleteIcon,
-  DownloadIcon,
-} from "@chakra-ui/icons";
+import { EditIcon, DeleteIcon } from "@chakra-ui/icons";
 import { PiUploadLight } from "react-icons/pi";
+import { PromptSearch } from "./PromptLibrary/PromptSearch";
+import { ImportExportButtons } from "./PromptLibrary/ImportExportButtons";
 
 import { useRef } from "react";
 
@@ -184,29 +177,12 @@ export default function PromptLibrary({
         <ModalCloseButton />
         <ModalBody>
           <Box maxH="60vh" overflowY="auto" pr={2}>
-            <HStack mb={4} spacing={3}>
-              <InputGroup flex="1">
-                <InputLeftElement pointerEvents="none">
-                  <SearchIcon color="gray.500" />
-                </InputLeftElement>
-                <Input
-                  placeholder="Search prompts..."
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                  pl="3rem"
-                />
-              </InputGroup>
-
-              <Button
-                leftIcon={<AddIcon />}
-                colorScheme="blue"
-                size="sm"
-                onClick={() => setShowAddPrompt(!showAddPrompt)}
-                title={showAddPrompt ? "Close" : "Add new prompt"}
-              >
-                {showAddPrompt ? "Close" : "New"}
-              </Button>
-            </HStack>
+            <PromptSearch
+              searchQuery={searchQuery}
+              setSearchQuery={setSearchQuery}
+              showAddPrompt={showAddPrompt}
+              setShowAddPrompt={setShowAddPrompt}
+            />
 
             {showAddPrompt ? (
               <Box pb={4}>
@@ -356,39 +332,14 @@ export default function PromptLibrary({
           </Box>
         </ModalBody>
         <ModalFooter>
-          <HStack spacing={3}>
-            <Button
-              leftIcon={<DownloadIcon />}
-              onClick={handleExportPrompts}
-              variant="outline"
-              title="Export all prompts as JSON"
-            >
-              Export
-            </Button>
-            <Button
-              leftIcon={<PiUploadLight />}
-              onClick={() => fileInputRef.current.click()}
-              variant="outline"
-              title="Import prompts from JSON file"
-            >
-              Import
-            </Button>
-            <Input
-              type="file"
-              hidden
-              ref={fileInputRef}
-              onChange={(e) => {
-                if (e.target.files[0]) {
-                  handleImportPrompts(e.target.files[0]);
-                  e.target.value = null; // Reset input to allow re-uploading same file
-                }
-              }}
-              accept=".json"
-            />
-            <Button colorScheme="blue" onClick={onClose}>
-              Close
-            </Button>
-          </HStack>
+          <ImportExportButtons
+            handleExportPrompts={handleExportPrompts}
+            handleImportPrompts={handleImportPrompts}
+            fileInputRef={fileInputRef}
+          />
+          <Button colorScheme="blue" onClick={onClose}>
+            Close
+          </Button>
         </ModalFooter>
       </ModalContent>
 

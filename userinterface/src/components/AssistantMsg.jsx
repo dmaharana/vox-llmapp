@@ -80,7 +80,7 @@ export function AssistantMsg({
           >
             {msg.length <= maxContentLength || isMsgExpanded
               ? msg
-              : msg.substring(0, maxContentLength + 3) + "..."}
+              : msg.substring(0, maxContentLength) + "..."}
           </ReactMarkdown>
 
           {String(msg).length > maxContentLength && (

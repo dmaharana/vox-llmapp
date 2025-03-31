@@ -12,6 +12,8 @@ import {
 import {
   CopyIcon,
   CheckIcon,
+  ChevronDownIcon,
+  ChevronUpIcon,
   RepeatIcon,
   RepeatClockIcon,
   ViewOffIcon,
@@ -43,6 +45,8 @@ export function AssistantMsg({
     (msg) => msg.role === DEFAULT_MESSAGES.assistantRole
   )?.length;
   const [isExpanded, setIsExpanded] = useState(false);
+  const [isMsgExpanded, setIsMsgExpanded] = useState(waitingResponse);
+  const maxContentLength = 200;
 
   return (
     <Box bg={"gray.50"} p={2} borderRadius={"md"} mb={2} w={"100%"}>
@@ -74,8 +78,29 @@ export function AssistantMsg({
               borderRadius: "10px",
             }}
           >
-            {msg}
+            {msg.length <= maxContentLength || isMsgExpanded
+              ? msg
+              : msg.substring(0, maxContentLength) + "..."}
           </ReactMarkdown>
+
+          {String(msg).length > maxContentLength && (
+            <Button
+              size="xs"
+              colorScheme="blue"
+              variant="ghost"
+              onClick={() => setIsMsgExpanded(!isMsgExpanded)}
+            >
+              {isMsgExpanded ? (
+                <Tooltip label={DEFAULT_MESSAGES.collapseMessage}>
+                  <ChevronUpIcon />
+                </Tooltip>
+              ) : (
+                <Tooltip label={DEFAULT_MESSAGES.expandMessage}>
+                  <ChevronDownIcon />
+                </Tooltip>
+              )}
+            </Button>
+          )}
         </Box>
       </HStack>
       <HStack spacing={1} justifyContent={"flex-end"}>

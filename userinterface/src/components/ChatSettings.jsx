@@ -26,6 +26,8 @@ import { DEFAULT_MESSAGES } from "./Constants";
 function ChatSettings({
   systemPrompt,
   setSystemPrompt,
+  prompts,
+  setPrompts,
   includeHistory,
   setIncludeHistory,
   waitingResponse,
@@ -37,7 +39,11 @@ function ChatSettings({
     setSystemPrompt(e.target.value);
   }
 
-  const { isOpen: isSettingsOpen, onOpen: onSettingsOpen, onClose: onSettingsClose } = useDisclosure();
+  const {
+    isOpen: isSettingsOpen,
+    onOpen: onSettingsOpen,
+    onClose: onSettingsClose,
+  } = useDisclosure();
   const btnRef = useRef(null);
 
   return (
@@ -54,10 +60,14 @@ function ChatSettings({
         />
         <MenuList>
           <MenuItem onClick={onSettingsOpen}>Settings</MenuItem>
-          <MenuItem onClick={() => {
-            onSettingsClose();
-            setIsLibraryOpen(true);
-          }}>Prompt Library</MenuItem>
+          <MenuItem
+            onClick={() => {
+              onSettingsClose();
+              setIsLibraryOpen(true);
+            }}
+          >
+            Prompt Library
+          </MenuItem>
         </MenuList>
       </Menu>
 
@@ -104,11 +114,12 @@ function ChatSettings({
       <PromptLibrary
         systemPrompt={systemPrompt}
         setSystemPrompt={setSystemPrompt}
+        prompts={prompts}
+        setPrompts={setPrompts}
         isOpen={isLibraryOpen}
         onClose={onLibraryClose}
       />
     </>
-    // </Box>
   );
 }
 

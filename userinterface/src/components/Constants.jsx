@@ -30,6 +30,9 @@ export const DEFAULT_MESSAGES = {
   collapseMessage: "Show less",
   deleteMessage: "Delete conversation",
 
+  exportPrompts: "Export all prompts as JSON",
+  importPrompts: "Import prompts from JSON file",
+
   assistantRole: "assistant",
   userRole: "user",
 };

@@ -6,10 +6,20 @@ import {
   Input,
   Button,
   IconButton,
+  Tooltip,
 } from "@chakra-ui/react";
-import { EditIcon, DeleteIcon, CheckIcon } from "@chakra-ui/icons";
-import { useState } from "react";
+import {
+  EditIcon,
+  DeleteIcon,
+  CheckIcon,
+  ChevronUpIcon,
+  ChevronDownIcon,
+} from "@chakra-ui/icons";
+import { useState, useRef } from "react";
 import PropTypes from "prop-types";
+import ReactMarkdown from "markdown-to-jsx";
+import ChakraUIRenderer from "chakra-ui-markdown-renderer";
+import { DEFAULT_MESSAGES } from "../Constants";
 
 export function PromptItem({
   prompt,
@@ -22,6 +32,8 @@ export function PromptItem({
 }) {
   const [editName, setEditName] = useState(prompt.name);
   const [editContent, setEditContent] = useState(prompt.content);
+  const [isExpanded, setIsExpanded] = useState(false);
+  const maxContentLength = 100;
 
   return (
     <Box p={2} borderWidth="1px" borderRadius="md">
@@ -93,20 +105,40 @@ export function PromptItem({
           resize="vertical"
         />
       ) : (
-        <Text fontSize="sm" mt={2}>
-          {!searchQuery
-            ? String(prompt.content)
-            : String(prompt.content)
-                .split(
-                  new RegExp(
-                    `(${searchQuery.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")})`,
-                    "gi"
-                  )
-                )
-                .map((part, i) =>
-                  i % 2 === 1 ? <mark key={i}>{part}</mark> : part
-                )}
-        </Text>
+        <Box mt={2}>
+          <ReactMarkdown
+            components={ChakraUIRenderer()}
+            skiphtml="true"
+            align="left"
+            sx={{
+              p: "20px",
+              borderRadius: "10px",
+            }}
+          >
+            {prompt.content.length <= maxContentLength || isExpanded
+              ? prompt.content
+              : prompt.content.substring(0, maxContentLength + 3) + "..."}
+          </ReactMarkdown>
+
+          {String(prompt.content).length > maxContentLength && (
+            <Button
+              size="xs"
+              colorScheme="blue"
+              variant="ghost"
+              onClick={() => setIsExpanded(!isExpanded)}
+            >
+              {isExpanded ? (
+                <Tooltip label={DEFAULT_MESSAGES.collapseMessage}>
+                  <ChevronUpIcon boxSize="1.5rem" color="green" />
+                </Tooltip>
+              ) : (
+                <Tooltip label={DEFAULT_MESSAGES.expandMessage}>
+                  <ChevronDownIcon boxSize="1.5rem" color="green" />
+                </Tooltip>
+              )}
+            </Button>
+          )}
+        </Box>
       )}
     </Box>
   );

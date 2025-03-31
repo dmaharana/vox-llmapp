@@ -26,6 +26,7 @@ import { AddIcon, EditIcon, DeleteIcon } from "@chakra-ui/icons";
 import { PromptSearch } from "./PromptLibrary/PromptSearch";
 import { ImportExportButtons } from "./PromptLibrary/ImportExportButtons";
 import { PromptItem } from "./PromptLibrary/PromptItem";
+import generateUUID from "./scripts/utils";
 
 export default function PromptLibrary({
   systemPrompt,
@@ -77,7 +78,7 @@ export default function PromptLibrary({
         const serverPrompts = data.prompts || [];
         const promptsWithIds = serverPrompts.map((prompt) => ({
           ...prompt,
-          id: prompt.id || crypto.randomUUID(),
+          id: prompt.id || generateUUID(),
           name: String(prompt.name || "Unnamed Prompt"),
           content: String(prompt.content || ""),
         }));

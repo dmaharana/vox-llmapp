@@ -1,5 +1,5 @@
 // Fallback for browsers without crypto.randomUUID
-function generateUUID() {
+export default function generateUUID() {
   if (
     typeof crypto !== "undefined" &&
     typeof crypto.randomUUID === "function"

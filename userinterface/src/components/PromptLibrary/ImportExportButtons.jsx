@@ -1,30 +1,31 @@
-import { Button, HStack, Input } from "@chakra-ui/react";
+import { Button, HStack, IconButton, Input, Tooltip } from "@chakra-ui/react";
 import { DownloadIcon } from "@chakra-ui/icons";
 import { PiUploadLight } from "react-icons/pi";
+import { DEFAULT_MESSAGES } from "../Constants";
 
 export function ImportExportButtons({
   handleExportPrompts,
   handleImportPrompts,
-  fileInputRef
+  fileInputRef,
 }) {
   return (
     <HStack spacing={3}>
-      <Button
-        leftIcon={<DownloadIcon />}
-        onClick={handleExportPrompts}
-        variant="outline"
-        title="Export all prompts as JSON"
-      >
-        Export
-      </Button>
-      <Button
-        leftIcon={<PiUploadLight />}
-        onClick={() => fileInputRef.current.click()}
-        variant="outline"
-        title="Import prompts from JSON file"
-      >
-        Import
-      </Button>
+      <Tooltip label={DEFAULT_MESSAGES.exportPrompts}>
+        <IconButton
+          icon={<DownloadIcon />}
+          onClick={handleExportPrompts}
+          variant="outline"
+        />
+      </Tooltip>
+
+      <Tooltip label={DEFAULT_MESSAGES.importPrompts}>
+        <IconButton
+          icon={<PiUploadLight />}
+          onClick={() => fileInputRef.current.click()}
+          variant="outline"
+        />
+      </Tooltip>
+
       <Input
         type="file"
         hidden

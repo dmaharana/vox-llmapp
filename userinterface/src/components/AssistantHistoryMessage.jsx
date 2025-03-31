@@ -1,3 +1,4 @@
+import { useState } from "react";
 import {
   Box,
   Button,
@@ -7,13 +8,21 @@ import {
   Tooltip,
   useClipboard,
 } from "@chakra-ui/react";
-import { CopyIcon, CheckIcon } from "@chakra-ui/icons";
+import {
+  CopyIcon,
+  CheckIcon,
+  ChevronDownIcon,
+  ChevronUpIcon,
+} from "@chakra-ui/icons";
 import ChakraUIRenderer from "chakra-ui-markdown-renderer";
 import ReactMarkdown from "markdown-to-jsx";
 import { DEFAULT_MESSAGES } from "./Constants";
 
 function AssistantHistoryMessage({ msg, count, index }) {
   const { hasCopied, onCopy } = useClipboard(msg.content);
+  const [isMsgExpanded, setIsMsgExpanded] = useState(false);
+  const standardTextLen = 200;
+
   return (
     <>
       <VStack spacing={1} align={"start"}>
@@ -37,8 +46,29 @@ function AssistantHistoryMessage({ msg, count, index }) {
             borderRadius: "10px",
           }}
         >
-          {msg.content}
+          {msg.content.length >= standardTextLen && !isMsgExpanded
+            ? msg.content.substring(0, standardTextLen + 3) + "..."
+            : msg.content}
         </ReactMarkdown>
+
+        {msg.content.length >= standardTextLen && (
+          <Button
+            size="xs"
+            colorScheme="blue"
+            variant="ghost"
+            onClick={() => setIsMsgExpanded(!isMsgExpanded)}
+          >
+            {isMsgExpanded ? (
+              <Tooltip label={DEFAULT_MESSAGES.collapseMessage}>
+                <ChevronUpIcon />
+              </Tooltip>
+            ) : (
+              <Tooltip label={DEFAULT_MESSAGES.expandMessage}>
+                <ChevronDownIcon />
+              </Tooltip>
+            )}
+          </Button>
+        )}
       </VStack>
       <HStack spacing={1} justifyContent={"flex-end"}>
         <Tooltip label={DEFAULT_MESSAGES.resTimeMessage}>

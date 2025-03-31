@@ -154,7 +154,7 @@ export default function ChatScreen() {
     if (rsp?.data?.error === false) {
       setCancelToken(null);
       setWaitingResponse(false);
-      setCurrentMsgId(0);
+      setCurrentMsgId(-1);
     }
   };
 
@@ -261,7 +261,7 @@ export default function ChatScreen() {
         );
 
         setWaitingResponse(false);
-        setCurrentMsgId(0);
+        setCurrentMsgId(-1);
         return;
       }
 
@@ -318,7 +318,7 @@ export default function ChatScreen() {
       // if assistant message is empty, set the assistant message to "Something went wrong. Please try again."
 
       const currentConv = conversation.find((m) => m.id === message.id);
-      console.log("msg id", message.id, "currentConv", currentConv);
+      // console.log("msg id", message.id, "currentConv", currentConv);
 
       if (currentConv?.assistant === "") {
         setConversation((p) =>
@@ -336,7 +336,7 @@ export default function ChatScreen() {
       }
 
       // reset current message id
-      setCurrentMsgId(0);
+      setCurrentMsgId(-1);
     }
   };
 

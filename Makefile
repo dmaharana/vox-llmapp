@@ -10,6 +10,7 @@ UI_DIST_DIR := userinterface/dist
 SERVER_DIST_DIR := server/dist
 LINUX_BIN := llmapp
 WINDOWS_BIN := llmapp.exe
+BUILD_DIR := build
 
 .PHONY: all buildui buildserver build createarchive release clean b c s u z r
 
@@ -44,8 +45,8 @@ buildui:
 buildserver:
 	@echo "Building server..."
 	cd $(SERVER_SUBDIR) && go mod tidy
-	cd $(SERVER_SUBDIR) && GOOS=linux GOARCH=amd64 go build -tags netgo -ldflags '-s -w' -o $(LINUX_BIN)
-	cd $(SERVER_SUBDIR) && GOOS=windows GOARCH=amd64 go build -tags netgo -ldflags '-s -w' -o $(WINDOWS_BIN)
+	cd $(SERVER_SUBDIR) && GOOS=linux GOARCH=amd64 go build -tags netgo -ldflags '-s -w' -o $(BUILD_DIR)/$(LINUX_BIN) cmd/llmapp/main.go
+	cd $(SERVER_SUBDIR) && GOOS=windows GOARCH=amd64 go build -tags netgo -ldflags '-s -w' -o $(BUILD_DIR)/$(WINDOWS_BIN) cmd/llmapp/main.go
 	@echo "Building server Done!"
 
 build: buildui buildserver

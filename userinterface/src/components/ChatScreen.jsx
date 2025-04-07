@@ -1,8 +1,7 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import {
   Box,
   Button,
-  Card,
   HStack,
   Icon,
   IconButton,
@@ -12,7 +11,6 @@ import {
   Stack,
   Text,
   Textarea,
-  Tooltip,
   VStack,
 } from "@chakra-ui/react";
 import { MdModelTraining, MdSystemUpdateAlt } from "react-icons/md";
@@ -54,6 +52,18 @@ export default function ChatScreen() {
   const [waitingResponse, setWaitingResponse] = useState(false);
   const [currentMsgId, setCurrentMsgId] = useState(1);
   const [cancelToken, setCancelToken] = useState();
+
+  useEffect(() => {
+    setConversation((prev) =>
+      Array.isArray(prev)
+        ? prev.map((msg) => ({
+            ...msg,
+            model,
+            systemPrompt,
+          }))
+        : prev
+    );
+  }, [model, systemPrompt]);
 
   // handle resubmit for a message with given id
   const handleResubmit = async (id) => {
@@ -383,7 +393,20 @@ export default function ChatScreen() {
           borderRadius={"2rem"}
           textShadow={"2px 2px 4px #000000"}
         >
-          Vox
+          {DEFAULT_MESSAGES.APP_TITLE}
+          {(() => {
+            if (systemPrompt !== DEFAULT_MESSAGES.SYSTEM_PROMPT) {
+              const matchedPrompt = prompts?.find(
+                (p) => p.content === systemPrompt
+              );
+              if (matchedPrompt) {
+                return ` (${matchedPrompt.name})`;
+              } else {
+                return ` (Custom Prompt)`;
+              }
+            }
+            return "";
+          })()}
         </Text>
         <VStack
           flex="1"
@@ -416,6 +439,7 @@ export default function ChatScreen() {
                     currentMsgId={currentMsgId}
                     defaultMsg={initialAssistantMessage}
                     chatHistory={convHistory}
+                    systemPrompt={systemPrompt}
                   />
                 )}
               </Box>

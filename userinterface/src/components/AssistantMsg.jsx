@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import {
   Avatar,
   Box,
@@ -22,8 +22,30 @@ import ReactMarkdown from "markdown-to-jsx";
 import ChakraUIRenderer from "chakra-ui-markdown-renderer";
 import { DEFAULT_MESSAGES } from "./Constants";
 
-import avatarImage from "../assets/assistant.png"; // Update the path to point to your avatar image
+import avatarImage from "../assets/assistant.png"; // Default avatar
+import avatarImage1 from "../assets/assistant1.png";
+import avatarImage2 from "../assets/assistant2.png";
+import avatarImage3 from "../assets/assistant3.png";
+import avatarImage4 from "../assets/assistant4.png";
+import avatarImage5 from "../assets/assistant5.png";
+import avatarImage6 from "../assets/assistant6.png";
+
 import AssistantHistory from "./AssistantHistory";
+
+const avatarImages = [
+  avatarImage,
+  avatarImage1,
+  avatarImage2,
+  avatarImage3,
+  avatarImage4,
+  avatarImage5,
+  avatarImage6,
+];
+
+const getRandomAvatar = () => {
+  const randomIndex = Math.floor(Math.random() * avatarImages.length);
+  return avatarImages[randomIndex];
+};
 
 export function AssistantMsg({
   msg,
@@ -35,6 +57,7 @@ export function AssistantMsg({
   currentMsgId,
   defaultMsg,
   chatHistory,
+  systemPrompt,
 }) {
   const { hasCopied, onCopy } = useClipboard(msg);
 
@@ -47,6 +70,11 @@ export function AssistantMsg({
   const [isExpanded, setIsExpanded] = useState(false);
   const [isMsgExpanded, setIsMsgExpanded] = useState(waitingResponse);
   const maxContentLength = 200;
+  const [currentAvatar, setCurrentAvatar] = useState(getRandomAvatar());
+
+  useEffect(() => {
+    setCurrentAvatar(getRandomAvatar());
+  }, [name, systemPrompt]);
 
   return (
     <Box bg={"gray.50"} p={2} borderRadius={"md"} mb={2} w={"100%"}>
@@ -54,7 +82,7 @@ export function AssistantMsg({
         <Avatar
           size={"sm"}
           name="Assistant"
-          src={avatarImage}
+          src={currentAvatar}
           mb={2}
           mr={3}
           bg={"red"}

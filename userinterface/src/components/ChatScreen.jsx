@@ -49,6 +49,50 @@ export default function ChatScreen() {
   const prompts = useSelector((state) => state.prompt.prompts);
   const systemPrompt = useSelector((state) => state.prompt.systemPrompt);
 
+  // Load prompts from localStorage on mount
+  useEffect(() => {
+    const savedPrompts = localStorage.getItem("voxPrompts");
+    if (savedPrompts) {
+      try {
+        const parsed = JSON.parse(savedPrompts);
+        dispatch(setPrompts(parsed));
+      } catch (e) {
+        console.error("Failed to parse saved prompts", e);
+      }
+    }
+
+    const savedSystemPrompt = localStorage.getItem("voxSystemPrompt");
+    if (savedSystemPrompt) {
+      try {
+        const parsedPrompt = JSON.parse(savedSystemPrompt);
+        if (parsedPrompt && parsedPrompt.trim() !== "") {
+          dispatch(setSystemPrompt(parsedPrompt));
+        } else {
+          dispatch(setSystemPrompt(DEFAULT_MESSAGES.SYSTEM_PROMPT));
+        }
+      } catch (e) {
+        console.error("Failed to parse saved system prompt", e);
+        dispatch(setSystemPrompt(DEFAULT_MESSAGES.SYSTEM_PROMPT));
+      }
+    } else {
+      dispatch(setSystemPrompt(DEFAULT_MESSAGES.SYSTEM_PROMPT));
+    }
+  }, [dispatch]);
+
+  // Save prompts to localStorage whenever prompts change
+  useEffect(() => {
+    if (prompts && prompts.length > 0) {
+      localStorage.setItem("voxPrompts", JSON.stringify(prompts));
+    }
+  }, [prompts]);
+
+  // Save systemPrompt to localStorage whenever it changes
+  useEffect(() => {
+    if (systemPrompt) {
+      localStorage.setItem("voxSystemPrompt", JSON.stringify(systemPrompt));
+    }
+  }, [systemPrompt]);
+
   const [isLibraryOpen, setIsLibraryOpen] = useState(false);
   const [conversation, setConversation] = useState([]);
   const [query, setQuery] = useState("");

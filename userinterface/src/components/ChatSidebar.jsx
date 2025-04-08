@@ -4,8 +4,13 @@ import {
   HStack,
   IconButton,
   useColorModeValue,
+  Input,
+  InputGroup,
+  InputLeftElement,
 } from "@chakra-ui/react";
-import { AddIcon } from "@chakra-ui/icons";
+import { AddIcon, SearchIcon } from "@chakra-ui/icons";
+import { useSelector, useDispatch } from "react-redux";
+import { setChatSearchQuery } from "../store/chatSlice";
 
 export default function ChatSidebar({
   isSidebarOpen,
@@ -16,6 +21,21 @@ export default function ChatSidebar({
   handleDeleteChat,
 }) {
   const sidebarBg = useColorModeValue("gray.200", "gray.700");
+  const dispatch = useDispatch();
+  const chatSearchQuery = useSelector((state) => state.chat.chatSearchQuery);
+
+  const filteredChats = allChats.filter((chat) => {
+    const query = chatSearchQuery.toLowerCase();
+    return (
+      (chat.title && chat.title.toLowerCase().includes(query)) ||
+      (chat.conversation &&
+        chat.conversation.some(
+          (msg) =>
+            (msg.user && msg.user.toLowerCase().includes(query)) ||
+            (msg.assistant && msg.assistant.toLowerCase().includes(query))
+        ))
+    );
+  });
 
   return (
     <VStack
@@ -29,6 +49,16 @@ export default function ChatSidebar({
       m={2}
       boxShadow="md"
     >
+      <InputGroup size="sm">
+        <InputLeftElement pointerEvents="none">
+          <SearchIcon color="gray.400" />
+        </InputLeftElement>
+        <Input
+          placeholder="Search chats..."
+          value={chatSearchQuery}
+          onChange={(e) => dispatch(setChatSearchQuery(e.target.value))}
+        />
+      </InputGroup>
       <Button
         colorScheme="blue"
         size="sm"
@@ -38,7 +68,7 @@ export default function ChatSidebar({
       >
         New Chat
       </Button>
-      {allChats.map((chat) => (
+      {filteredChats.map((chat) => (
         <HStack key={chat.id} w="100%" spacing={1}>
           <Button
             flex="1"

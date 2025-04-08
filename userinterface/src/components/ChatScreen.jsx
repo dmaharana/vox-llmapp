@@ -12,6 +12,8 @@ import {
   Text,
   Textarea,
   VStack,
+  useColorMode,
+  useColorModeValue,
 } from "@chakra-ui/react";
 import { MdModelTraining, MdSystemUpdateAlt } from "react-icons/md";
 import { IoMdSend } from "react-icons/io";
@@ -25,7 +27,7 @@ import { DEFAULT_MESSAGES } from "./Constants";
 import ClearChat from "./ClearChat";
 import StopGenerationButton from "./StopGenerationButton";
 import UploadChat from "./UploadChat";
-import { EditIcon } from "@chakra-ui/icons";
+import { EditIcon, MoonIcon, SunIcon } from "@chakra-ui/icons";
 
 export default function ChatScreen() {
   const [isLibraryOpen, setIsLibraryOpen] = useState(false);
@@ -33,7 +35,6 @@ export default function ChatScreen() {
   const [query, setQuery] = useState("");
   const [model, setModel] = useState("");
   const [systemPrompt, setSystemPrompt] = useState(
-    // Removed duplicate state definition
     DEFAULT_MESSAGES.SYSTEM_PROMPT
   );
   const [prompts, setPrompts] = useState([]);
@@ -43,8 +44,6 @@ export default function ChatScreen() {
   const initialAssistantMessage = (
     <Button
       isLoading
-      // colorScheme="orange"
-      // loadingText="Thinking..."
       spinner={<BeatLoader size={8} color="red" />}
       variant={"ghost"}
     />
@@ -52,6 +51,12 @@ export default function ChatScreen() {
   const [waitingResponse, setWaitingResponse] = useState(false);
   const [currentMsgId, setCurrentMsgId] = useState(1);
   const [cancelToken, setCancelToken] = useState();
+
+  const { colorMode, toggleColorMode } = useColorMode();
+  const bgMain = useColorModeValue("gray.50", "gray.700");
+  // const bgMain = useColorModeValue("gray.50", "gray.800");
+  const bgChat = useColorModeValue("blue.50", "gray.700");
+  const bgInput = useColorModeValue("green.50", "gray.700");
 
   useEffect(() => {
     setConversation((prev) =>
@@ -375,44 +380,59 @@ export default function ChatScreen() {
     <Box>
       <VStack
         h={"90vh"}
-        bg={"gray.50"}
+        bg={bgMain}
         py={4}
         px={2}
         borderRadius={"2rem"}
         justifyContent="space-between"
       >
-        <Text
-          fontFamily={"Gothic"}
-          fontSize={"2.0rem"}
-          fontWeight={"bold"}
-          textAlign={"center"}
-          color={"#000000"}
-          bg={"#FFD7BE"}
-          w={"100%"}
+        <HStack
+          w="100%"
           p={2}
-          borderRadius={"2rem"}
-          textShadow={"2px 2px 4px #000000"}
+          borderRadius="2rem"
+          bg="#FFD7BE"
+          justifyContent="space-between"
+          alignItems="center"
         >
-          {DEFAULT_MESSAGES.APP_TITLE}
-          {(() => {
-            if (systemPrompt !== DEFAULT_MESSAGES.SYSTEM_PROMPT) {
-              const matchedPrompt = prompts?.find(
-                (p) => p.content === systemPrompt
-              );
-              if (matchedPrompt) {
-                return ` (${matchedPrompt.name})`;
-              } else {
-                return ` (Custom Prompt)`;
+          <Text
+            fontFamily="Gothic"
+            fontSize="2.0rem"
+            fontWeight="bold"
+            textAlign="center"
+            color="#000000"
+            flex="1"
+            textShadow="2px 2px 4px #000000"
+          >
+            {DEFAULT_MESSAGES.APP_TITLE}
+            {(() => {
+              if (systemPrompt !== DEFAULT_MESSAGES.SYSTEM_PROMPT) {
+                const matchedPrompt = prompts?.find(
+                  (p) => p.content === systemPrompt
+                );
+                if (matchedPrompt) {
+                  return ` (${matchedPrompt.name})`;
+                } else {
+                  return ` (Custom Prompt)`;
+                }
               }
-            }
-            return "";
-          })()}
-        </Text>
+              return "";
+            })()}
+          </Text>
+
+          <IconButton
+            aria-label="Toggle dark mode"
+            icon={colorMode === "light" ? <MoonIcon /> : <SunIcon />}
+            onClick={toggleColorMode}
+            variant="ghost"
+            size="lg"
+            color="black"
+          />
+        </HStack>
         <VStack
           flex="1"
           h="100%"
           w={"100%"}
-          bg={"blue.50"}
+          bg={bgChat}
           overflowY={"auto"}
           justifyContent={conversation.length > 0 ? "flex-start" : "center"}
         >
@@ -571,11 +591,11 @@ export default function ChatScreen() {
           )}
         </VStack>
 
-        <Box w={"100%"} bg={"green.50"} mt="auto">
-          <HStack bg={"green.50"}>
+        <Box w={"100%"} bg={bgInput} mt="auto">
+          <HStack bg={bgInput}>
             <Textarea
               isDisabled={waitingResponse}
-              placeholder="Press Enter to send | Shift+Enter for new line"
+              placeholder={DEFAULT_MESSAGES.chatTextBoxDefaultMessage}
               value={query}
               onChange={(e) => setQuery(e.target.value)}
               onKeyDown={(e) => handleKeyPress(e)}

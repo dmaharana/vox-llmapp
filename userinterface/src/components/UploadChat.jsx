@@ -1,16 +1,8 @@
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import {
   IconButton,
   Input,
-  Popover,
-  PopoverBody,
-  PopoverContent,
-  PopoverTrigger,
-  PopoverCloseButton,
-  PopoverHeader,
-  HStack,
   Tooltip,
-  useDisclosure,
 } from "@chakra-ui/react";
 import { PiUploadLight } from "react-icons/pi";
 import ShowAlert from "./ShowAlert";
@@ -22,17 +14,25 @@ function UploadChat({
   setCurrentMsgId,
   setConvHistory,
 }) {
-  const { isOpen, onToggle, onClose } = useDisclosure();
   const [convCount, setConvCount] = useState(-1);
   const [loadError, setLoadError] = useState(false);
-  const [file, setFile] = useState("");
 
-  // onclose reset all states
+  const fileInputRef = useRef();
+  const timerRef = useRef();
+
   function resetStates() {
     setConvCount(-1);
     setLoadError(false);
-    setFile("");
   }
+
+  useEffect(() => {
+    if (convCount !== -1 || loadError) {
+      timerRef.current = setTimeout(() => {
+        resetStates();
+      }, 3000);
+    }
+    return () => clearTimeout(timerRef.current);
+  }, [convCount, loadError]);
 
   function handleUpload(file) {
     const fileReader = new FileReader();
@@ -40,20 +40,15 @@ function UploadChat({
     fileReader.onload = () => {
       try {
         const voxData = JSON.parse(fileReader.result);
-        // if there are no conversations, show an alert
-        // console.log(voxData);
         if (
           voxData?.conversation?.length > 0 &&
           voxData.conversation[0]?.user
         ) {
-          // console.log(voxData.conversation[0].user);
           setConversation(voxData?.conversation);
           setConvHistory(voxData?.history);
-          // setCurrentMsgId to total number of messages+1
           setCurrentMsgId(voxData.conversation.length + 1);
           setConvCount(voxData.conversation.length);
         } else {
-          // console.log("no conversations");
           setConvCount(0);
         }
       } catch (error) {
@@ -61,45 +56,32 @@ function UploadChat({
         setLoadError(true);
       }
     };
-    onClose();
   }
 
   return (
-    <Popover isOpen={isOpen} onClose={onClose} placement="left">
-      <PopoverTrigger>
-        <Tooltip label="Upload Chat" hasArrow placement="right">
-          <IconButton
-            icon={<PiUploadLight />}
-            size="lg"
-            variant="ghost"
-            color="green.500"
-            isDisabled={waitingResponse}
-            onClick={onToggle}
-          ></IconButton>
-        </Tooltip>
-      </PopoverTrigger>
-      <PopoverContent
-        w="220px"
-        bg={"gray.50"}
-        borderRadius={"md"}
-        boxShadow="green 0px 0px 1px"
-        borderColor="green"
-        borderWidth={2}
-      >
-        <PopoverCloseButton />
-        <PopoverHeader>Upload Conversation</PopoverHeader>
-        <PopoverBody>
-          <HStack justifyContent={"center"}>
-            <Input
-              type="file"
-              value={file}
-              onChange={(e) => {
-                handleUpload(e.target.files[0]);
-              }}
-            />
-          </HStack>
-        </PopoverBody>
-      </PopoverContent>
+    <>
+      <Tooltip label="Upload Chat" hasArrow placement="right">
+        <IconButton
+          icon={<PiUploadLight />}
+          size="lg"
+          variant="ghost"
+          color="green.500"
+          isDisabled={waitingResponse}
+          onClick={() => fileInputRef.current.click()}
+        />
+      </Tooltip>
+
+      <Input
+        type="file"
+        hidden
+        ref={fileInputRef}
+        onChange={(e) => {
+          if (e.target.files[0]) {
+            handleUpload(e.target.files[0]);
+            e.target.value = null;
+          }
+        }}
+      />
 
       {loadError && (
         <ShowAlert
@@ -127,7 +109,7 @@ function UploadChat({
           resetStates={resetStates}
         />
       )}
-    </Popover>
+    </>
   );
 }
 

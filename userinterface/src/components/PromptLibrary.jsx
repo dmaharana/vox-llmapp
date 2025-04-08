@@ -66,7 +66,7 @@ export default function PromptLibrary({
       }
     }
 
-    console.log("No prompts found in localStorage, fetching from server...");
+    // console.log("No prompts found in localStorage, fetching from server...");
 
     // Fetch default prompts from server if localStorage is empty or has empty array
     fetch("/api/prompts")

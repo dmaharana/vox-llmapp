@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Textarea, Tooltip } from "@chakra-ui/react";
+import { Textarea, Tooltip, useColorModeValue } from "@chakra-ui/react";
 import {
   Avatar,
   Box,
@@ -31,13 +31,23 @@ export function UserMsg({
   const [isExpanded, setIsExpanded] = useState(false);
   const standardTextLen = 200;
 
+  const userBg = useColorModeValue("green.50", "gray.600");
+  const userTextColor = useColorModeValue("black", "white");
+
   const toggleExpand = () => {
     setIsExpanded(!isExpanded);
   };
 
-  const name = "User";
+  const name = "Me";
   return (
-    <Box bg={"green.50"} p={2} borderRadius={"md"} mb={2} w={"100%"}>
+    <Box
+      bg={userBg}
+      color={userTextColor}
+      p={2}
+      borderRadius={"md"}
+      mb={2}
+      w={"100%"}
+    >
       <HStack>
         <Avatar size={"sm"} name="Me" mb={2} mr={3} />
         <Box w={"100%"} align={"start"}>
@@ -45,10 +55,10 @@ export function UserMsg({
             fontWeight={"bold"}
             mb={1}
             fontSize={"xs"}
-            color={"gray.600"}
+            color={useColorModeValue("gray.600", "gray.300")}
             align={"start"}
           >
-            {name}
+            {DEFAULT_MESSAGES.USER_NAME}
           </Text>
           {isEditing ? (
             <Textarea

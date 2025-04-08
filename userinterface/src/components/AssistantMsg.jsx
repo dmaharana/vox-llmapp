@@ -8,6 +8,7 @@ import {
   Text,
   Tooltip,
   useClipboard,
+  useColorModeValue,
 } from "@chakra-ui/react";
 import {
   CopyIcon,
@@ -61,6 +62,9 @@ export function AssistantMsg({
 }) {
   const { hasCopied, onCopy } = useClipboard(msg);
 
+  const assistantBg = useColorModeValue("gray.50", "gray.700");
+  const assistantTextColor = useColorModeValue("black", "white");
+
   const conversation = chatHistory?.find(
     (conv) => conv.id === convId
   )?.messages;
@@ -77,7 +81,7 @@ export function AssistantMsg({
   }, [name, systemPrompt]);
 
   return (
-    <Box bg={"gray.50"} p={2} borderRadius={"md"} mb={2} w={"100%"}>
+    <Box bg={assistantBg} color={assistantTextColor} p={2} borderRadius={"md"} mb={2} w={"100%"}>
       <HStack>
         <Avatar
           size={"sm"}
@@ -92,7 +96,7 @@ export function AssistantMsg({
             fontWeight={"bold"}
             mb={1}
             fontSize={"xs"}
-            color={"gray.600"}
+            color={useColorModeValue("gray.600", "gray.300")}
             align={"start"}
           >
             {name}

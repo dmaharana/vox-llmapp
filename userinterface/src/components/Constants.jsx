@@ -3,6 +3,7 @@ export const listModelsApi = "/api/models";
 
 export const DEFAULT_MESSAGES = {
   APP_TITLE: "Vox",
+  USER_NAME: "Me",
   SYSTEM_PROMPT:
     "You are a helpful assistant. Answer as concisely as possible.",
   ASSISTANT_PROMPT: "Assistant is typing...",
@@ -10,6 +11,7 @@ export const DEFAULT_MESSAGES = {
   CHAT_HISTORY_OFF_MSG:
     "Chat mode off, only current message is included to generate response. Sytem prompt will be prepended to the query.",
 
+  chatTextBoxDefaultMessage: "Press Enter to send | Shift+Enter for new line",
   resTimeMessage: "Response time in seconds",
   reSubmitMessage: "Regenerate response",
   copyMessage: "Copy to clipboard",

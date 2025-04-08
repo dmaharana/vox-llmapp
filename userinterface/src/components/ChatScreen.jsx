@@ -1,40 +1,21 @@
 import { useState, useEffect } from "react";
-import generateUUID from "./scripts/utils";
 import {
   Box,
-  Button,
-  HStack,
-  Icon,
-  IconButton,
-  List,
-  ListItem,
-  Spacer,
-  Stack,
-  Text,
-  Textarea,
-  VStack,
   useColorMode,
   useColorModeValue,
+  Button,
+  HStack,
+  VStack,
 } from "@chakra-ui/react";
-import { MdModelTraining, MdSystemUpdateAlt } from "react-icons/md";
-import { IoMdSend } from "react-icons/io";
 import { BeatLoader } from "react-spinners";
-import { UserMsg } from "./UserMsg";
-import { AssistantMsg } from "./AssistantMsg";
-import DownloadChat from "./DownloadChat";
-import ModelSelect from "./ModelSelect";
-import ChatSettings from "./ChatSettings";
+import generateUUID from "./scripts/utils";
 import { DEFAULT_MESSAGES } from "./Constants";
-import ClearChat from "./ClearChat";
-import StopGenerationButton from "./StopGenerationButton";
-import UploadChat from "./UploadChat";
-import {
-  EditIcon,
-  MoonIcon,
-  SunIcon,
-  HamburgerIcon,
-  AddIcon,
-} from "@chakra-ui/icons";
+
+import ChatSidebar from "./ChatSidebar";
+import ChatHeader from "./ChatHeader";
+import ChatMessages from "./ChatMessages";
+import ChatInput from "./ChatInput";
+import ChatFooterControls from "./ChatFooterControls";
 
 function generateChatTitle(conversation) {
   if (!Array.isArray(conversation) || conversation.length === 0) {
@@ -77,6 +58,8 @@ export default function ChatScreen() {
   const [activeChatId, setActiveChatId] = useState(null);
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
 
+  const toggleSidebar = () => setIsSidebarOpen((prev) => !prev);
+
   const initialAssistantMessage = (
     <Button
       isLoading
@@ -91,9 +74,9 @@ export default function ChatScreen() {
   const { colorMode, toggleColorMode } = useColorMode();
   const bgMain = useColorModeValue("gray.50", "gray.700");
   // const bgMain = useColorModeValue("gray.50", "gray.800");
-  const bgChat = useColorModeValue("blue.50", "gray.700");
-  const bgInput = useColorModeValue("green.50", "gray.700");
-  const sidebarBg = useColorModeValue("gray.200", "gray.700");
+  // const bgChat = useColorModeValue("blue.50", "gray.700");
+  // const bgInput = useColorModeValue("green.50", "gray.900");
+  // const sidebarBg = useColorModeValue("gray.200", "gray.300");
 
   useEffect(() => {
     setConversation((prev) =>
@@ -516,53 +499,14 @@ export default function ChatScreen() {
     <Box position="relative">
       <HStack align="stretch" h="90vh">
         {isSidebarOpen && (
-          <VStack
-            w="250px"
-            bg={sidebarBg}
-            p={2}
-            spacing={2}
-            overflowY="auto"
-            borderRight="1px solid gray"
-            borderRadius="md"
-            m={2}
-            boxShadow="md"
-          >
-            <Button
-              colorScheme="blue"
-              size="sm"
-              onClick={handleNewChat}
-              w="100%"
-              leftIcon={<AddIcon />}
-            >
-              New Chat
-            </Button>
-            {allChats.map((chat) => (
-              <HStack key={chat.id} w="100%" spacing={1}>
-                <Button
-                  flex="1"
-                  variant={chat.id === activeChatId ? "solid" : "ghost"}
-                  colorScheme="teal"
-                  size="sm"
-                  onClick={() => handleSelectChat(chat.id)}
-                  whiteSpace="nowrap"
-                  overflow="hidden"
-                  textOverflow="ellipsis"
-                  justifyContent="flex-start"
-                  textAlign="left"
-                >
-                  {chat.title}
-                </Button>
-                <IconButton
-                  aria-label="Delete chat"
-                  icon={<span>&times;</span>}
-                  size="sm"
-                  colorScheme="red"
-                  variant="ghost"
-                  onClick={() => handleDeleteChat(chat.id)}
-                />
-              </HStack>
-            ))}
-          </VStack>
+          <ChatSidebar
+            isSidebarOpen={isSidebarOpen}
+            allChats={allChats}
+            activeChatId={activeChatId}
+            handleNewChat={handleNewChat}
+            handleSelectChat={handleSelectChat}
+            handleDeleteChat={handleDeleteChat}
+          />
         )}
         <Box flex="1" position="relative">
           <VStack
@@ -573,288 +517,57 @@ export default function ChatScreen() {
             borderRadius={"2rem"}
             justifyContent="space-between"
           >
-            <HStack
-              w="100%"
-              p={2}
-              borderRadius="2rem"
-              bg="#FFD7BE"
-              justifyContent="space-between"
-              alignItems="center"
-            >
-              <IconButton
-                aria-label="Toggle sidebar"
-                icon={<HamburgerIcon />}
-                size="sm"
-                onClick={() => setIsSidebarOpen(!isSidebarOpen)}
-                variant="ghost"
-                mr={2}
-                color="black"
-              />
+            <ChatHeader
+              toggleColorMode={toggleColorMode}
+              colorMode={colorMode}
+              systemPrompt={systemPrompt}
+              prompts={prompts}
+              setIsLibraryOpen={setIsLibraryOpen}
+              toggleSidebar={toggleSidebar}
+            />
 
-              <Text
-                fontFamily="Gothic"
-                fontSize="2.0rem"
-                fontWeight="bold"
-                textAlign="center"
-                color="#000000"
-                flex="1"
-                textShadow="2px 2px 4px #000000"
-              >
-                {DEFAULT_MESSAGES.APP_TITLE}
-                {(() => {
-                  if (systemPrompt !== DEFAULT_MESSAGES.SYSTEM_PROMPT) {
-                    const matchedPrompt = prompts?.find(
-                      (p) => p.content === systemPrompt
-                    );
-                    if (matchedPrompt) {
-                      return ` (${matchedPrompt.name})`;
-                    } else {
-                      return ` (Custom Prompt)`;
-                    }
-                  }
-                  return "";
-                })()}
-              </Text>
+            <ChatMessages
+              conversation={conversation}
+              waitingResponse={waitingResponse}
+              handleQueryUpdate={handleQueryUpdate}
+              handleDeleteMessage={handleDeleteMessage}
+              handleResubmit={handleResubmit}
+              currentMsgId={currentMsgId}
+              initialAssistantMessage={initialAssistantMessage}
+              convHistory={convHistory}
+              systemPrompt={systemPrompt}
+              prompts={prompts}
+              setIsLibraryOpen={setIsLibraryOpen}
+              useColorModeValue={useColorModeValue}
+            />
 
-              <IconButton
-                aria-label="Toggle dark mode"
-                icon={colorMode === "light" ? <MoonIcon /> : <SunIcon />}
-                onClick={toggleColorMode}
-                variant="ghost"
-                size="lg"
-                color="black"
-              />
-            </HStack>
-            <VStack
-              flex="1"
-              h="100%"
-              w={"100%"}
-              bg={bgChat}
-              overflowY={"auto"}
-              justifyContent={conversation.length > 0 ? "flex-start" : "center"}
-            >
-              {conversation.length > 0 ? (
-                conversation.map((m) => (
-                  <Box key={m.id} w={"100%"}>
-                    {m.user && (
-                      <UserMsg
-                        msg={m.user}
-                        msgId={m.id}
-                        waitingResponse={waitingResponse}
-                        handleQueryUpdate={handleQueryUpdate}
-                        handleDeleteMessage={handleDeleteMessage}
-                      />
-                    )}
-                    {m.assistant && (
-                      <AssistantMsg
-                        msg={m.assistant}
-                        name={m.model}
-                        convId={m.id}
-                        resTime={m.resTime}
-                        handleRepeat={handleResubmit}
-                        waitingResponse={waitingResponse}
-                        currentMsgId={currentMsgId}
-                        defaultMsg={initialAssistantMessage}
-                        chatHistory={convHistory}
-                        systemPrompt={systemPrompt}
-                      />
-                    )}
-                  </Box>
-                ))
-              ) : (
-                <Box w={"100%"} textAlign="center" p={8}>
-                  <VStack spacing={6}>
-                    <Text fontSize="2xl" fontWeight="bold" color="gray.600">
-                      What would you like to know today?
-                    </Text>
+            <ChatInput
+              query={query}
+              setQuery={setQuery}
+              waitingResponse={waitingResponse}
+              handleSubmit={handleSubmit}
+              handleKeyPress={handleKeyPress}
+              handleStopGeneration={handleStopGeneration}
+              useColorModeValue={useColorModeValue}
+            />
 
-                    <Box
-                      width="100%"
-                      maxW="container.md"
-                      p={4}
-                      borderRadius="xl"
-                      borderWidth={2}
-                      borderColor="blue.200"
-                      bgGradient="linear(to-b, blue.50, white)"
-                      boxShadow="0px 4px 24px rgba(149, 203, 255, 0.25)"
-                    >
-                      <Stack spacing={4}>
-                        <List spacing={3}>
-                          <ListItem display="flex" alignItems="center">
-                            <Icon
-                              as={MdModelTraining}
-                              color="blue.600"
-                              boxSize={6}
-                              mr={3}
-                              filter="drop-shadow(0 2px 2px rgba(0, 0, 0, 0.1))"
-                            />
-                            <Box flex="1">
-                              <Text
-                                fontSize="sm"
-                                color="blue.700"
-                                mb={0}
-                                fontWeight="normal"
-                              >
-                                Model:
-                              </Text>
-                              <Text
-                                fontSize="md"
-                                color="blue.900"
-                                fontWeight="semibold"
-                                noOfLines={1}
-                                textShadow="0 1px 2px rgba(0, 0, 0, 0.05)"
-                              >
-                                {model || "No model chosen yet"}
-                              </Text>
-                            </Box>
-                          </ListItem>
-
-                          <ListItem display="flex" alignItems="flex-start">
-                            <Icon
-                              as={MdSystemUpdateAlt}
-                              color="blue.600"
-                              boxSize={6}
-                              mr={3}
-                              mt={1}
-                              filter="drop-shadow(0 2px 2px rgba(0, 0, 0, 0.1))"
-                            />
-                            <Box flex="1">
-                              <Text
-                                fontSize="sm"
-                                color="blue.700"
-                                mb={0}
-                                fontWeight="normal"
-                              >
-                                System Prompt:
-                              </Text>
-                              <Box
-                                position="relative"
-                                borderRadius="lg"
-                                p={3}
-                                bg="white"
-                                borderWidth={1}
-                                borderColor="blue.100"
-                                boxShadow="inner 0 2px 4px rgba(0, 0, 0, 0.05)"
-                              >
-                                <Text
-                                  fontSize="md"
-                                  color="blue.800"
-                                  noOfLines={3}
-                                  lineHeight="tall"
-                                  position="relative"
-                                  zIndex={1}
-                                >
-                                  {(() => {
-                                    const matchedPrompt = prompts?.find(
-                                      (p) => p.content === systemPrompt
-                                    );
-                                    if (matchedPrompt) {
-                                      return matchedPrompt.name;
-                                    } else if (
-                                      systemPrompt ===
-                                      DEFAULT_MESSAGES.SYSTEM_PROMPT
-                                    ) {
-                                      return "Default System Prompt";
-                                    } else {
-                                      return "Custom System Prompt";
-                                    }
-                                  })()}
-
-                                  <IconButton
-                                    size="xs"
-                                    position="absolute"
-                                    top={0}
-                                    right={0}
-                                    zIndex={2}
-                                    icon={<EditIcon />}
-                                    colorScheme="blue"
-                                    variant="ghost"
-                                    onClick={() => setIsLibraryOpen(true)}
-                                  />
-                                </Text>
-                              </Box>
-                            </Box>
-                          </ListItem>
-                        </List>
-                      </Stack>
-                    </Box>
-
-                    <Text fontSize="sm" color="gray.500" fontStyle="italic">
-                      Type your question below or select a system prompt to get
-                      started
-                    </Text>
-                  </VStack>
-                </Box>
-              )}
-            </VStack>
-
-            <Box w={"100%"} bg={bgInput} mt="auto">
-              <HStack bg={bgInput}>
-                <Textarea
-                  isDisabled={waitingResponse}
-                  placeholder={DEFAULT_MESSAGES.chatTextBoxDefaultMessage}
-                  value={query}
-                  onChange={(e) => setQuery(e.target.value)}
-                  onKeyDown={(e) => handleKeyPress(e)}
-                  borderRadius={"2rem"}
-                  h={"70%"}
-                  // resize={"none"}
-                  paddingTop={"2rem"}
-                />
-                {query && (
-                  <Button
-                    colorScheme={"purple"}
-                    type="submit"
-                    variant="ghost"
-                    isDisabled={!query || waitingResponse}
-                    onClick={(e) => handleSubmit(e)}
-                  >
-                    <IoMdSend size={40} />
-                  </Button>
-                )}
-
-                {waitingResponse && (
-                  <StopGenerationButton
-                    handleStopGeneration={handleStopGeneration}
-                  />
-                )}
-              </HStack>
-              <HStack>
-                <ChatSettings
-                  systemPrompt={systemPrompt}
-                  setSystemPrompt={setSystemPrompt}
-                  prompts={prompts}
-                  setPrompts={setPrompts}
-                  includeHistory={includeHistory}
-                  setIncludeHistory={setIncludeHistory}
-                  waitingResponse={waitingResponse}
-                  isLibraryOpen={isLibraryOpen}
-                  setIsLibraryOpen={setIsLibraryOpen}
-                  onLibraryClose={() => setIsLibraryOpen(false)}
-                />
-                <ModelSelect model={model} setModel={setModel} />
-                <Spacer />
-                {conversation.length > 0 && (
-                  <DownloadChat
-                    conversation={conversation}
-                    waitingResponse={waitingResponse}
-                    convHistory={convHistory}
-                  />
-                )}
-                {conversation.length > 0 && (
-                  <ClearChat
-                    handleClearChat={handleClearChat}
-                    waitingResponse={waitingResponse}
-                  />
-                )}
-                <UploadChat
-                  setConversation={setConversation}
-                  waitingResponse={waitingResponse}
-                  setCurrentMsgId={setCurrentMsgId}
-                  setConvHistory={setConvHistory}
-                />
-              </HStack>
-            </Box>
+            <ChatFooterControls
+              systemPrompt={systemPrompt}
+              setSystemPrompt={setSystemPrompt}
+              prompts={prompts}
+              setPrompts={setPrompts}
+              includeHistory={includeHistory}
+              setIncludeHistory={setIncludeHistory}
+              waitingResponse={waitingResponse}
+              isLibraryOpen={isLibraryOpen}
+              setIsLibraryOpen={setIsLibraryOpen}
+              conversation={conversation}
+              convHistory={convHistory}
+              handleClearChat={handleClearChat}
+              setConversation={setConversation}
+              setCurrentMsgId={setCurrentMsgId}
+              setConvHistory={setConvHistory}
+            />
           </VStack>
         </Box>
       </HStack>

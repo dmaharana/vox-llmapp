@@ -1,15 +1,17 @@
 import { HStack, IconButton, Text } from "@chakra-ui/react";
 import { MoonIcon, SunIcon, HamburgerIcon } from "@chakra-ui/icons";
+import { useSelector } from "react-redux";
 import { DEFAULT_MESSAGES } from "./Constants";
 
 export default function ChatHeader({
   toggleColorMode,
   colorMode,
-  systemPrompt,
-  prompts,
   setIsLibraryOpen,
   toggleSidebar,
 }) {
+  const prompts = useSelector((state) => state.prompt.prompts);
+  const systemPrompt = useSelector((state) => state.prompt.systemPrompt);
+
   return (
     <HStack
       w="100%"

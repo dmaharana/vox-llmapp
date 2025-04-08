@@ -1,4 +1,6 @@
 import { useState, useEffect } from "react";
+import { useSelector, useDispatch } from "react-redux";
+import { setPrompts, setSystemPrompt } from "../store/promptSlice";
 import {
   Box,
   useColorMode,
@@ -16,6 +18,7 @@ import ChatHeader from "./ChatHeader";
 import ChatMessages from "./ChatMessages";
 import ChatInput from "./ChatInput";
 import ChatFooterControls from "./ChatFooterControls";
+import ModelSelect from "./ModelSelect";
 
 function generateChatTitle(conversation) {
   if (!Array.isArray(conversation) || conversation.length === 0) {
@@ -42,14 +45,14 @@ function generateChatTitle(conversation) {
 }
 
 export default function ChatScreen() {
+  const dispatch = useDispatch();
+  const prompts = useSelector((state) => state.prompt.prompts);
+  const systemPrompt = useSelector((state) => state.prompt.systemPrompt);
+
   const [isLibraryOpen, setIsLibraryOpen] = useState(false);
   const [conversation, setConversation] = useState([]);
   const [query, setQuery] = useState("");
   const [model, setModel] = useState("");
-  const [systemPrompt, setSystemPrompt] = useState(
-    DEFAULT_MESSAGES.SYSTEM_PROMPT
-  );
-  const [prompts, setPrompts] = useState([]);
   const [includeHistory, setIncludeHistory] = useState(true);
   const [convHistory, setConvHistory] = useState([]);
   const [convId, setConvId] = useState(1);
@@ -59,6 +62,19 @@ export default function ChatScreen() {
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
 
   const toggleSidebar = () => setIsSidebarOpen((prev) => !prev);
+
+  useEffect(() => {
+    const savedModel = localStorage.getItem("voxSelectedModel");
+    if (savedModel) {
+      setModel(savedModel);
+    }
+  }, []);
+
+  useEffect(() => {
+    if (model) {
+      localStorage.setItem("voxSelectedModel", model);
+    }
+  }, [model]);
 
   const initialAssistantMessage = (
     <Button
@@ -73,22 +89,28 @@ export default function ChatScreen() {
 
   const { colorMode, toggleColorMode } = useColorMode();
   const bgMain = useColorModeValue("gray.50", "gray.700");
-  // const bgMain = useColorModeValue("gray.50", "gray.800");
-  // const bgChat = useColorModeValue("blue.50", "gray.700");
-  // const bgInput = useColorModeValue("green.50", "gray.900");
-  // const sidebarBg = useColorModeValue("gray.200", "gray.300");
 
   useEffect(() => {
-    setConversation((prev) =>
-      Array.isArray(prev)
-        ? prev.map((msg) => ({
-            ...msg,
-            model,
-            systemPrompt,
-          }))
-        : prev
-    );
+    // Do not update existing messages' model or systemPrompt
+    // Optionally, update other UI state here if needed
   }, [model, systemPrompt]);
+
+  useEffect(() => {
+    if (!activeChatId) return;
+
+    setAllChats((prev) => {
+      const updated = prev.map((chat) =>
+        chat.id === activeChatId
+          ? {
+              ...chat,
+              model,
+            }
+          : chat
+      );
+      localStorage.setItem("voxChats", JSON.stringify(updated));
+      return updated;
+    });
+  }, [model, activeChatId]);
 
   useEffect(() => {
     const saved = localStorage.getItem("voxChats");
@@ -144,7 +166,6 @@ export default function ChatScreen() {
           updated = [newChat, ...prev];
         }
       } else {
-        // no messages: do not add new chat, but keep existing list
         updated = prev;
       }
 
@@ -167,14 +188,11 @@ export default function ChatScreen() {
     }
   };
 
-  // handle resubmit for a message with given id
   const handleResubmit = async (id) => {
-    // find the message with the given id
     setCurrentMsgId(id);
     const message = conversation?.find((msg) => msg.id === id);
     const assistantMessage = message?.assistant;
 
-    // save the existing assistant message into the history object with the same conversation id, so that the history can be shown to the user
     const convHistoryItem = convHistory?.find((item) => item.id === id);
 
     if (assistantMessage !== "Thinking..." && assistantMessage !== "") {
@@ -218,6 +236,7 @@ export default function ChatScreen() {
       id: id,
       user: message.user,
       model: model,
+      systemPrompt: systemPrompt,
       assistant: "Thinking...",
       resTime: "",
     };
@@ -282,6 +301,7 @@ export default function ChatScreen() {
       id: newMsgId,
       user: query,
       model: model,
+      systemPrompt: systemPrompt,
       // assistant: "",
       assistant: "Thinking...",
       // assistant: initialAssistantMessage,
@@ -408,9 +428,7 @@ export default function ChatScreen() {
                 m.id === msgId
                   ? {
                       ...m,
-                      systemPrompt,
                       assistant: text,
-                      model,
                       resTime: `${resTime.toFixed(2)}s`,
                     }
                   : m
@@ -520,10 +538,10 @@ export default function ChatScreen() {
             <ChatHeader
               toggleColorMode={toggleColorMode}
               colorMode={colorMode}
-              systemPrompt={systemPrompt}
-              prompts={prompts}
               setIsLibraryOpen={setIsLibraryOpen}
               toggleSidebar={toggleSidebar}
+              model={model}
+              setModel={setModel}
             />
 
             <ChatMessages
@@ -535,10 +553,9 @@ export default function ChatScreen() {
               currentMsgId={currentMsgId}
               initialAssistantMessage={initialAssistantMessage}
               convHistory={convHistory}
-              systemPrompt={systemPrompt}
-              prompts={prompts}
               setIsLibraryOpen={setIsLibraryOpen}
               useColorModeValue={useColorModeValue}
+              model={model}
             />
 
             <ChatInput
@@ -552,10 +569,6 @@ export default function ChatScreen() {
             />
 
             <ChatFooterControls
-              systemPrompt={systemPrompt}
-              setSystemPrompt={setSystemPrompt}
-              prompts={prompts}
-              setPrompts={setPrompts}
               includeHistory={includeHistory}
               setIncludeHistory={setIncludeHistory}
               waitingResponse={waitingResponse}
@@ -567,6 +580,8 @@ export default function ChatScreen() {
               setConversation={setConversation}
               setCurrentMsgId={setCurrentMsgId}
               setConvHistory={setConvHistory}
+              model={model}
+              setModel={setModel}
             />
           </VStack>
         </Box>

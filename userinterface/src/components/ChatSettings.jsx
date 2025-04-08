@@ -1,4 +1,6 @@
-import { useState, useRef } from "react";
+import { useRef } from "react";
+import { useSelector, useDispatch } from "react-redux";
+import { setSystemPrompt } from "../store/promptSlice";
 import {
   Box,
   Text,
@@ -23,11 +25,8 @@ import { SettingsIcon } from "@chakra-ui/icons";
 import IncludeHistorySwitch from "./IncludeHistorySwitch";
 import PromptLibrary from "./PromptLibrary";
 import { DEFAULT_MESSAGES } from "./Constants";
+
 function ChatSettings({
-  systemPrompt,
-  setSystemPrompt,
-  prompts,
-  setPrompts,
   includeHistory,
   setIncludeHistory,
   waitingResponse,
@@ -35,8 +34,11 @@ function ChatSettings({
   setIsLibraryOpen,
   onLibraryClose,
 }) {
+  const dispatch = useDispatch();
+  const systemPrompt = useSelector((state) => state.prompt.systemPrompt);
+
   function handleChange(e) {
-    setSystemPrompt(e.target.value);
+    dispatch(setSystemPrompt(e.target.value));
   }
 
   const {
@@ -111,14 +113,7 @@ function ChatSettings({
         </ModalContent>
       </Modal>
 
-      <PromptLibrary
-        systemPrompt={systemPrompt}
-        setSystemPrompt={setSystemPrompt}
-        prompts={prompts}
-        setPrompts={setPrompts}
-        isOpen={isLibraryOpen}
-        onClose={onLibraryClose}
-      />
+      <PromptLibrary isOpen={isLibraryOpen} onClose={onLibraryClose} />
     </>
   );
 }

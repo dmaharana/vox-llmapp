@@ -10,6 +10,7 @@ import {
 } from "@chakra-ui/react";
 import { MdModelTraining, MdSystemUpdateAlt } from "react-icons/md";
 import { EditIcon } from "@chakra-ui/icons";
+import { useSelector } from "react-redux";
 import { DEFAULT_MESSAGES } from "./Constants";
 import { UserMsg } from "./UserMsg";
 import { AssistantMsg } from "./AssistantMsg";
@@ -23,11 +24,13 @@ export default function ChatMessages({
   currentMsgId,
   initialAssistantMessage,
   convHistory,
-  systemPrompt,
-  prompts,
   setIsLibraryOpen,
   useColorModeValue,
+  model,
 }) {
+  const prompts = useSelector((state) => state.prompt.prompts);
+  const systemPrompt = useSelector((state) => state.prompt.systemPrompt);
+
   const bgChat = useColorModeValue("blue.50", "gray.700");
 
   return (
@@ -111,7 +114,7 @@ export default function ChatMessages({
                         noOfLines={1}
                         textShadow="0 1px 2px rgba(0, 0, 0, 0.05)"
                       >
-                        No model chosen yet
+                        {model ? model : "No model chosen yet"}
                       </Text>
                     </Box>
                   </ListItem>

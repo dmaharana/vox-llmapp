@@ -1,15 +1,11 @@
 import { HStack, Spacer } from "@chakra-ui/react";
 import ChatSettings from "./ChatSettings";
-import ModelSelect from "./ModelSelect";
 import DownloadChat from "./DownloadChat";
 import ClearChat from "./ClearChat";
 import UploadChat from "./UploadChat";
+import ModelSelect from "./ModelSelect";
 
 export default function ChatFooterControls({
-  systemPrompt,
-  setSystemPrompt,
-  prompts,
-  setPrompts,
   includeHistory,
   setIncludeHistory,
   waitingResponse,
@@ -21,15 +17,13 @@ export default function ChatFooterControls({
   setConversation,
   setCurrentMsgId,
   setConvHistory,
+  model,
+  setModel,
 }) {
   return (
     <HStack justifyContent="space-between" w="100%">
       <HStack>
         <ChatSettings
-          systemPrompt={systemPrompt}
-          setSystemPrompt={setSystemPrompt}
-          prompts={prompts}
-          setPrompts={setPrompts}
           includeHistory={includeHistory}
           setIncludeHistory={setIncludeHistory}
           waitingResponse={waitingResponse}
@@ -37,7 +31,8 @@ export default function ChatFooterControls({
           setIsLibraryOpen={setIsLibraryOpen}
           onLibraryClose={() => setIsLibraryOpen(false)}
         />
-        <ModelSelect model={conversation.model} setModel={conversation.setModel} />
+
+        <ModelSelect model={model} setModel={setModel} />
       </HStack>
 
       <HStack>

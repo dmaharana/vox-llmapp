@@ -1,4 +1,6 @@
 import { useState, useEffect, useRef } from "react";
+import { useSelector, useDispatch } from "react-redux";
+import { setPrompts, setSystemPrompt } from "../store/promptSlice";
 import ShowAlert from "./ShowAlert";
 import {
   Textarea,
@@ -29,11 +31,7 @@ import { PromptItem } from "./PromptLibrary/PromptItem";
 import generateUUID from "./scripts/utils";
 
 export default function PromptLibrary({
-  systemPrompt,
-  setSystemPrompt,
   isOpen,
-  prompts,
-  setPrompts,
   onClose,
 }) {
   const {
@@ -41,6 +39,10 @@ export default function PromptLibrary({
     onOpen: onDeleteDialogOpen,
     onClose: onDeleteDialogClose,
   } = useDisclosure();
+  const dispatch = useDispatch();
+  const prompts = useSelector((state) => state.prompt.prompts);
+  const systemPrompt = useSelector((state) => state.prompt.systemPrompt);
+
   const cancelRef = useRef();
   const fileInputRef = useRef();
   const [promptToDelete, setPromptToDelete] = useState(null);
@@ -53,7 +55,7 @@ export default function PromptLibrary({
   const [editContent, setEditContent] = useState("");
   const initialLoadComplete = useRef(false);
   const [importStatus, setImportStatus] = useState(null);
-  const [importMessage, setImportMessage] = useState(""); // Corrected typo here
+  const [importMessage, setImportMessage] = useState("");
   const [showImportAlert, setShowImportAlert] = useState(false);
 
   useEffect(() => {
@@ -61,14 +63,11 @@ export default function PromptLibrary({
     if (savedPrompts) {
       const parsedPrompts = JSON.parse(savedPrompts);
       if (parsedPrompts.length > 0) {
-        setPrompts(parsedPrompts);
+        dispatch(setPrompts(parsedPrompts));
         return;
       }
     }
 
-    // console.log("No prompts found in localStorage, fetching from server...");
-
-    // Fetch default prompts from server if localStorage is empty or has empty array
     fetch("/api/prompts")
       .then((response) => {
         if (!response.ok) throw new Error("Failed to fetch prompts");
@@ -83,12 +82,11 @@ export default function PromptLibrary({
           content: String(prompt.content || ""),
         }));
         localStorage.setItem("prompts", JSON.stringify(promptsWithIds));
-        setPrompts(promptsWithIds);
+        dispatch(setPrompts(promptsWithIds));
       })
       .catch((error) => console.error("Prompt fetch error:", error));
-  }, []);
+  }, [dispatch]);
 
-  // Mark initial load complete after first valid prompts load
   useEffect(() => {
     if (prompts.length > 0 && !initialLoadComplete.current) {
       initialLoadComplete.current = true;
@@ -104,7 +102,6 @@ export default function PromptLibrary({
     }
   }, [showImportAlert]);
 
-  // Save prompts to localStorage whenever prompts state changes after initial load
   useEffect(() => {
     if (initialLoadComplete.current) {
       localStorage.setItem("prompts", JSON.stringify(prompts));
@@ -117,7 +114,7 @@ export default function PromptLibrary({
   };
 
   const confirmDelete = () => {
-    setPrompts((prev) => prev.filter((p) => p.id !== promptToDelete));
+    dispatch(setPrompts(prompts.filter((p) => p.id !== promptToDelete)));
     onDeleteDialogClose();
     setPromptToDelete(null);
   };
@@ -154,7 +151,7 @@ export default function PromptLibrary({
           content: String(prompt.content || ""),
         }));
 
-        setPrompts(validatedPrompts);
+        dispatch(setPrompts(validatedPrompts));
         setImportStatus("success");
         setImportMessage("Prompts imported successfully!");
         setShowImportAlert(true);
@@ -175,7 +172,7 @@ export default function PromptLibrary({
         name: newPromptName,
         content: newPromptContent,
       };
-      setPrompts((prev) => [...prev, newPrompt]);
+      dispatch(setPrompts([...prompts, newPrompt]));
       setNewPromptName("");
       setNewPromptContent("");
     }
@@ -251,16 +248,18 @@ export default function PromptLibrary({
                       setEditContent(prompt.content);
                     }}
                     onSaveEdit={(id, name, content) => {
-                      setPrompts((prev) =>
-                        prev.map((p) =>
-                          p.id === id ? { ...p, name, content } : p
+                      dispatch(
+                        setPrompts(
+                          prompts.map((p) =>
+                            p.id === id ? { ...p, name, content } : p
+                          )
                         )
                       );
                       setEditingPrompt(null);
                     }}
                     onDelete={handleDeletePrompt}
                     onUse={(content) => {
-                      setSystemPrompt(content);
+                      dispatch(setSystemPrompt(content));
                       onClose();
                     }}
                   />

@@ -43,9 +43,14 @@ const avatarImages = [
   avatarImage6,
 ];
 
-const getRandomAvatar = () => {
-  const randomIndex = Math.floor(Math.random() * avatarImages.length);
-  return avatarImages[randomIndex];
+const getAvatarForModel = (modelName) => {
+  if (!modelName) return avatarImages[0]; // fallback
+  let hash = 0;
+  for (let i = 0; i < modelName.length; i++) {
+    hash = modelName.charCodeAt(i) + ((hash << 5) - hash);
+  }
+  const index = Math.abs(hash) % avatarImages.length;
+  return avatarImages[index];
 };
 
 export function AssistantMsg({
@@ -59,6 +64,7 @@ export function AssistantMsg({
   defaultMsg,
   chatHistory,
   systemPrompt,
+  model,
 }) {
   const { hasCopied, onCopy } = useClipboard(msg);
 
@@ -74,11 +80,7 @@ export function AssistantMsg({
   const [isExpanded, setIsExpanded] = useState(false);
   const [isMsgExpanded, setIsMsgExpanded] = useState(waitingResponse);
   const maxContentLength = 200;
-  const [currentAvatar, setCurrentAvatar] = useState(getRandomAvatar());
-
-  useEffect(() => {
-    setCurrentAvatar(getRandomAvatar());
-  }, [name, systemPrompt]);
+  const currentAvatar = getAvatarForModel(model);
 
   return (
     <Box bg={assistantBg} color={assistantTextColor} p={2} borderRadius={"md"} mb={2} w={"100%"}>

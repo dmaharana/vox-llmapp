@@ -55,6 +55,7 @@ export default function ChatMessages({
               <AssistantMsg
                 msg={m.assistant}
                 name={m.model}
+                model={m.model}
                 convId={m.id}
                 resTime={m.resTime}
                 handleRepeat={handleResubmit}

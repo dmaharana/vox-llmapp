@@ -1,5 +1,6 @@
 import {
   VStack,
+  Box,
   Button,
   HStack,
   IconButton,
@@ -7,16 +8,8 @@ import {
   Input,
   InputGroup,
   InputLeftElement,
-  Modal,
-  ModalOverlay,
-  ModalContent,
-  ModalHeader,
-  ModalBody,
-  ModalFooter,
-  ModalCloseButton,
   Button as ChakraButton,
   useDisclosure,
-  Text,
 } from "@chakra-ui/react";
 import { PiUploadLight } from "react-icons/pi";
 
@@ -115,7 +108,6 @@ function ChatSidebar({
                 const firstUserMsg = chat.conversation.find((msg) => msg.user);
                 chat.title = firstUserMsg ? firstUserMsg.user : "Untitled Chat";
               }
-              console.log(chat);
               if (!chat.id || !Array.isArray(chat.conversation)) return;
               const exists = updated.some((c) => c.id === chat.id);
               if (!exists) {
@@ -133,7 +125,6 @@ function ChatSidebar({
     });
     e.target.value = null;
   };
-  /*******  b990bf4c-e4d2-4af8-91cd-885acc61bbc9  *******/
 
   return (
     <>
@@ -144,7 +135,7 @@ function ChatSidebar({
         bg={sidebarBg}
         p={2}
         spacing={2}
-        overflowY="auto"
+        // overflowY="auto"
         borderRight="1px solid gray"
         borderRadius="md"
         m={2}
@@ -178,34 +169,36 @@ function ChatSidebar({
             />
           </Tooltip>
         </HStack>
-        {filteredChats.map((chat) => (
-          <HStack key={chat.id} w="100%" spacing={1}>
-            <Button
-              flex="1"
-              variant={chat.id === activeChatId ? "solid" : "ghost"}
-              colorScheme="teal"
-              size="sm"
-              onClick={() => handleSelectChat(chat.id)}
-              whiteSpace="nowrap"
-              overflow="hidden"
-              textOverflow="ellipsis"
-              justifyContent="flex-start"
-              textAlign="left"
-            >
-              {chat.title}
-            </Button>
-            <IconButton
-              aria-label="Delete chat"
-              icon={<span>&times;</span>}
-              size="sm"
-              colorScheme="red"
-              variant="ghost"
-              onClick={() => handleDeleteChat(chat.id)}
-            />
-          </HStack>
-        ))}
+        <Box w="100%" overflowY="auto">
+          {filteredChats.map((chat) => (
+            <HStack key={chat.id} w="100%" spacing={1}>
+              <Button
+                flex="1"
+                variant={chat.id === activeChatId ? "solid" : "ghost"}
+                colorScheme="teal"
+                size="sm"
+                onClick={() => handleSelectChat(chat.id)}
+                whiteSpace="nowrap"
+                overflow="hidden"
+                textOverflow="ellipsis"
+                justifyContent="flex-start"
+                textAlign="left"
+              >
+                {chat.title}
+              </Button>
+              <IconButton
+                aria-label="Delete chat"
+                icon={<span>&times;</span>}
+                size="sm"
+                colorScheme="red"
+                variant="ghost"
+                onClick={() => handleDeleteChat(chat.id)}
+              />
+            </HStack>
+          ))}
+        </Box>
 
-        <VStack mt="auto" spacing={2}>
+        <VStack mt="auto" spacing={2} position="sticky" bottom="0">
           <HStack>
             <Tooltip label="Export All Chats" hasArrow>
               <IconButton

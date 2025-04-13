@@ -129,9 +129,8 @@ function ChatSidebar({
   return (
     <>
       <VStack
-        w="250px"
         minW="200px"
-        maxW="300px"
+        maxW="25%"
         bg={sidebarBg}
         p={2}
         spacing={2}

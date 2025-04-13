@@ -48,6 +48,19 @@ export default function ChatScreen() {
   const dispatch = useDispatch();
   const prompts = useSelector((state) => state.prompt.prompts);
   const systemPrompt = useSelector((state) => state.prompt.systemPrompt);
+  const [isLibraryOpen, setIsLibraryOpen] = useState(false);
+  const [conversation, setConversation] = useState([]);
+  const [query, setQuery] = useState("");
+  const [model, setModel] = useState("");
+  const [includeHistory, setIncludeHistory] = useState(true);
+  const [convHistory, setConvHistory] = useState([]);
+  const [convId, setConvId] = useState(1);
+
+  const [allChats, setAllChats] = useState([]);
+  const [activeChatId, setActiveChatId] = useState(null);
+  const [isSidebarOpen, setIsSidebarOpen] = useState(true);
+
+  const toggleSidebar = () => setIsSidebarOpen((prev) => !prev);
 
   // Load prompts from localStorage on mount
   useEffect(() => {
@@ -92,20 +105,6 @@ export default function ChatScreen() {
       localStorage.setItem("voxSystemPrompt", JSON.stringify(systemPrompt));
     }
   }, [systemPrompt]);
-
-  const [isLibraryOpen, setIsLibraryOpen] = useState(false);
-  const [conversation, setConversation] = useState([]);
-  const [query, setQuery] = useState("");
-  const [model, setModel] = useState("");
-  const [includeHistory, setIncludeHistory] = useState(true);
-  const [convHistory, setConvHistory] = useState([]);
-  const [convId, setConvId] = useState(1);
-
-  const [allChats, setAllChats] = useState([]);
-  const [activeChatId, setActiveChatId] = useState(null);
-  const [isSidebarOpen, setIsSidebarOpen] = useState(true);
-
-  const toggleSidebar = () => setIsSidebarOpen((prev) => !prev);
 
   useEffect(() => {
     const savedModel = localStorage.getItem("voxSelectedModel");
@@ -564,6 +563,7 @@ export default function ChatScreen() {
           <ChatSidebar
             isSidebarOpen={isSidebarOpen}
             allChats={allChats}
+            setAllChats={setAllChats}
             activeChatId={activeChatId}
             handleNewChat={handleNewChat}
             handleSelectChat={handleSelectChat}

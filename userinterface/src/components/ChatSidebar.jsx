@@ -32,6 +32,7 @@ import { setChatSearchQuery } from "../store/chatSlice";
 import { useRef } from "react";
 import ConfirmDialog from "./ConfirmDialog";
 import generateUUID from "./scripts/utils";
+import JSZip from "jszip";
 
 function ChatSidebar({
   isSidebarOpen,
@@ -68,18 +69,21 @@ function ChatSidebar({
     );
   });
 
-  const handleExportAllChats = () => {
+  const handleExportAllChats = async () => {
+    const zip = new JSZip();
+
     allChats.forEach((chat) => {
-      const blob = new Blob([JSON.stringify(chat, null, 2)], {
-        type: "application/json",
-      });
-      const url = URL.createObjectURL(blob);
-      const link = document.createElement("a");
-      link.href = url;
       const safeTitle = chat.title
         ? chat.title.replace(/[^a-z0-9]/gi, "_").toLowerCase()
         : chat.id;
-      link.download = `chat_${safeTitle}.json`;
+      zip.file(`chat_${safeTitle}.json`, JSON.stringify(chat, null, 2));
+    });
+
+    zip.generateAsync({ type: "blob" }).then((content) => {
+      const url = URL.createObjectURL(content);
+      const link = document.createElement("a");
+      link.href = url;
+      link.download = `all_chats_${new Date().toISOString().split("T")[0]}.zip`;
       document.body.appendChild(link);
       link.click();
       document.body.removeChild(link);
@@ -87,7 +91,6 @@ function ChatSidebar({
     });
   };
 
-  /*************  ✨ Windsurf Command 🌟  *************/
   const handleImportChats = (e) => {
     const files = e.target.files;
     if (!files.length) return;

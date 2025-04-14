@@ -23,17 +23,24 @@ import ReactMarkdown from "markdown-to-jsx";
 import ChakraUIRenderer from "chakra-ui-markdown-renderer";
 import { DEFAULT_MESSAGES } from "./Constants";
 
-import avatarImage from "../assets/assistant.png"; // Default avatar
-import avatarImage1 from "../assets/assistant1.png";
-import avatarImage2 from "../assets/assistant2.png";
-import avatarImage3 from "../assets/assistant3.png";
-import avatarImage4 from "../assets/assistant4.png";
-import avatarImage5 from "../assets/assistant5.png";
-import avatarImage6 from "../assets/assistant6.png";
+import avatarImage from "../assets/informal/assistant.png"; // Default avatar
+import avatarImage1 from "../assets/informal/assistant1.png";
+import avatarImage2 from "../assets/informal/assistant2.png";
+import avatarImage3 from "../assets/informal/assistant3.png";
+import avatarImage4 from "../assets/informal/assistant4.png";
+import avatarImage5 from "../assets/informal/assistant5.png";
+import avatarImage6 from "../assets/informal/assistant6.png";
+import avatarImage7 from "../assets/formal/assistant.png"; // Default avatar
+import avatarImage8 from "../assets/formal/assistant1.png";
+import avatarImage9 from "../assets/formal/assistant2.png";
+import avatarImage10 from "../assets/formal/assistant3.png";
+import avatarImage11 from "../assets/formal/assistant4.png";
+import avatarImage12 from "../assets/formal/assistant5.png";
+import avatarImage13 from "../assets/formal/assistant6.png";
 
 import AssistantHistory from "./AssistantHistory";
 
-const avatarImages = [
+const avatarImagesInformal = [
   avatarImage,
   avatarImage1,
   avatarImage2,
@@ -42,6 +49,22 @@ const avatarImages = [
   avatarImage5,
   avatarImage6,
 ];
+
+const avatarImagesFormal = [
+  avatarImage7,
+  avatarImage8,
+  avatarImage9,
+  avatarImage10,
+  avatarImage11,
+  avatarImage12,
+  avatarImage13,
+];
+
+const chatMode = "formal";
+let avatarImages = avatarImagesInformal;
+if (chatMode === "formal") {
+  avatarImages = avatarImagesFormal;
+}
 
 const getAvatarForModel = (modelName) => {
   if (!modelName) return avatarImages[0]; // fallback
@@ -83,7 +106,14 @@ export function AssistantMsg({
   const currentAvatar = getAvatarForModel(model);
 
   return (
-    <Box bg={assistantBg} color={assistantTextColor} p={2} borderRadius={"md"} mb={2} w={"100%"}>
+    <Box
+      bg={assistantBg}
+      color={assistantTextColor}
+      p={2}
+      borderRadius={"md"}
+      mb={2}
+      w={"100%"}
+    >
       <HStack>
         <Avatar
           size={"sm"}

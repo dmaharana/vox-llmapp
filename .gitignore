@@ -3,6 +3,5 @@ release/*
 */node_modules/*
 */tmp/*
 */dist/*
-*llmserver*
-*llmapp*
 .aider*
+server/configs/prompts.json

@@ -59,6 +59,7 @@ export default function ChatScreen() {
   const [allChats, setAllChats] = useState([]);
   const [activeChatId, setActiveChatId] = useState(null);
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
+  const [isProviderOpen, setIsProviderOpen] = useState(false);
 
   const toggleSidebar = () => setIsSidebarOpen((prev) => !prev);
 
@@ -626,6 +627,8 @@ export default function ChatScreen() {
               setConvHistory={setConvHistory}
               model={model}
               setModel={setModel}
+              isProviderOpen={isProviderOpen}
+              setIsProviderOpen={setIsProviderOpen}
             />
           </VStack>
         </Box>

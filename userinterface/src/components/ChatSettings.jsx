@@ -24,6 +24,7 @@ import {
 import { SettingsIcon } from "@chakra-ui/icons";
 import IncludeHistorySwitch from "./IncludeHistorySwitch";
 import PromptLibrary from "./PromptLibrary";
+import ProviderManagement from "./ProviderManagement";
 import { DEFAULT_MESSAGES } from "./Constants";
 
 function ChatSettings({
@@ -33,6 +34,9 @@ function ChatSettings({
   isLibraryOpen,
   setIsLibraryOpen,
   onLibraryClose,
+  isProviderOpen,
+  setIsProviderOpen,
+  onProviderClose,
 }) {
   const dispatch = useDispatch();
   const systemPrompt = useSelector((state) => state.prompt.systemPrompt);
@@ -69,6 +73,14 @@ function ChatSettings({
             }}
           >
             Prompt Library
+          </MenuItem>
+          <MenuItem
+            onClick={() => {
+              onSettingsClose();
+              setIsProviderOpen(true);
+            }}
+          >
+            Provider Management
           </MenuItem>
         </MenuList>
       </Menu>
@@ -114,6 +126,8 @@ function ChatSettings({
       </Modal>
 
       <PromptLibrary isOpen={isLibraryOpen} onClose={onLibraryClose} />
+
+      <ProviderManagement isOpen={isProviderOpen} onClose={onProviderClose} />
     </>
   );
 }

@@ -11,6 +11,7 @@ export const DEFAULT_MESSAGES = {
   CHAT_HISTORY_OFF_MSG:
     "Chat mode off, only current message is included to generate response. Sytem prompt will be prepended to the query.",
 
+  UpdateSystemPrompt: "Click to update System Prompt",
   chatTextBoxDefaultMessage: "Press Enter to send | Shift+Enter for new line",
   resTimeMessage: "Response time in seconds",
   reSubmitMessage: "Regenerate response",
@@ -44,3 +45,26 @@ export const DEFAULT_FILENAMES = {
   csv: "conversation.csv",
   json: "conversation.json",
 };
+
+export const Providers = [
+  {
+    name: "Ollama",
+    value: "ollama",
+    url: "http://localhost:11434",
+  },
+  {
+    name: "OpenRouter",
+    value: "openrouter",
+    url: "https://openrouter.ai/api/v1",
+  },
+  {
+    name: "Groq",
+    value: "groq",
+    url: "https://api.groq.com/openai/api/v1",
+  },
+  {
+    name: "Gemini",
+    value: "gemini",
+    url: "https://generativelanguage.googleapis.com/v1beta/openai",
+  },
+];

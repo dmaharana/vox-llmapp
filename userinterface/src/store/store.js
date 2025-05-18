@@ -1,11 +1,9 @@
 import { configureStore } from "@reduxjs/toolkit";
-import promptReducer from "./promptSlice";
 import chatReducer from "./chatSlice";
 import providerReducer from "./providerSlice";
 
 export const store = configureStore({
   reducer: {
-    prompt: promptReducer,
     chat: chatReducer,
     provider: providerReducer,
   },

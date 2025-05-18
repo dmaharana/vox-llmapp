@@ -19,6 +19,8 @@ export default function ChatFooterControls({
   setConvHistory,
   model,
   setModel,
+  isProviderOpen,
+  setIsProviderOpen,
 }) {
   return (
     <HStack justifyContent="space-between" w="100%">
@@ -30,6 +32,9 @@ export default function ChatFooterControls({
           isLibraryOpen={isLibraryOpen}
           setIsLibraryOpen={setIsLibraryOpen}
           onLibraryClose={() => setIsLibraryOpen(false)}
+          isProviderOpen={isProviderOpen}
+          setIsProviderOpen={setIsProviderOpen}
+          onProviderClose={() => setIsProviderOpen(false)}
         />
 
         <ModelSelect model={model} setModel={setModel} />

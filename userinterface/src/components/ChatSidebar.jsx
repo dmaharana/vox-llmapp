@@ -36,7 +36,7 @@ function ChatSidebar({
   handleSelectChat,
   handleDeleteChat,
 }) {
-  const sidebarBg = useColorModeValue("gray.200", "gray.700");
+  const sidebarBg = useColorModeValue("blue.50", "gray.700");
   const dispatch = useDispatch();
   const chatSearchQuery = useSelector((state) => state.chat.chatSearchQuery);
   const fileInputRef = useRef();

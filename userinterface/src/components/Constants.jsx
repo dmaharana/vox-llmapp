@@ -9,7 +9,7 @@ export const DEFAULT_MESSAGES = {
   ASSISTANT_PROMPT: "Assistant is typing...",
   CHAT_HISTORY_ON_MSG: "Chat mode on, all previous messages are included.",
   CHAT_HISTORY_OFF_MSG:
-    "Chat mode off, only current message is included to generate response. Sytem prompt will be prepended to the query.",
+    "Chat mode off, only current message is included to generate response. System prompt will be prepended to the query.",
 
   UpdateSystemPrompt: "Click to update System Prompt",
   chatTextBoxDefaultMessage: "Press Enter to send | Shift+Enter for new line",

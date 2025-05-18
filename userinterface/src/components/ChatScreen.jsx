@@ -577,7 +577,7 @@ export default function ChatScreen() {
             bg={bgMain}
             py={4}
             px={2}
-            borderRadius={"2rem"}
+            borderRadius={"1rem"}
             justifyContent="space-between"
           >
             <ChatHeader

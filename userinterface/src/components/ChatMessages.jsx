@@ -30,7 +30,7 @@ export default function ChatMessages({
   const systemPrompt = useSelector((state) => state.prompt.systemPrompt);
 
   const bgChat = useColorModeValue("blue.50", "gray.700");
-
+  const bgText = useColorModeValue("gray.600", "gray.200");
   return (
     <VStack
       flex="1"
@@ -72,73 +72,76 @@ export default function ChatMessages({
       ) : (
         <Box w={"100%"} textAlign="center" p={8}>
           <VStack spacing={6}>
-            <Text fontSize="2xl" fontWeight="bold" color="gray.600">
+            <Text fontSize="2xl" fontWeight="bold" color={bgText}>
               What would you like to know today?
             </Text>
 
             <HStack alignItems="center" flex="1">
               <Icon
                 as={MdModelTraining}
-                color="blue.600"
+                color={bgText}
                 boxSize={6}
                 mr={3}
                 filter="drop-shadow(0 2px 2px rgba(0, 0, 0, 0.1))"
               />
-              <Text fontSize="md" fontWeight="bold" color="blue.600">
+              <Text fontSize="md" fontWeight="bold" color={bgText}>
                 System Prompt:
               </Text>
 
               <Tooltip label={DEFAULT_MESSAGES.UpdateSystemPrompt}>
-              <Button
-                size="sm"
-                icon={
-                  <Icon
-                    as={MdModelTraining}
-                    color="blue.600"
-                    boxSize={6}
-                    mr={3}
-                    filter="drop-shadow(0 2px 2px rgba(0, 0, 0, 0.1))"
-                  />
-                }
-                colorScheme="blue"
-                variant="ghost"
-                onClick={() => setIsLibraryOpen(true)}
-              >
-                <Text
-                  fontSize="md"
-                  color="blue.800"
-                  noOfLines={3}
-                  lineHeight="tall"
-                  position="relative"
-                  zIndex={1}
-                  textDecoration="underline"
-                  _hover={{
-                    textDecoration: "none",
-                  }}
+                <Button
+                  size="sm"
+                  icon={
+                    <Icon
+                      as={MdModelTraining}
+                      color={bgText}
+                      boxSize={6}
+                      mr={3}
+                      filter="drop-shadow(0 2px 2px rgba(0, 0, 0, 0.1))"
+                    />
+                  }
+                  colorScheme="blue"
+                  variant="ghost"
+                  onClick={() => setIsLibraryOpen(true)}
                 >
-                  {(() => {
-                    const matchedPrompt = prompts?.find(
-                      (p) => p.content === systemPrompt
-                    );
-                    if (matchedPrompt) {
-                      return matchedPrompt.name;
-                    } else if (
-                      systemPrompt === DEFAULT_MESSAGES.SYSTEM_PROMPT
-                    ) {
-                      return "Default System Prompt";
-                    } else {
-                      return "Custom System Prompt";
-                    }
-                  })()}
-                </Text>
-              </Button>
+                  <Text
+                    fontSize="md"
+                    color={bgText}
+                    noOfLines={3}
+                    lineHeight="tall"
+                    position="relative"
+                    zIndex={1}
+                    _hover={{
+                      textDecoration: "none",
+                    }}
+                  >
+                    {(() => {
+                      const matchedPrompt = prompts?.find(
+                        (p) => p.content === systemPrompt
+                      );
+                      if (matchedPrompt) {
+                        return matchedPrompt.name;
+                      } else if (
+                        systemPrompt === DEFAULT_MESSAGES.SYSTEM_PROMPT
+                      ) {
+                        return "Default System Prompt";
+                      } else {
+                        return "Custom System Prompt";
+                      }
+                    })()}
+                  </Text>
+                </Button>
               </Tooltip>
-
             </HStack>
 
-            <Text fontSize="sm" color="gray.500" fontStyle="italic">
-              Type your question below or select a system prompt to get started
-            </Text>
+            <VStack>
+              <Text fontSize="sm" color={bgText} fontStyle="italic">
+                Click on System Prompt to update it.
+              </Text>
+              <Text fontSize="sm" color={bgText} fontStyle="italic">
+                Type your question below to get started.
+              </Text>
+            </VStack>
           </VStack>
         </Box>
       )}

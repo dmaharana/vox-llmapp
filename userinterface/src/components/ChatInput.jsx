@@ -13,6 +13,7 @@ export default function ChatInput({
   useColorModeValue,
 }) {
   const bgInput = useColorModeValue("green.50", "gray.700");
+  const bgText = useColorModeValue("gray.600", "gray.100");
 
   return (
     <Box w={"100%"} bg={bgInput} mt="auto">
@@ -23,9 +24,14 @@ export default function ChatInput({
           value={query}
           onChange={(e) => setQuery(e.target.value)}
           onKeyDown={(e) => handleKeyPress(e)}
-          borderRadius={"2rem"}
-          h={"70%"}
+          borderRadius={"1rem"}
+          autoSize={true}
+          maxH="10lh"
           paddingTop={"2rem"}
+          color={bgText}
+          variant="outline"
+          resize="vertical"
+          overflow="auto"
         />
         {query && (
           <Button

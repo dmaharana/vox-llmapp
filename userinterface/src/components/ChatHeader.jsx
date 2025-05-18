@@ -2,6 +2,7 @@ import { HStack, IconButton, Text } from "@chakra-ui/react";
 import { MoonIcon, SunIcon, HamburgerIcon } from "@chakra-ui/icons";
 import { useSelector } from "react-redux";
 import { DEFAULT_MESSAGES } from "./Constants";
+import { useColorModeValue } from "@chakra-ui/react";
 
 export default function ChatHeader({
   toggleColorMode,
@@ -11,13 +12,16 @@ export default function ChatHeader({
 }) {
   const prompts = useSelector((state) => state.prompt.prompts);
   const systemPrompt = useSelector((state) => state.prompt.systemPrompt);
+  const bgText = useColorModeValue("blue.900", "blue.100");
+  const bgHeader = useColorModeValue("blue.100", "blue.600");
+
 
   return (
     <HStack
       w="100%"
       p={2}
-      borderRadius="2rem"
-      bg="#FFD7BE"
+      borderRadius="1rem"
+      bg={bgHeader}
       justifyContent="space-between"
       alignItems="center"
     >
@@ -28,22 +32,21 @@ export default function ChatHeader({
         onClick={toggleSidebar}
         variant="ghost"
         mr={2}
-        color="black"
+        color={bgText}
         sx={{
           _hover: {
-            backgroundColor: "#fcbf9e",
+            backgroundColor: bgHeader,
           },
         }}
       />
 
       <Text
-        fontFamily="Gothic"
+        fontFamily="Raleway, sans-serif"
         fontSize="2.0rem"
         fontWeight="bold"
         textAlign="center"
-        color="#000000"
+        color={bgText}
         flex="1"
-        textShadow="2px 2px 4px #000000"
       >
         {DEFAULT_MESSAGES.APP_TITLE}
         {(() => {
@@ -52,9 +55,9 @@ export default function ChatHeader({
               (p) => p.content === systemPrompt
             );
             if (matchedPrompt) {
-              return ` (${matchedPrompt.name})`;
+              return ` as ${matchedPrompt.name}`;
             } else {
-              return ` (Custom Prompt)`;
+              return ` as Custom Prompt`;
             }
           }
           return "";
@@ -67,10 +70,10 @@ export default function ChatHeader({
         onClick={toggleColorMode}
         variant="ghost"
         size="lg"
-        color="black"
+        color={bgText}
         sx={{
           _hover: {
-            backgroundColor: "#fcbf9e",
+            backgroundColor: bgHeader,
           },
         }}
       />

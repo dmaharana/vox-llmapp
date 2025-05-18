@@ -1,18 +1,37 @@
 import React from "react";
 import ReactDOM from "react-dom/client";
 import App from "./App.jsx";
+import "@fontsource/open-sans";
+import "@fontsource/raleway";
 
 import { ChakraProvider, ColorModeScript, extendTheme } from "@chakra-ui/react";
 
 import { Provider } from "react-redux";
 import { store } from "./store";
 
+// 2. Objects can be created inside the extendTheme function or elsewhere and imported
+const colors = {
+  primaryFontColor: {
+    lightMode: "gray.700",
+    darkMode: "gray.200",
+  },
+  secondaryFontColor: {
+    lightMode: "gray.600",
+    darkMode: "gray.400",
+  },
+  plainOldBlue: "blue"
+}
+
 const config = {
   initialColorMode: "light",
   useSystemColorMode: false,
+  fonts: {
+    heading: `'Open Sans', sans-serif`,
+    body: `'Raleway', sans-serif`,
+  },
 };
 
-const theme = extendTheme({ config });
+const theme = extendTheme({ config, colors });
 
 ReactDOM.createRoot(document.getElementById("root")).render(
   <React.StrictMode>

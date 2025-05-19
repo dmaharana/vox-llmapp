@@ -18,6 +18,7 @@ export default function ChatMessages({
   waitingResponse,
   handleQueryUpdate,
   handleDeleteMessage,
+  handleAssistantUpdate,
   handleResubmit,
   currentMsgId,
   initialAssistantMessage,
@@ -65,6 +66,7 @@ export default function ChatMessages({
                 defaultMsg={initialAssistantMessage}
                 chatHistory={convHistory}
                 systemPrompt={systemPrompt}
+                handleAssistantUpdate={handleAssistantUpdate}
               />
             )}
           </Box>

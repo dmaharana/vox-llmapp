@@ -9,6 +9,7 @@ import {
   Tooltip,
   useClipboard,
   useColorModeValue,
+  Textarea,
 } from "@chakra-ui/react";
 import {
   CopyIcon,
@@ -18,6 +19,7 @@ import {
   RepeatIcon,
   RepeatClockIcon,
   ViewOffIcon,
+  EditIcon,
 } from "@chakra-ui/icons";
 import ReactMarkdown from "markdown-to-jsx";
 import ChakraUIRenderer from "chakra-ui-markdown-renderer";
@@ -88,6 +90,7 @@ export function AssistantMsg({
   chatHistory,
   systemPrompt,
   model,
+  handleAssistantUpdate,
 }) {
   const { hasCopied, onCopy } = useClipboard(msg);
 
@@ -102,6 +105,7 @@ export function AssistantMsg({
   )?.length;
   const [isExpanded, setIsExpanded] = useState(false);
   const [isMsgExpanded, setIsMsgExpanded] = useState(waitingResponse);
+  const [isEditing, setIsEditing] = useState(false);
   const maxContentLength = 200;
   const currentAvatar = getAvatarForModel(model);
 
@@ -133,40 +137,51 @@ export function AssistantMsg({
           >
             {name}
           </Text>
-          <ReactMarkdown
-            components={ChakraUIRenderer()}
-            skiphtml="true"
-            align="left"
-            sx={{
-              p: "20px",
-              borderRadius: "10px",
-            }}
-          >
-            {msg.length <= maxContentLength || isMsgExpanded
-              ? msg
-              : msg.substring(0, maxContentLength) + "..."}
-          </ReactMarkdown>
+          {isEditing ? (
+            <Textarea
+              value={msg}
+              onChange={(e) => handleAssistantUpdate(convId, e.target.value)}
+              onBlur={() => setIsEditing(false)}
+            />
+          ) : (
+            <>
+              <ReactMarkdown
+                components={ChakraUIRenderer()}
+                skiphtml="true"
+                align="left"
+                sx={{
+                  p: "20px",
+                  borderRadius: "10px",
+                }}
+              >
+                {msg.length <= maxContentLength || isMsgExpanded
+                  ? msg
+                  : msg.substring(0, maxContentLength) + "..."}
+              </ReactMarkdown>
 
-          {String(msg).length > maxContentLength && (
-            <Button
-              size="xs"
-              colorScheme="blue"
-              variant="ghost"
-              onClick={() => setIsMsgExpanded(!isMsgExpanded)}
-            >
-              {isMsgExpanded ? (
-                <Tooltip label={DEFAULT_MESSAGES.collapseMessage}>
-                  <ChevronUpIcon />
-                </Tooltip>
-              ) : (
-                <Tooltip label={DEFAULT_MESSAGES.expandMessage}>
-                  <ChevronDownIcon />
-                </Tooltip>
+              {String(msg).length > maxContentLength && (
+                <Button
+                  size="xs"
+                  colorScheme="blue"
+                  variant="ghost"
+                  onClick={() => setIsMsgExpanded(!isMsgExpanded)}
+                >
+                  {isMsgExpanded ? (
+                    <Tooltip label={DEFAULT_MESSAGES.collapseMessage}>
+                      <ChevronUpIcon />
+                    </Tooltip>
+                  ) : (
+                    <Tooltip label={DEFAULT_MESSAGES.expandMessage}>
+                      <ChevronDownIcon />
+                    </Tooltip>
+                  )}
+                </Button>
               )}
-            </Button>
+            </>
           )}
         </Box>
       </HStack>
+
       <HStack spacing={1} justifyContent={"flex-end"}>
         {typeof count === "undefined" ? null : (
           <Button
@@ -212,14 +227,22 @@ export function AssistantMsg({
           variant="ghost"
         />
 
-        {currentMsgId !== convId ? (
-          <Tooltip label={DEFAULT_MESSAGES.resTimeMessage}>
-            <Text fontSize="sm" fontWeight="bold" color="blue">
-              {resTime}
-            </Text>
-          </Tooltip>
-        ) : null}
-
+        <Button
+          size="xs"
+          colorScheme="blue"
+          isDisabled={waitingResponse}
+          onClick={() => setIsEditing(!isEditing)}
+          leftIcon={
+            isEditing ? (
+              <CheckIcon />
+            ) : (
+              <Tooltip label={DEFAULT_MESSAGES.editMessage}>
+                <EditIcon />
+              </Tooltip>
+            )
+          }
+          variant="ghost"
+        />
         {waitingResponse && currentMsgId === convId ? null : (
           <Button
             size="xs"
@@ -240,6 +263,14 @@ export function AssistantMsg({
             variant="ghost"
           />
         )}
+
+        {currentMsgId !== convId ? (
+          <Tooltip label={DEFAULT_MESSAGES.resTimeMessage}>
+            <Text fontSize="sm" fontWeight="bold" color="blue">
+              {resTime}
+            </Text>
+          </Tooltip>
+        ) : null}
       </HStack>
       {isExpanded && <br />}
       {isExpanded && (

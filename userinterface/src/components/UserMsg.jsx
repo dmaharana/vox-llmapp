@@ -32,13 +32,15 @@ export function UserMsg({
   const standardTextLen = 200;
 
   const userBg = useColorModeValue("green.50", "gray.600");
+  const userAvatarText = useColorModeValue("gray.200", "gray.800");
+  const userAvatarName = useColorModeValue("gray.600", "gray.300");
+  const userAvatarBg = useColorModeValue("orange.600", "orange.300");
   const userTextColor = useColorModeValue("black", "white");
 
   const toggleExpand = () => {
     setIsExpanded(!isExpanded);
   };
 
-  const name = "Me";
   return (
     <Box
       bg={userBg}
@@ -49,13 +51,13 @@ export function UserMsg({
       w={"100%"}
     >
       <HStack>
-        <Avatar size={"sm"} name="Me" mb={2} mr={3} />
+        <Avatar size={"sm"} name={DEFAULT_MESSAGES.USER_NAME} mb={2} mr={3} bg={userAvatarBg} color={userAvatarText} />
         <Box w={"100%"} align={"start"}>
           <Text
             fontWeight={"bold"}
             mb={1}
             fontSize={"xs"}
-            color={useColorModeValue("gray.600", "gray.300")}
+            color={userAvatarName}
             align={"start"}
           >
             {DEFAULT_MESSAGES.USER_NAME}

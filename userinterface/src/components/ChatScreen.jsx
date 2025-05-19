@@ -315,6 +315,19 @@ export default function ChatScreen() {
     }
   };
 
+  const handleAssistantUpdate = (id, editedAssistantMsg) => {
+    // find the message with the given id
+    const message = conversation.find((msg) => msg.id === id);
+
+    if (message) {
+      setConversation((conversation) =>
+        conversation.map((msg) =>
+          msg.id === id ? { ...msg, assistant: editedAssistantMsg } : msg
+        )
+      );
+    }
+  };
+
   const handleStopGeneration = async () => {
     const params = new URLSearchParams({
       token: cancelToken,
@@ -594,6 +607,7 @@ export default function ChatScreen() {
               waitingResponse={waitingResponse}
               handleQueryUpdate={handleQueryUpdate}
               handleDeleteMessage={handleDeleteMessage}
+              handleAssistantUpdate={handleAssistantUpdate}
               handleResubmit={handleResubmit}
               currentMsgId={currentMsgId}
               initialAssistantMessage={initialAssistantMessage}

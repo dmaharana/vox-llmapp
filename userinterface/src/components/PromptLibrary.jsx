@@ -63,6 +63,8 @@ export default function PromptLibrary({
     if (savedPrompts) {
       const parsedPrompts = JSON.parse(savedPrompts);
       if (parsedPrompts.length > 0) {
+        // sort the prompts by name
+        parsedPrompts.sort((a, b) => a.name.localeCompare(b.name));
         dispatch(setPrompts(parsedPrompts));
         return;
       }
@@ -172,7 +174,14 @@ export default function PromptLibrary({
         name: newPromptName,
         content: newPromptContent,
       };
-      dispatch(setPrompts([...prompts, newPrompt]));
+
+      // add the new prompt to the prompts array
+      const updatedPrompts = [...prompts, newPrompt];
+
+      // sort the prompts by name
+      updatedPrompts.sort((a, b) => a.name.localeCompare(b.name));
+
+      dispatch(setPrompts(updatedPrompts));
       setNewPromptName("");
       setNewPromptContent("");
     }

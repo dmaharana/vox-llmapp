@@ -25,7 +25,7 @@ import { SettingsIcon } from "@chakra-ui/icons";
 import IncludeHistorySwitch from "./IncludeHistorySwitch";
 import PromptLibrary from "./PromptLibrary";
 import ProviderManagement from "./ProviderManagement";
-import { DEFAULT_MESSAGES } from "./Constants";
+import AddProvider from "./Provider/AddProvider";
 
 function ChatSettings({
   includeHistory,
@@ -37,6 +37,9 @@ function ChatSettings({
   isProviderOpen,
   setIsProviderOpen,
   onProviderClose,
+  isAddProviderOpen,
+  setIsAddProviderOpen,
+  onAddProviderClose,
 }) {
   const dispatch = useDispatch();
   const systemPrompt = useSelector((state) => state.prompt.systemPrompt);

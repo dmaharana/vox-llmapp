@@ -3,8 +3,6 @@ import { useSelector, useDispatch } from "react-redux";
 import { setProviders } from "../store/providerSlice";
 import ShowAlert from "./ShowAlert";
 import {
-  Textarea,
-  Input,
   Box,
   VStack,
   HStack,
@@ -23,11 +21,17 @@ import {
   AlertDialogHeader,
   AlertDialogBody,
   AlertDialogFooter,
+  Table,
+  Thead,
+  Tbody,
+  Tr,
+  Th,
+  Td,
 } from "@chakra-ui/react";
-import { AddIcon } from "@chakra-ui/icons";
 import { ProviderSearch } from "./Provider/ProviderSearch";
 import { ImportExportButtons } from "./PromptLibrary/ImportExportButtons";
 import { ProviderItem } from "./Provider/ProviderItem";
+import AddProvider from "./Provider/AddProvider"; // Import the AddProvider component
 import generateUUID from "./scripts/utils";
 
 export default function ProviderManagement({ isOpen, onClose }) {
@@ -42,13 +46,12 @@ export default function ProviderManagement({ isOpen, onClose }) {
   const cancelRef = useRef();
   const fileInputRef = useRef();
   const [providerToDelete, setProviderToDelete] = useState(null);
-  const [newProviderName, setNewProviderName] = useState("");
-  const [newProviderConfig, setNewProviderConfig] = useState("");
   const [searchQuery, setSearchQuery] = useState("");
   const [showAddProvider, setShowAddProvider] = useState(false);
   const [editingProvider, setEditingProvider] = useState(null);
   const [editName, setEditName] = useState("");
   const [editConfig, setEditConfig] = useState("");
+  const [editProvider, setEditProvider] = useState(null);
   const initialLoadComplete = useRef(false);
   const [importStatus, setImportStatus] = useState(null);
   const [importMessage, setImportMessage] = useState("");
@@ -161,18 +164,28 @@ export default function ProviderManagement({ isOpen, onClose }) {
     reader.readAsText(file);
   };
 
-  const handleAddProvider = async () => {
-    if (newProviderName && newProviderConfig) {
-      const newProvider = {
-        id: generateUUID(),
-        name: newProviderName,
-        config: newProviderConfig,
-      };
-      dispatch(setProviders([...providers, newProvider]));
-      setNewProviderName("");
-      setNewProviderConfig("");
-    }
+  const handleAddProvider = (providerData) => {
+    const newProvider = {
+      id: generateUUID(),
+      provider_name: providerData.provider,
+      name: providerData.name,
+      endpoint: providerData.endpoint,
+      api_key: providerData.apiKey,
+      models: providerData.models,
+    };
+    dispatch(setProviders([...providers, newProvider]));
+    setShowAddProvider(false); // Close the add provider form
   };
+
+  const handleEditProvider = (providerId) => {
+    const provider = providers.find((p) => p.id === providerId);
+    setEditProvider(provider);
+    setShowAddProvider(true);
+    setEditName(provider.name);
+    setEditConfig(provider.api_key);
+  };
+
+  console.log("providers", providers);
 
   return (
     <Modal
@@ -183,11 +196,11 @@ export default function ProviderManagement({ isOpen, onClose }) {
       blockScrollOnMount={false}
     >
       <ModalOverlay />
-      <ModalContent>
+      <ModalContent maxW="container.md">
         <ModalHeader>Provider Management</ModalHeader>
         <ModalCloseButton />
         <ModalBody pb={6}>
-          <Box maxH="60vh" overflowY="auto" pr={2}>
+          <Box maxH="80vh" overflowY="auto" pr={2}>
             <ProviderSearch
               searchQuery={searchQuery}
               setSearchQuery={setSearchQuery}
@@ -197,66 +210,64 @@ export default function ProviderManagement({ isOpen, onClose }) {
 
             {showAddProvider ? (
               <Box pb={4}>
-                <Input
-                  placeholder="Provider name"
-                  value={newProviderName}
-                  onChange={(e) => setNewProviderName(e.target.value)}
-                  mb={3}
+                <AddProvider
+                  onSave={handleAddProvider}
+                  onCancel={() => setShowAddProvider(false)}
+                  editProvider={editProvider}
+                  editName={editName}
+                  editConfig={editConfig}
                 />
-                <Textarea
-                  placeholder="Provider configuration"
-                  value={newProviderConfig}
-                  onChange={(e) => setNewProviderConfig(e.target.value)}
-                  mb={3}
-                />
-                <Box display="flex" justifyContent="flex-end">
-                  <Button
-                    leftIcon={<AddIcon />}
-                    colorScheme="blue"
-                    onClick={handleAddProvider}
-                    isDisabled={!newProviderName || !newProviderConfig}
-                    mt={3}
-                  >
-                    Add Provider
-                  </Button>
-                </Box>
               </Box>
             ) : null}
 
-            <VStack spacing={4} align="stretch">
-              {providers
-                ?.filter((provider) => {
-                  const query = searchQuery.toLowerCase();
-                  return (
-                    provider.name.toLowerCase().includes(query) ||
-                    provider.config.toLowerCase().includes(query)
-                  );
-                })
-                .map((provider) => (
-                  <ProviderItem
-                    key={provider.id}
-                    provider={provider}
-                    searchQuery={searchQuery}
-                    isEditing={editingProvider === provider.id}
-                    onEdit={(id) => {
-                      setEditingProvider(id);
-                      setEditName(provider.name);
-                      setEditConfig(provider.config);
-                    }}
-                    onSaveEdit={(id, name, config) => {
-                      dispatch(
-                        setProviders(
-                          providers.map((p) =>
-                            p.id === id ? { ...p, name, config } : p
-                          )
-                        )
-                      );
-                      setEditingProvider(null);
-                    }}
-                    onDelete={handleDeleteProvider}
-                  />
-                ))}
-            </VStack>
+            <Table variant="simple">
+              <Thead>
+                <Tr>
+                  <Th>Name</Th>
+                  <Th>Provider</Th>
+                  <Th>Endpoint</Th>
+                  <Th>Actions</Th>
+                </Tr>
+              </Thead>
+              <Tbody>
+                {providers
+                  ?.filter((provider) => {
+                    const query = searchQuery.toLowerCase();
+                    return (
+                      provider.name.toLowerCase().includes(query) ||
+                      provider.provider_name.toLowerCase().includes(query)
+                    );
+                  })
+                  .map((provider) => (
+                    <Tr key={provider.id}>
+                      <Td>{provider.name}</Td>
+                      <Td>{provider.provider_name}</Td>
+                      <Td>{provider.endpoint}</Td>
+                      <Td>
+                        <HStack spacing={2}>
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            onClick={() => {
+                              handleEditProvider(provider.id);
+                            }}
+                          >
+                            Edit
+                          </Button>
+                          <Button
+                            size="sm"
+                            colorScheme="red"
+                            variant="outline"
+                            onClick={() => handleDeleteProvider(provider.id)}
+                          >
+                            Delete
+                          </Button>
+                        </HStack>
+                      </Td>
+                    </Tr>
+                  ))}
+              </Tbody>
+            </Table>
           </Box>
         </ModalBody>
 

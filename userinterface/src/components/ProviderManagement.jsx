@@ -126,7 +126,9 @@ export default function ProviderManagement({ isOpen, onClose }) {
     const url = URL.createObjectURL(blob);
     const link = document.createElement("a");
     link.href = url;
-    link.download = `providers_export_${new Date().toISOString().split("T")[0]}.json`;
+    link.download = `providers_export_${
+      new Date().toISOString().split("T")[0]
+    }.json`;
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
@@ -229,54 +231,56 @@ export default function ProviderManagement({ isOpen, onClose }) {
             />
 
             {showProviders ? (
-            <Table variant="simple">
-              <Thead>
-                <Tr>
-                  <Th>Name</Th>
-                  <Th>Provider</Th>
-                  <Th>Endpoint</Th>
-                  <Th>Actions</Th>
-                </Tr>
-              </Thead>
-              <Tbody>
-                {providers
-                  ?.filter((provider) => {
-                    const query = searchQuery.toLowerCase();
-                    return (
-                      provider.name.toLowerCase().includes(query) ||
-                      provider.provider_name.toLowerCase().includes(query)
-                    );
-                  })
-                  .map((provider) => (
-                    <Tr key={provider.id}>
-                      <Td>{provider.name}</Td>
-                      <Td>{provider.provider_name}</Td>
-                      <Td>{provider.endpoint}</Td>
-                      <Td>
-                        <HStack spacing={2}>
-                          <Button
-                            size="sm"
-                            variant="outline"
-                            onClick={() => handleEditProvider(provider.id)}
-                          >
-                            Edit
-                          </Button>
-                          <Button
-                            size="sm"
-                            colorScheme="red"
-                            variant="outline"
-                            onClick={() => handleDeleteProvider(provider.id)}
-                          >
-                            Delete
-                          </Button>
-                        </HStack>
-                      </Td>
-                    </Tr>
-                  ))}
-              </Tbody>
-            </Table>
+              <Table variant="simple">
+                <Thead>
+                  <Tr>
+                    <Th>Name</Th>
+                    <Th>Provider</Th>
+                    <Th>Endpoint</Th>
+                    <Th>Actions</Th>
+                  </Tr>
+                </Thead>
+                <Tbody>
+                  {providers
+                    ?.filter((provider) => {
+                      const query = searchQuery.toLowerCase();
+                      return (
+                        provider.name.toLowerCase().includes(query) ||
+                        provider.provider_name.toLowerCase().includes(query)
+                      );
+                    })
+                    .map((provider) => (
+                      <Tr key={provider.id}>
+                        <Td>{provider.name}</Td>
+                        <Td>{provider.provider_name}</Td>
+                        <Td>{provider.endpoint}</Td>
+                        <Td>
+                          <HStack spacing={2}>
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              onClick={() => handleEditProvider(provider.id)}
+                            >
+                              Edit
+                            </Button>
+                            <Button
+                              size="sm"
+                              colorScheme="red"
+                              variant="outline"
+                              onClick={() => handleDeleteProvider(provider.id)}
+                            >
+                              Delete
+                            </Button>
+                          </HStack>
+                        </Td>
+                      </Tr>
+                    ))}
+                </Tbody>
+              </Table>
             ) : (
-              <Text textAlign="center" mt={10} fontSize="lg" color="gray.500">{DEFAULT_MESSAGES.addProviderMessage}</Text>
+              <Text textAlign="center" mt={10} fontSize="lg" color="gray.500">
+                {DEFAULT_MESSAGES.addProviderMessage}
+              </Text>
             )}
           </Box>
         </ModalBody>
@@ -284,7 +288,9 @@ export default function ProviderManagement({ isOpen, onClose }) {
         {showImportAlert && (
           <ShowAlert
             status={importStatus}
-            title={importStatus === "success" ? "Import Successful" : "Import Error"}
+            title={
+              importStatus === "success" ? "Import Successful" : "Import Error"
+            }
             message={importMessage}
             resetStates={() => setShowImportAlert(false)}
           />
@@ -315,7 +321,8 @@ export default function ProviderManagement({ isOpen, onClose }) {
               Delete Provider
             </AlertDialogHeader>
             <AlertDialogBody>
-              Are you sure you want to delete this provider? This action cannot be undone.
+              Are you sure you want to delete this provider? This action cannot
+              be undone.
             </AlertDialogBody>
             <AlertDialogFooter>
               <Button ref={cancelRef} onClick={onDeleteDialogClose}>

@@ -28,6 +28,7 @@ import { AddIcon, EditIcon, DeleteIcon } from "@chakra-ui/icons";
 import { PromptSearch } from "./PromptLibrary/PromptSearch";
 import { ImportExportButtons } from "./PromptLibrary/ImportExportButtons";
 import { PromptItem } from "./PromptLibrary/PromptItem";
+import { AddPromptForm } from "./PromptLibrary/AddPromptForm";
 import generateUUID from "./scripts/utils";
 
 export default function PromptLibrary({
@@ -210,31 +211,41 @@ export default function PromptLibrary({
             />
 
             {showAddPrompt ? (
-              <Box pb={4}>
-                <Input
-                  placeholder="Prompt name"
-                  value={newPromptName}
-                  onChange={(e) => setNewPromptName(e.target.value)}
-                  mb={3}
-                />
-                <Textarea
-                  placeholder="Prompt content"
-                  value={newPromptContent}
-                  onChange={(e) => setNewPromptContent(e.target.value)}
-                  mb={3}
-                />
-                <Box display="flex" justifyContent="flex-end">
-                  <Button
-                    leftIcon={<AddIcon />}
-                    colorScheme="blue"
-                    onClick={handleAddPrompt}
-                    isDisabled={!newPromptName || !newPromptContent}
-                    mt={3}
-                  >
-                    Add Prompt
-                  </Button>
-                </Box>
-              </Box>
+              <AddPromptForm
+                showAddPrompt={showAddPrompt}
+                newPromptName={newPromptName}
+                setNewPromptName={setNewPromptName}
+                newPromptContent={newPromptContent}
+                setNewPromptContent={setNewPromptContent}
+                onSave={handleAddPrompt}
+                setShowAddPrompt={setShowAddPrompt}
+                prompts={prompts}
+              />
+              // <Box pb={4}>
+              //   <Input
+              //     placeholder="Prompt name"
+              //     value={newPromptName}
+              //     onChange={(e) => setNewPromptName(e.target.value)}
+              //     mb={3}
+              //   />
+              //   <Textarea
+              //     placeholder="Prompt content"
+              //     value={newPromptContent}
+              //     onChange={(e) => setNewPromptContent(e.target.value)}
+              //     mb={3}
+              //   />
+              //   <Box display="flex" justifyContent="flex-end">
+              //     <Button
+              //       leftIcon={<AddIcon />}
+              //       colorScheme="blue"
+              //       onClick={handleAddPrompt}
+              //       isDisabled={!newPromptName || !newPromptContent}
+              //       mt={3}
+              //     >
+              //       Add Prompt
+              //     </Button>
+              //   </Box>
+              // </Box>
             ) : null}
 
             <VStack spacing={4} align="stretch">

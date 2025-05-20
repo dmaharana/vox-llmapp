@@ -40,6 +40,10 @@ export const DEFAULT_MESSAGES = {
   assistantRole: "assistant",
   userRole: "user",
 
+  addPromptMessage: "Please add a prompt, click on the + button",
+  addPromptNameMessage: "Please enter a name for the prompt, like 'General' or 'Creative' or 'Formal' etc.",
+  addPromptContentMessage: "Please enter a content for the prompt, like 'You are a helpful assistant.'",
+
   addProviderMessage: "Please add a provider, click on the + button",
 };
 

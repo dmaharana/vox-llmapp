@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect } from "react";
 import {
   Drawer,
   DrawerBody,
@@ -6,7 +6,7 @@ import {
   DrawerOverlay,
   DrawerContent,
   DrawerCloseButton,
-  Box,
+  DrawerFooter,
   FormControl,
   FormLabel,
   Input,
@@ -19,33 +19,42 @@ import {
   InputRightElement,
   Text,
   useToast,
-  SimpleGrid,
   HStack,
-} from '@chakra-ui/react';
-import { SearchIcon } from '@chakra-ui/icons';
+} from "@chakra-ui/react";
+import { SearchIcon } from "@chakra-ui/icons";
 
-const AddProvider = ({ isOpen, onClose, onSave, isEditing = false, providerToEdit, existingNames = [] }) => {
+function AddProvider({
+  isOpen,
+  onClose,
+  onSave,
+  isEditing = false,
+  providerToEdit,
+  existingNames = [],
+}) {
   // Sample provider data
   const providers = [
-    { name: 'Ollama', endpoint: 'http://localhost:11434' },
-    { name: 'OpenRouter', endpoint: 'https://openrouter.ai/api/v1' },
-    { name: 'Groq', endpoint: 'https://api.groq.com/openai/api/v1' },
-    { name: 'Gemini', endpoint: 'https://generativelanguage.googleapis.com/v1beta/openai' },
-    { name: 'Open AI Complaint', endpoint: '' },
-    { name: 'Provider A', endpoint: 'https://api.provider-a.com' },
-    { name: 'Provider B', endpoint: 'https://api.provider-b.com' },
+    { name: "Ollama", endpoint: "http://localhost:11434" },
+    { name: "OpenRouter", endpoint: "https://openrouter.ai/api/v1" },
+    { name: "Groq", endpoint: "https://api.groq.com/openai/api/v1" },
+    {
+      name: "Gemini",
+      endpoint: "https://generativelanguage.googleapis.com/v1beta/openai",
+    },
+    { name: "Open AI Complaint", endpoint: "" },
+    { name: "Provider A", endpoint: "https://api.provider-a.com" },
+    { name: "Provider B", endpoint: "https://api.provider-b.com" },
   ];
 
   // State management
   const [formData, setFormData] = useState({
-    provider_name: '',
-    name: '',
-    endpoint: '',
-    api_key: '',
+    provider_name: "",
+    name: "",
+    endpoint: "",
+    api_key: "",
   });
   const [models, setModels] = useState([]);
   const [selectedModels, setSelectedModels] = useState([]);
-  const [modelFilter, setModelFilter] = useState('');
+  const [modelFilter, setModelFilter] = useState("");
   const [isLoadingModels, setIsLoadingModels] = useState(false);
   const toast = useToast();
   const [showApiKey, setShowApiKey] = useState(false);
@@ -54,19 +63,19 @@ const AddProvider = ({ isOpen, onClose, onSave, isEditing = false, providerToEdi
   useEffect(() => {
     if (isEditing && providerToEdit) {
       setFormData({
-        provider_name: providerToEdit.provider_name || '',
-        name: providerToEdit.name || '',
-        endpoint: providerToEdit.endpoint || '',
-        api_key: providerToEdit.api_key || '',
+        provider_name: providerToEdit.provider_name || "",
+        name: providerToEdit.name || "",
+        endpoint: providerToEdit.endpoint || "",
+        api_key: providerToEdit.api_key || "",
       });
       setSelectedModels(providerToEdit.models || []);
       setModels(providerToEdit.models || []); // Pre-populate models
     } else {
       // Reset form for adding new provider
-      setFormData({ provider_name: '', name: '', endpoint: '', api_key: '' });
+      setFormData({ provider_name: "", name: "", endpoint: "", api_key: "" });
       setSelectedModels([]);
       setModels([]);
-      setModelFilter('');
+      setModelFilter("");
     }
   }, [isEditing, providerToEdit]);
 
@@ -76,7 +85,7 @@ const AddProvider = ({ isOpen, onClose, onSave, isEditing = false, providerToEdi
     setFormData({
       ...formData,
       provider_name: e.target.value,
-      endpoint: selectedProvider?.endpoint || '',
+      endpoint: selectedProvider?.endpoint || "",
     });
   };
 
@@ -90,9 +99,9 @@ const AddProvider = ({ isOpen, onClose, onSave, isEditing = false, providerToEdi
   const fetchModels = async () => {
     if (!formData.provider_name) {
       toast({
-        title: 'Error',
-        description: 'Please select a provider first',
-        status: 'error',
+        title: "Error",
+        description: "Please select a provider first",
+        status: "error",
         duration: 3000,
         isClosable: true,
       });
@@ -103,18 +112,18 @@ const AddProvider = ({ isOpen, onClose, onSave, isEditing = false, providerToEdi
     // Simulate API call
     setTimeout(() => {
       const sampleModels = [
-        'Model 1',
-        'Model 2',
-        'Model 3',
-        'Advanced Model',
-        'Basic Model',
+        "Model 1",
+        "Model 2",
+        "Model 3",
+        "Advanced Model",
+        "Basic Model",
       ];
       setModels(sampleModels);
       setIsLoadingModels(false);
       toast({
-        title: 'Success',
-        description: 'Models fetched successfully',
-        status: 'success',
+        title: "Success",
+        description: "Models fetched successfully",
+        status: "success",
         duration: 3000,
         isClosable: true,
       });
@@ -133,9 +142,9 @@ const AddProvider = ({ isOpen, onClose, onSave, isEditing = false, providerToEdi
     // Validation
     if (!formData.provider_name) {
       toast({
-        title: 'Error',
-        description: 'Provider is required',
-        status: 'error',
+        title: "Error",
+        description: "Provider is required",
+        status: "error",
         duration: 3000,
         isClosable: true,
       });
@@ -144,9 +153,9 @@ const AddProvider = ({ isOpen, onClose, onSave, isEditing = false, providerToEdi
 
     if (!formData.name) {
       toast({
-        title: 'Error',
-        description: 'Name is required',
-        status: 'error',
+        title: "Error",
+        description: "Name is required",
+        status: "error",
         duration: 3000,
         isClosable: true,
       });
@@ -159,9 +168,9 @@ const AddProvider = ({ isOpen, onClose, onSave, isEditing = false, providerToEdi
       : existingNames;
     if (otherNames.includes(formData.name)) {
       toast({
-        title: 'Error',
-        description: 'Name must be unique',
-        status: 'error',
+        title: "Error",
+        description: "Name must be unique",
+        status: "error",
         duration: 3000,
         isClosable: true,
       });
@@ -179,28 +188,36 @@ const AddProvider = ({ isOpen, onClose, onSave, isEditing = false, providerToEdi
     onSave(providerData, isEditing);
 
     // Reset form and close drawer
-    setFormData({ provider_name: '', name: '', endpoint: '', api_key: '' });
+    setFormData({ provider_name: "", name: "", endpoint: "", api_key: "" });
     setSelectedModels([]);
     setModels([]);
-    setModelFilter('');
+    setModelFilter("");
     onClose();
   };
 
   // Handle cancel
   const handleCancel = () => {
-    setFormData({ provider_name: '', name: '', endpoint: '', api_key: '' });
+    setFormData({ provider_name: "", name: "", endpoint: "", api_key: "" });
     setSelectedModels([]);
     setModels([]);
-    setModelFilter('');
+    setModelFilter("");
     onClose();
   };
 
   return (
-    <Drawer isOpen={isOpen} placement="right" onClose={onClose} size="md" closeOnInteractOutside={false}>
+    <Drawer
+      isOpen={isOpen}
+      placement="right"
+      onClose={onClose}
+      size="md"
+      closeOnInteractOutside={false}
+    >
       <DrawerOverlay />
       <DrawerContent>
         <DrawerCloseButton />
-        <DrawerHeader>{isEditing ? 'Edit Provider' : 'Add New Provider'}</DrawerHeader>
+        <DrawerHeader>
+          {isEditing ? "Edit Provider" : "Add New Provider"}
+        </DrawerHeader>
         <DrawerBody>
           <form onSubmit={handleSubmit}>
             <VStack spacing={4}>
@@ -234,10 +251,12 @@ const AddProvider = ({ isOpen, onClose, onSave, isEditing = false, providerToEdi
                   <Text color="green.500" fontSize="sm" mt={1}>
                     Valid name
                   </Text>
-                ) : existingNames.includes(formData.name) && (
-                  <Text color="red.500" fontSize="sm" mt={1}>
-                    Name already exists
-                  </Text>
+                ) : (
+                  existingNames.includes(formData.name) && (
+                    <Text color="red.500" fontSize="sm" mt={1}>
+                      Name already exists
+                    </Text>
+                  )
                 )}
               </FormControl>
 
@@ -257,28 +276,38 @@ const AddProvider = ({ isOpen, onClose, onSave, isEditing = false, providerToEdi
                 <FormLabel>API Key</FormLabel>
                 <InputGroup size="md">
                   <Input
-                    type={showApiKey ? 'text' : 'password'}
+                    type={showApiKey ? "text" : "password"}
                     name="api_key"
                     value={formData.api_key}
                     onChange={handleInputChange}
                     placeholder="Enter API key"
                   />
                   <InputRightElement width="4.5rem">
-                    <Button h="1.75rem" size="sm" onClick={() => setShowApiKey(!showApiKey)}>
-                      {showApiKey ? 'Hide' : 'Show'}
+                    <Button
+                      h="1.75rem"
+                      size="sm"
+                      onClick={() => setShowApiKey(!showApiKey)}
+                    >
+                      {showApiKey ? "Hide" : "Show"}
                     </Button>
                   </InputRightElement>
                 </InputGroup>
               </FormControl>
 
               {/* Models Section */}
-              <FormControl>
+              <FormControl isRequired>
                 <FormLabel>Models</FormLabel>
                 <Button
                   onClick={fetchModels}
                   colorScheme="teal"
                   isLoading={isLoadingModels}
                   mb={4}
+                  isDisabled={
+                    formData.name === "" ||
+                    formData.endpoint === "" ||
+                    formData.provider_name === "" ||
+                    isLoadingModels
+                  }
                 >
                   Fetch Models
                 </Button>
@@ -318,31 +347,40 @@ const AddProvider = ({ isOpen, onClose, onSave, isEditing = false, providerToEdi
                   </>
                 )}
               </FormControl>
-
-              {/* Action Buttons */}
-              <HStack width="full" justify="space-between">
-                <Button
-                  type="button"
-                  variant="outline"
-                  width="48%"
-                  onClick={handleCancel}
-                >
-                  Cancel
-                </Button>
-                <Button
-                  type="submit"
-                  colorScheme="teal"
-                  width="48%"
-                >
-                  {isEditing ? 'Update Provider' : 'Save Provider'}
-                </Button>
-              </HStack>
             </VStack>
           </form>
         </DrawerBody>
+
+        <DrawerFooter>
+          {/* Action Buttons */}
+          <HStack width="full" justify="space-between" mb={4}>
+            <Button
+              colorScheme="blue"
+              width="48%"
+              isDisabled={
+                formData.name === "" ||
+                formData.endpoint === "" ||
+                formData.provider_name === "" ||
+                isLoadingModels ||
+                selectedModels.length === 0
+              }
+              onClick={handleSubmit}
+            >
+              {isEditing ? "Update Provider" : "Save Provider"}
+            </Button>
+            <Button
+              type="button"
+              variant="outline"
+              width="48%"
+              onClick={handleCancel}
+            >
+              Cancel
+            </Button>
+          </HStack>
+        </DrawerFooter>
       </DrawerContent>
     </Drawer>
   );
-};
+}
 
 export default AddProvider;

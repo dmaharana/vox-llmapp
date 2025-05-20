@@ -39,6 +39,8 @@ export const DEFAULT_MESSAGES = {
 
   assistantRole: "assistant",
   userRole: "user",
+
+  addProviderMessage: "Please add a provider, click on the + button",
 };
 
 export const DEFAULT_FILENAMES = {

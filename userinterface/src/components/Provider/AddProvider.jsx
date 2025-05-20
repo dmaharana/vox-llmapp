@@ -1,5 +1,11 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
+  Drawer,
+  DrawerBody,
+  DrawerHeader,
+  DrawerOverlay,
+  DrawerContent,
+  DrawerCloseButton,
   Box,
   FormControl,
   FormLabel,
@@ -14,37 +20,62 @@ import {
   Text,
   useToast,
   SimpleGrid,
+  HStack,
 } from '@chakra-ui/react';
 import { SearchIcon } from '@chakra-ui/icons';
 
-const AddProvider = ({ onSave }) => {
+const AddProvider = ({ isOpen, onClose, onSave, isEditing = false, providerToEdit, existingNames = [] }) => {
   // Sample provider data
   const providers = [
+    { name: 'Ollama', endpoint: 'http://localhost:11434' },
+    { name: 'OpenRouter', endpoint: 'https://openrouter.ai/api/v1' },
+    { name: 'Groq', endpoint: 'https://api.groq.com/openai/api/v1' },
+    { name: 'Gemini', endpoint: 'https://generativelanguage.googleapis.com/v1beta/openai' },
+    { name: 'Open AI Complaint', endpoint: '' },
     { name: 'Provider A', endpoint: 'https://api.provider-a.com' },
     { name: 'Provider B', endpoint: 'https://api.provider-b.com' },
-    { name: 'Provider C', endpoint: '' },
   ];
 
   // State management
   const [formData, setFormData] = useState({
-    provider: '',
+    provider_name: '',
     name: '',
     endpoint: '',
-    apiKey: '',
+    api_key: '',
   });
   const [models, setModels] = useState([]);
   const [selectedModels, setSelectedModels] = useState([]);
   const [modelFilter, setModelFilter] = useState('');
   const [isLoadingModels, setIsLoadingModels] = useState(false);
-  const [existingNames, setExistingNames] = useState([]); // Simulated existing names
   const toast = useToast();
+  const [showApiKey, setShowApiKey] = useState(false);
+
+  // Pre-populate form for editing
+  useEffect(() => {
+    if (isEditing && providerToEdit) {
+      setFormData({
+        provider_name: providerToEdit.provider_name || '',
+        name: providerToEdit.name || '',
+        endpoint: providerToEdit.endpoint || '',
+        api_key: providerToEdit.api_key || '',
+      });
+      setSelectedModels(providerToEdit.models || []);
+      setModels(providerToEdit.models || []); // Pre-populate models
+    } else {
+      // Reset form for adding new provider
+      setFormData({ provider_name: '', name: '', endpoint: '', api_key: '' });
+      setSelectedModels([]);
+      setModels([]);
+      setModelFilter('');
+    }
+  }, [isEditing, providerToEdit]);
 
   // Handle provider selection
   const handleProviderChange = (e) => {
     const selectedProvider = providers.find((p) => p.name === e.target.value);
     setFormData({
       ...formData,
-      provider: e.target.value,
+      provider_name: e.target.value,
       endpoint: selectedProvider?.endpoint || '',
     });
   };
@@ -57,7 +88,7 @@ const AddProvider = ({ onSave }) => {
 
   // Simulate fetching models
   const fetchModels = async () => {
-    if (!formData.provider) {
+    if (!formData.provider_name) {
       toast({
         title: 'Error',
         description: 'Please select a provider first',
@@ -100,7 +131,7 @@ const AddProvider = ({ onSave }) => {
     e.preventDefault();
 
     // Validation
-    if (!formData.provider) {
+    if (!formData.provider_name) {
       toast({
         title: 'Error',
         description: 'Provider is required',
@@ -122,7 +153,11 @@ const AddProvider = ({ onSave }) => {
       return;
     }
 
-    if (existingNames.includes(formData.name)) {
+    // Check for unique name, excluding the current provider's name in edit mode
+    const otherNames = isEditing
+      ? existingNames.filter((name) => name !== providerToEdit?.name)
+      : existingNames;
+    if (otherNames.includes(formData.name)) {
       toast({
         title: 'Error',
         description: 'Name must be unique',
@@ -137,133 +172,176 @@ const AddProvider = ({ onSave }) => {
     const providerData = {
       ...formData,
       models: selectedModels,
+      id: isEditing ? providerToEdit.id : undefined, // Include ID for editing
     };
 
-    // Call onSave with provider data
-    onSave(providerData);
+    // Call onSave with provider data and isEditing flag
+    onSave(providerData, isEditing);
 
-    // Update local existing names
-    setExistingNames([...existingNames, formData.name]);
-
-    // Reset form
-    setFormData({ provider: '', name: '', endpoint: '', apiKey: '', models: [] });
+    // Reset form and close drawer
+    setFormData({ provider_name: '', name: '', endpoint: '', api_key: '' });
     setSelectedModels([]);
     setModels([]);
     setModelFilter('');
+    onClose();
+  };
+
+  // Handle cancel
+  const handleCancel = () => {
+    setFormData({ provider_name: '', name: '', endpoint: '', api_key: '' });
+    setSelectedModels([]);
+    setModels([]);
+    setModelFilter('');
+    onClose();
   };
 
   return (
-    <Box p={6} maxW="600px" mx="auto" bg="white" borderRadius="md" shadow="md">
-      <form onSubmit={handleSubmit}>
-        <VStack spacing={4}>
-          {/* Provider Selection */}
-          <FormControl isRequired>
-            <FormLabel>Provider</FormLabel>
-            <Select
-              name="provider"
-              value={formData.provider}
-              onChange={handleProviderChange}
-              placeholder="Select provider"
-            >
-              {providers.map((provider) => (
-                <option key={provider.name} value={provider.name}>
-                  {provider.name}
-                </option>
-              ))}
-            </Select>
-          </FormControl>
+    <Drawer isOpen={isOpen} placement="right" onClose={onClose} size="md" closeOnInteractOutside={false}>
+      <DrawerOverlay />
+      <DrawerContent>
+        <DrawerCloseButton />
+        <DrawerHeader>{isEditing ? 'Edit Provider' : 'Add New Provider'}</DrawerHeader>
+        <DrawerBody>
+          <form onSubmit={handleSubmit}>
+            <VStack spacing={4}>
+              {/* Provider Selection */}
+              <FormControl isRequired>
+                <FormLabel>Provider</FormLabel>
+                <Select
+                  name="provider_name"
+                  value={formData.provider_name}
+                  onChange={handleProviderChange}
+                  placeholder="Select provider"
+                >
+                  {providers.map((provider) => (
+                    <option key={provider.name} value={provider.name}>
+                      {provider.name}
+                    </option>
+                  ))}
+                </Select>
+              </FormControl>
 
-          {/* Name Input */}
-          <FormControl isRequired>
-            <FormLabel>Name</FormLabel>
-            <Input
-              name="name"
-              value={formData.name}
-              onChange={handleInputChange}
-              placeholder="Enter unique name"
-            />
-            {existingNames.includes(formData.name) && (
-              <Text color="red.500" fontSize="sm" mt={1}>
-                Name already exists
-              </Text>
-            )}
-          </FormControl>
+              {/* Name Input */}
+              <FormControl isRequired>
+                <FormLabel>Name</FormLabel>
+                <Input
+                  name="name"
+                  value={formData.name}
+                  onChange={handleInputChange}
+                  placeholder="Enter unique name"
+                />
+                {isEditing && formData.name === providerToEdit?.name ? (
+                  <Text color="green.500" fontSize="sm" mt={1}>
+                    Valid name
+                  </Text>
+                ) : existingNames.includes(formData.name) && (
+                  <Text color="red.500" fontSize="sm" mt={1}>
+                    Name already exists
+                  </Text>
+                )}
+              </FormControl>
 
-          {/* Service Endpoint */}
-          <FormControl>
-            <FormLabel>Service Endpoint</FormLabel>
-            <Input
-              name="endpoint"
-              value={formData.endpoint}
-              onChange={handleInputChange}
-              placeholder="Enter service endpoint"
-            />
-          </FormControl>
+              {/* Service Endpoint */}
+              <FormControl isRequired>
+                <FormLabel>Service Endpoint</FormLabel>
+                <Input
+                  name="endpoint"
+                  value={formData.endpoint}
+                  onChange={handleInputChange}
+                  placeholder="Enter service endpoint"
+                />
+              </FormControl>
 
-          {/* API Key */}
-          <FormControl>
-            <FormLabel>API Key</FormLabel>
-            <Input
-              name="apiKey"
-              value={formData.apiKey}
-              onChange={handleInputChange}
-              placeholder="Enter API key"
-            />
-          </FormControl>
-
-          {/* Models Section */}
-          <FormControl>
-            <FormLabel>Models</FormLabel>
-            <Button
-              onClick={fetchModels}
-              colorScheme="teal"
-              isLoading={isLoadingModels}
-              mb={4}
-            >
-              Fetch Models
-            </Button>
-
-            {models.length > 0 && (
-              <>
-                {/* Model Filter */}
-                <InputGroup mb={4}>
+              {/* API Key */}
+              <FormControl>
+                <FormLabel>API Key</FormLabel>
+                <InputGroup size="md">
                   <Input
-                    placeholder="Filter models..."
-                    value={modelFilter}
-                    onChange={(e) => setModelFilter(e.target.value)}
+                    type={showApiKey ? 'text' : 'password'}
+                    name="api_key"
+                    value={formData.api_key}
+                    onChange={handleInputChange}
+                    placeholder="Enter API key"
                   />
-                  <InputRightElement>
-                    <SearchIcon />
+                  <InputRightElement width="4.5rem">
+                    <Button h="1.75rem" size="sm" onClick={() => setShowApiKey(!showApiKey)}>
+                      {showApiKey ? 'Hide' : 'Show'}
+                    </Button>
                   </InputRightElement>
                 </InputGroup>
+              </FormControl>
 
-                {/* Model Selection */}
-                <CheckboxGroup
-                  value={selectedModels}
-                  onChange={setSelectedModels}
+              {/* Models Section */}
+              <FormControl>
+                <FormLabel>Models</FormLabel>
+                <Button
+                  onClick={fetchModels}
+                  colorScheme="teal"
+                  isLoading={isLoadingModels}
+                  mb={4}
                 >
-                  <SimpleGrid columns={[1, 2]} spacing={2}>
-                    {filteredModels.map((model) => (
-                      <Checkbox key={model} value={model}>
-                        {model}
-                      </Checkbox>
-                    ))}
-                  </SimpleGrid>
-                </CheckboxGroup>
-                {filteredModels.length === 0 && (
-                  <Text color="gray.500">No models match your filter</Text>
-                )}
-              </>
-            )}
-          </FormControl>
+                  Fetch Models
+                </Button>
 
-          {/* Submit Button */}
-          <Button type="submit" colorScheme="teal" width="full">
-            Save Provider
-          </Button>
-        </VStack>
-      </form>
-    </Box>
+                {models.length > 0 && (
+                  <>
+                    {/* Model Filter */}
+                    <InputGroup mb={4}>
+                      <Input
+                        placeholder="Filter models..."
+                        value={modelFilter}
+                        onChange={(e) => setModelFilter(e.target.value)}
+                      />
+                      <InputRightElement>
+                        <SearchIcon />
+                      </InputRightElement>
+                    </InputGroup>
+
+                    {/* Model Selection */}
+                    <CheckboxGroup
+                      value={selectedModels}
+                      onChange={setSelectedModels}
+                      alignItems="flex-start"
+                      pl={4}
+                    >
+                      <VStack spacing={2} align="flex-start">
+                        {filteredModels.map((model) => (
+                          <Checkbox key={model} value={model} id={model}>
+                            {model}
+                          </Checkbox>
+                        ))}
+                      </VStack>
+                    </CheckboxGroup>
+                    {filteredModels.length === 0 && (
+                      <Text color="gray.500">No models match your filter</Text>
+                    )}
+                  </>
+                )}
+              </FormControl>
+
+              {/* Action Buttons */}
+              <HStack width="full" justify="space-between">
+                <Button
+                  type="button"
+                  variant="outline"
+                  width="48%"
+                  onClick={handleCancel}
+                >
+                  Cancel
+                </Button>
+                <Button
+                  type="submit"
+                  colorScheme="teal"
+                  width="48%"
+                >
+                  {isEditing ? 'Update Provider' : 'Save Provider'}
+                </Button>
+              </HStack>
+            </VStack>
+          </form>
+        </DrawerBody>
+      </DrawerContent>
+    </Drawer>
   );
 };
 

@@ -4,7 +4,6 @@ import { setProviders } from "../store/providerSlice";
 import ShowAlert from "./ShowAlert";
 import {
   Box,
-  VStack,
   HStack,
   useDisclosure,
   Modal,
@@ -21,6 +20,7 @@ import {
   AlertDialogHeader,
   AlertDialogBody,
   AlertDialogFooter,
+  Text,
   Table,
   Thead,
   Tbody,
@@ -30,9 +30,9 @@ import {
 } from "@chakra-ui/react";
 import { ProviderSearch } from "./Provider/ProviderSearch";
 import { ImportExportButtons } from "./PromptLibrary/ImportExportButtons";
-import { ProviderItem } from "./Provider/ProviderItem";
-import AddProvider from "./Provider/AddProvider"; // Import the AddProvider component
+import AddProvider from "./Provider/AddProvider";
 import generateUUID from "./scripts/utils";
+import { DEFAULT_MESSAGES } from "./Constants";
 
 export default function ProviderManagement({ isOpen, onClose }) {
   const {
@@ -49,13 +49,11 @@ export default function ProviderManagement({ isOpen, onClose }) {
   const [searchQuery, setSearchQuery] = useState("");
   const [showAddProvider, setShowAddProvider] = useState(false);
   const [editingProvider, setEditingProvider] = useState(null);
-  const [editName, setEditName] = useState("");
-  const [editConfig, setEditConfig] = useState("");
-  const [editProvider, setEditProvider] = useState(null);
   const initialLoadComplete = useRef(false);
   const [importStatus, setImportStatus] = useState(null);
   const [importMessage, setImportMessage] = useState("");
   const [showImportAlert, setShowImportAlert] = useState(false);
+  const showProviders = providers.length > 0;
 
   useEffect(() => {
     const savedProviders = localStorage.getItem("providers");
@@ -78,7 +76,10 @@ export default function ProviderManagement({ isOpen, onClose }) {
           ...provider,
           id: provider.id || generateUUID(),
           name: String(provider.name || "Unnamed Provider"),
-          config: String(provider.config || ""),
+          provider_name: String(provider.provider_name || ""),
+          endpoint: String(provider.endpoint || ""),
+          api_key: String(provider.api_key || ""),
+          models: provider.models || [],
         }));
         localStorage.setItem("providers", JSON.stringify(providersWithIds));
         dispatch(setProviders(providersWithIds));
@@ -125,9 +126,7 @@ export default function ProviderManagement({ isOpen, onClose }) {
     const url = URL.createObjectURL(blob);
     const link = document.createElement("a");
     link.href = url;
-    link.download = `providers_export_${
-      new Date().toISOString().split("T")[0]
-    }.json`;
+    link.download = `providers_export_${new Date().toISOString().split("T")[0]}.json`;
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
@@ -147,7 +146,10 @@ export default function ProviderManagement({ isOpen, onClose }) {
         const validatedProviders = importedProviders.map((provider) => ({
           id: provider.id || generateUUID(),
           name: String(provider.name || "Unnamed Provider"),
-          config: String(provider.config || ""),
+          provider_name: String(provider.provider_name || ""),
+          endpoint: String(provider.endpoint || ""),
+          api_key: String(provider.api_key || ""),
+          models: provider.models || [],
         }));
 
         dispatch(setProviders(validatedProviders));
@@ -164,28 +166,46 @@ export default function ProviderManagement({ isOpen, onClose }) {
     reader.readAsText(file);
   };
 
-  const handleAddProvider = (providerData) => {
-    const newProvider = {
-      id: generateUUID(),
-      provider_name: providerData.provider,
-      name: providerData.name,
-      endpoint: providerData.endpoint,
-      api_key: providerData.apiKey,
-      models: providerData.models,
-    };
-    dispatch(setProviders([...providers, newProvider]));
-    setShowAddProvider(false); // Close the add provider form
+  const handleAddProvider = (providerData, isEditing) => {
+    if (isEditing) {
+      // Update existing provider
+      dispatch(
+        setProviders(
+          providers.map((p) =>
+            p.id === providerData.id
+              ? {
+                  id: p.id,
+                  name: providerData.name,
+                  provider_name: providerData.provider_name,
+                  endpoint: providerData.endpoint,
+                  api_key: providerData.api_key,
+                  models: providerData.models,
+                }
+              : p
+          )
+        )
+      );
+    } else {
+      // Add new provider
+      const newProvider = {
+        id: generateUUID(),
+        name: providerData.name,
+        provider_name: providerData.provider_name,
+        endpoint: providerData.endpoint,
+        api_key: providerData.api_key,
+        models: providerData.models,
+      };
+      dispatch(setProviders([...providers, newProvider]));
+    }
+    setShowAddProvider(false); // Close the drawer
+    setEditingProvider(null); // Clear editing state
   };
 
   const handleEditProvider = (providerId) => {
     const provider = providers.find((p) => p.id === providerId);
-    setEditProvider(provider);
+    setEditingProvider(provider);
     setShowAddProvider(true);
-    setEditName(provider.name);
-    setEditConfig(provider.api_key);
   };
-
-  console.log("providers", providers);
 
   return (
     <Modal
@@ -208,18 +228,7 @@ export default function ProviderManagement({ isOpen, onClose }) {
               setShowAddProvider={setShowAddProvider}
             />
 
-            {showAddProvider ? (
-              <Box pb={4}>
-                <AddProvider
-                  onSave={handleAddProvider}
-                  onCancel={() => setShowAddProvider(false)}
-                  editProvider={editProvider}
-                  editName={editName}
-                  editConfig={editConfig}
-                />
-              </Box>
-            ) : null}
-
+            {showProviders ? (
             <Table variant="simple">
               <Thead>
                 <Tr>
@@ -248,9 +257,7 @@ export default function ProviderManagement({ isOpen, onClose }) {
                           <Button
                             size="sm"
                             variant="outline"
-                            onClick={() => {
-                              handleEditProvider(provider.id);
-                            }}
+                            onClick={() => handleEditProvider(provider.id)}
                           >
                             Edit
                           </Button>
@@ -268,15 +275,16 @@ export default function ProviderManagement({ isOpen, onClose }) {
                   ))}
               </Tbody>
             </Table>
+            ) : (
+              <Text textAlign="center" mt={10} fontSize="lg" color="gray.500">{DEFAULT_MESSAGES.addProviderMessage}</Text>
+            )}
           </Box>
         </ModalBody>
 
         {showImportAlert && (
           <ShowAlert
             status={importStatus}
-            title={
-              importStatus === "success" ? "Import Successful" : "Import Error"
-            }
+            title={importStatus === "success" ? "Import Successful" : "Import Error"}
             message={importMessage}
             resetStates={() => setShowImportAlert(false)}
           />
@@ -307,8 +315,7 @@ export default function ProviderManagement({ isOpen, onClose }) {
               Delete Provider
             </AlertDialogHeader>
             <AlertDialogBody>
-              Are you sure you want to delete this provider? This action cannot
-              be undone.
+              Are you sure you want to delete this provider? This action cannot be undone.
             </AlertDialogBody>
             <AlertDialogFooter>
               <Button ref={cancelRef} onClick={onDeleteDialogClose}>
@@ -321,6 +328,18 @@ export default function ProviderManagement({ isOpen, onClose }) {
           </AlertDialogContent>
         </AlertDialogOverlay>
       </AlertDialog>
+
+      <AddProvider
+        isOpen={showAddProvider}
+        onClose={() => {
+          setShowAddProvider(false);
+          setEditingProvider(null);
+        }}
+        onSave={handleAddProvider}
+        isEditing={!!editingProvider}
+        providerToEdit={editingProvider}
+        existingNames={providers.map((p) => p.name)}
+      />
     </Modal>
   );
 }

@@ -7,6 +7,7 @@ export function ImportExportButtons({
   handleExportPrompts,
   handleImportPrompts,
   fileInputRef,
+  enableDownload,
 }) {
   return (
     <HStack spacing={3}>
@@ -15,6 +16,7 @@ export function ImportExportButtons({
           icon={<DownloadIcon />}
           onClick={handleExportPrompts}
           variant="outline"
+          isDisabled={!enableDownload}
         />
       </Tooltip>
 

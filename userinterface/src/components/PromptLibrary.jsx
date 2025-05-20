@@ -57,6 +57,7 @@ export default function PromptLibrary({
   const [importStatus, setImportStatus] = useState(null);
   const [importMessage, setImportMessage] = useState("");
   const [showImportAlert, setShowImportAlert] = useState(false);
+  const enableDownload = prompts.length > 0;
 
   useEffect(() => {
     const savedPrompts = localStorage.getItem("prompts");
@@ -294,6 +295,7 @@ export default function PromptLibrary({
               handleExportPrompts={handleExportPrompts}
               handleImportPrompts={handleImportPrompts}
               fileInputRef={fileInputRef}
+              enableDownload={enableDownload}
             />
             <Button colorScheme="blue" onClick={onClose}>
               Close

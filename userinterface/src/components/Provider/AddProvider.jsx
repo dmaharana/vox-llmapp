@@ -82,11 +82,13 @@ function AddProvider({
   // Handle provider selection
   const handleProviderChange = (e) => {
     const selectedProvider = providers.find((p) => p.name === e.target.value);
-    setFormData({
-      ...formData,
-      provider_name: e.target.value,
-      endpoint: selectedProvider?.endpoint || "",
-    });
+    
+      setFormData({
+        ...formData,
+        name: selectedProvider?.name,
+        provider_name: selectedProvider?.name,
+        endpoint: selectedProvider?.endpoint,
+      });
   };
 
   // Handle input changes

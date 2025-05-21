@@ -18,7 +18,6 @@ import ChatHeader from "./ChatHeader";
 import ChatMessages from "./ChatMessages";
 import ChatInput from "./ChatInput";
 import ChatFooterControls from "./ChatFooterControls";
-import ModelSelect from "./ModelSelect";
 
 function generateChatTitle(conversation) {
   if (!Array.isArray(conversation) || conversation.length === 0) {
@@ -48,6 +47,7 @@ export default function ChatScreen() {
   const dispatch = useDispatch();
   const prompts = useSelector((state) => state.prompt.prompts);
   const systemPrompt = useSelector((state) => state.prompt.systemPrompt);
+  const providers = useSelector((state) => state.provider.providers);
   const [isLibraryOpen, setIsLibraryOpen] = useState(false);
   const [conversation, setConversation] = useState([]);
   const [query, setQuery] = useState("");
@@ -61,6 +61,16 @@ export default function ChatScreen() {
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
   const [isProviderOpen, setIsProviderOpen] = useState(false);
   const [isAddProviderOpen, setIsAddProviderOpen] = useState(false);
+  const [selectedModel, setSelectedModel] = useState(null);
+  const [selectedProviderId, setSelectedProviderId] = useState(null);
+  const [selectedProvider, setSelectedProvider] = useState(null);
+
+  useEffect(() => {
+    if (selectedProviderId) {
+      const provider = providers.find((p) => p.id === selectedProviderId);
+      setSelectedProvider(provider);
+    }
+  }, [selectedProviderId]);
 
   const toggleSidebar = () => setIsSidebarOpen((prev) => !prev);
 
@@ -414,6 +424,9 @@ export default function ChatScreen() {
       stream: true,
       includeHistory: includeHistory,
       systemPrompt: systemPrompt,
+      providerName: selectedProvider.name,
+      providerApiKey: selectedProvider.api_key,
+      providerApiUrl: selectedProvider.endpoint,
     };
 
     if (conversation.length > 0 && includeHistory) {
@@ -571,6 +584,12 @@ export default function ChatScreen() {
     }
   };
 
+  const handleModelSelect = (model) => {
+    setSelectedModel(model);
+    setModel(model.name);
+    setSelectedProviderId(model.providerId);
+  };
+
   return (
     <Box position="relative">
       <HStack align="stretch" h="90vh">
@@ -646,6 +665,7 @@ export default function ChatScreen() {
               setIsProviderOpen={setIsProviderOpen}
               isAddProviderOpen={isAddProviderOpen}
               setIsAddProviderOpen={setIsAddProviderOpen}
+              onModelSelect={handleModelSelect}
             />
           </VStack>
         </Box>

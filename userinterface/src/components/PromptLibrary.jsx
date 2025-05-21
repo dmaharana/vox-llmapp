@@ -30,6 +30,7 @@ import { ImportExportButtons } from "./PromptLibrary/ImportExportButtons";
 import { PromptItem } from "./PromptLibrary/PromptItem";
 import { AddPromptForm } from "./PromptLibrary/AddPromptForm";
 import generateUUID from "./scripts/utils";
+import { DEFAULT_MESSAGES } from "./Constants";
 
 export default function PromptLibrary({
   isOpen,
@@ -303,8 +304,10 @@ export default function PromptLibrary({
         <ModalFooter>
           <HStack spacing={3}>
             <ImportExportButtons
-              handleExportPrompts={handleExportPrompts}
-              handleImportPrompts={handleImportPrompts}
+              exportLabel={DEFAULT_MESSAGES.exportPrompts}
+              importLabel={DEFAULT_MESSAGES.importPrompts}
+              handleExport={handleExportPrompts}
+              handleImport={handleImportPrompts}
               fileInputRef={fileInputRef}
               enableDownload={enableDownload}
             />

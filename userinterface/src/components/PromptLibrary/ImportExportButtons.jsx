@@ -1,26 +1,28 @@
-import { Button, HStack, IconButton, Input, Tooltip } from "@chakra-ui/react";
+import { HStack, IconButton, Input, Tooltip } from "@chakra-ui/react";
 import { DownloadIcon } from "@chakra-ui/icons";
 import { PiUploadLight } from "react-icons/pi";
 import { DEFAULT_MESSAGES } from "../Constants";
 
 export function ImportExportButtons({
-  handleExportPrompts,
-  handleImportPrompts,
+  exportLabel,
+  importLabel,
+  handleExport,
+  handleImport,
   fileInputRef,
   enableDownload,
 }) {
   return (
     <HStack spacing={3}>
-      <Tooltip label={DEFAULT_MESSAGES.exportPrompts}>
+      <Tooltip label={exportLabel}>
         <IconButton
           icon={<DownloadIcon />}
-          onClick={handleExportPrompts}
+          onClick={() => handleExport()}
           variant="outline"
           isDisabled={!enableDownload}
         />
       </Tooltip>
 
-      <Tooltip label={DEFAULT_MESSAGES.importPrompts}>
+      <Tooltip label={importLabel}>
         <IconButton
           icon={<PiUploadLight />}
           onClick={() => fileInputRef.current.click()}
@@ -34,7 +36,7 @@ export function ImportExportButtons({
         ref={fileInputRef}
         onChange={(e) => {
           if (e.target.files[0]) {
-            handleImportPrompts(e.target.files[0]);
+            handleImport(e.target.files[0]);
             e.target.value = null;
           }
         }}

@@ -37,6 +37,9 @@ export const DEFAULT_MESSAGES = {
   exportPrompts: "Export all prompts as JSON",
   importPrompts: "Import prompts from JSON file",
 
+  exportProviders: "Export all providers as JSON",
+  importProviders: "Import providers from JSON file",
+
   assistantRole: "assistant",
   userRole: "user",
 

@@ -1,26 +1,53 @@
 import { useEffect, useState } from "react";
-import { listModelsApi } from "./Constants";
 import { Select } from "@chakra-ui/react";
+import { useSelector } from "react-redux";
 
-export default function ModelSelect({ model, setModel }) {
+export default function ModelSelect({ model, setModel, onModelSelect }) {
   const [models, setModels] = useState([]);
+  const providers = useSelector((state) => state.provider.providers);
 
-  useEffect(function () {
-    async function fetchModels() {
-      const res = await fetch(listModelsApi);
-      const body = await res.json();
-      if (body["error"]) {
-        console.error(body["message"]);
-        setModels([]);
-        return;
+  // models will be fetched from the providers
+  useEffect(
+    function () {
+      const models = providers.flatMap((p) =>
+        p.models.map((m) => ({
+          name: m,
+          providerId: p.id,
+          providerName: p.name,
+        }))
+      );
+      setModels(models);
+
+      // sort models by provider name
+      models.sort((a, b) => a.providerName.localeCompare(b.providerName));
+
+      if (models.length > 0 && !model) {
+        handleModelSelect(models[0]);
       }
+    },
+    [providers]
+  );
 
-      // console.log(body["message"]);
-      setModels(body["data"].models);
-      setModel(body["data"].models[0].name);
-    }
-    fetchModels();
-  }, []);
+  const handleModelSelect = (selectedModel) => {
+    setModel(selectedModel.name);
+    // Pass both model and provider information to parent
+    onModelSelect &&
+      onModelSelect({
+        modelName: selectedModel.name,
+        providerId: selectedModel.providerId,
+        providerName: selectedModel.providerName,
+      });
+  };
+
+  const handleModelChange = (e) => {
+    const model = e.target.value;
+    const modelObj = models.find(
+      (m) => m.name === model || m.providerName === model
+    );
+    if (!modelObj) return;
+    setModel(modelObj.name);
+    handleModelSelect(modelObj);
+  };
 
   return (
     <Select
@@ -29,16 +56,16 @@ export default function ModelSelect({ model, setModel }) {
       variant={"filled"}
       textColor={"orange.500"}
       maxW={"250px"}
-      onChange={(e) => setModel(e.target.value)}
+      onChange={handleModelChange}
     >
       {models.length > 0 ? (
         models.map((m) => (
           <option key={m.name} value={m.name}>
-            {m.name} ({m.details.parameter_size})
+            {m.providerName}/{m.name}
           </option>
         ))
       ) : (
-        <option value="unknown">Loading...</option>
+        <option value="unknown">Add a provider first</option>
       )}
     </Select>
   );

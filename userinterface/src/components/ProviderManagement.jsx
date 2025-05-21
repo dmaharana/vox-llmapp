@@ -120,6 +120,12 @@ export default function ProviderManagement({ isOpen, onClose }) {
   };
 
   const handleExportProviders = () => {
+    console.log("Exporting providers...");
+    console.log(providers);
+    if (providers.length === 0) {
+      console.error("No providers to export");
+      return;
+    }
     const blob = new Blob([JSON.stringify(providers, null, 2)], {
       type: "application/json",
     });
@@ -299,9 +305,12 @@ export default function ProviderManagement({ isOpen, onClose }) {
         <ModalFooter>
           <HStack spacing={3}>
             <ImportExportButtons
-              handleExportProviders={handleExportProviders}
-              handleImportProviders={handleImportProviders}
+              exportLabel={DEFAULT_MESSAGES.exportProviders}
+              importLabel={DEFAULT_MESSAGES.importProviders}
+              handleExport={handleExportProviders}
+              handleImport={handleImportProviders}
               fileInputRef={fileInputRef}
+              enableDownload={providers.length > 0}
             />
             <Button colorScheme="blue" onClick={onClose}>
               Close

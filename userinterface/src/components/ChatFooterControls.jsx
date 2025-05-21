@@ -23,6 +23,7 @@ export default function ChatFooterControls({
   setIsProviderOpen,
   isAddProviderOpen,
   setIsAddProviderOpen,
+  onModelSelect,
 }) {
   return (
     <HStack justifyContent="space-between" w="100%">
@@ -42,7 +43,7 @@ export default function ChatFooterControls({
           onAddProviderClose={() => setIsAddProviderOpen(false)}
         />
 
-        <ModelSelect model={model} setModel={setModel} />
+        <ModelSelect model={model} setModel={setModel} onModelSelect={onModelSelect} />
       </HStack>
 
       <HStack>

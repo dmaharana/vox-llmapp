@@ -1,0 +1,8 @@
+@server = http://localhost:8011
+
+### get providers
+GET {{server}}/api/providers
+
+
+### get supported providers
+GET {{server}}/api/supported-providers

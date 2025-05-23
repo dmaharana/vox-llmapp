@@ -88,6 +88,14 @@ type (
 		Role    string `json:"role,omitempty"`
 		Content string `json:"content,omitempty"`
 	}
+
+	SupportedProvider struct {
+		ProviderId string `json:"provider_id"`
+		Name string `json:"name"`
+		ProviderName string `json:"provider_name"`
+		Endpoint string `json:"endpoint"`
+		APIKey string `json:"api_key"`
+	}
 )
 
 // model setting defaults
@@ -109,9 +117,22 @@ var (
 	}
 
 	ProviderModelURLs = map[string]string{
-		"openrouter": "%s/models",
-		"groq":       "%s/models",
-		"gemini":     "%s/models",
+		"openrouter": "%s/api/v1/models",
+		"groq":       "%s/openai/v1/models",
+		"gemini":     "%s/v1beta/models",
 		"ollama":     "%s/v1/models",
 	}
+
+
+	SupportedProviders = []SupportedProvider{
+		{ProviderId: "ollama", Name: "Ollama", ProviderName: "Ollama", Endpoint: "http://localhost:11434"},
+		{ProviderId: "openrouter", Name: "OpenRouter", ProviderName: "OpenRouter", Endpoint: "https://openrouter.ai/api/v1", APIKey: ""},
+		{ProviderId: "groq", Name: "Groq", ProviderName: "Groq", Endpoint: "https://api.groq.com/openai/v1", APIKey: ""},
+		{ProviderId: "gemini", Name: "Gemini", ProviderName: "Gemini", Endpoint: "https://generativelanguage.googleapis.com/v1beta/openai", APIKey: ""},
+		{ProviderId: "customOpenAI", Name: "Custom OpenAI Compatible", ProviderName: "OpenAI Compatible", Endpoint: "", APIKey: ""},
+	}
+
+	DefaultProvider = "ollama"
+
+	AuthorizationHeader = "X-Api-Key"
 )

@@ -22,7 +22,7 @@ const (
 	cancelTokenKey = "cancelToken"
 	minQueryLength = 20 // Minimum length before we refine the query
 
-	url = "http://localhost:11434/v1"
+	provider_url = "http://localhost:11434/v1"
 )
 
 // refineShortQuery enhances short user queries to get better responses
@@ -112,9 +112,9 @@ func (app *Config) ChatResponse(w http.ResponseWriter, r *http.Request) {
 
 	log.Printf("Sending request: %s", string(jsonData))
 
-	apiEndpoint := url + genApi
+	apiEndpoint := provider_url + genApi
 	if reqPayload.IncludeHistory {
-		apiEndpoint = url + chatApi
+		apiEndpoint = provider_url + chatApi
 	}
 	log.Printf("Sending request to: %s", apiEndpoint)
 
@@ -236,7 +236,7 @@ func (app *Config) GetModels(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// call the tag list endpoint
-	res, err := http.Get(url + tagApi)
+	res, err := http.Get(provider_url + tagApi)
 	if err != nil {
 		app.errorJSON(w, err)
 		return
@@ -264,9 +264,11 @@ func (app *Config) GetOpenAIModels(w http.ResponseWriter, r *http.Request) {
 
 	// get provider from path
 	provider := r.URL.Query().Get("provider")
+	log.Printf("Provider: %s", provider)
 
 	// get query parameter provider_url
 	providerUrl := r.URL.Query().Get("provider_url")
+	log.Printf("Provider URL: %s", providerUrl)
 
 	// if providerUrl empty, then get from llmapp ProviderURL
 	if providerUrl == "" {
@@ -286,14 +288,24 @@ func (app *Config) GetOpenAIModels(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	modelURL := fmt.Sprintf(ProviderModelURLs[provider], providerUrl)
+	// get provider base url, extract from providerUrl
+	providerBaseUrl, err := getBaseURL(providerUrl)
+	if err != nil {
+		app.errorJSON(w, err)
+		return
+	}
+	log.Printf("Provider Base URL: %s", providerBaseUrl)
+	modelURL := fmt.Sprintf(ProviderModelURLs[provider], providerBaseUrl)
+	log.Printf("Model URL: %s", modelURL)
 
 	// get bearer token
-	bearerToken := r.Header.Get("Authorization")
-	if bearerToken == "" {
+	bearerToken := r.Header.Get(AuthorizationHeader)
+	if bearerToken == "" && provider != "ollama" {
 		app.errorJSON(w, fmt.Errorf("bearer token not found"))
 		return
 	}
+
+	log.Printf("Bearer token: %s", bearerToken)
 
 	// call the tag list endpoint
 	req, err := http.NewRequest("GET", modelURL, nil)
@@ -301,7 +313,7 @@ func (app *Config) GetOpenAIModels(w http.ResponseWriter, r *http.Request) {
 		app.errorJSON(w, err)
 		return
 	}
-	req.Header.Add("Authorization", bearerToken)
+	req.Header.Add("Authorization", fmt.Sprintf("Bearer %s", bearerToken))
 	req.Header.Add("Content-Type", "application/json")
 	req.Header.Add("Accept", "application/json")
 	res, err := client.Do(req)
@@ -412,4 +424,34 @@ func (app *Config) CancelRequest(w http.ResponseWriter, r *http.Request) {
 		app.writeJSON(w, http.StatusOK, jsonresp)
 	}
 
+}
+
+func (app *Config) GetSupportedProviders(w http.ResponseWriter, r *http.Request) {
+	jsonresp := jsonResponse{
+		Error:   false,
+		Message: "success",
+	}
+
+	jsonresp.Data = SupportedProviders
+
+	app.writeJSON(w, http.StatusOK, jsonresp)
+}
+
+func (app *Config) GetDefaultProvider(w http.ResponseWriter, r *http.Request) {
+	jsonresp := jsonResponse{
+		Error:   false,
+		Message: "success",
+	}
+
+	defaultProvider := SupportedProvider{}
+	for _, provider := range SupportedProviders {
+		if provider.ProviderId == DefaultProvider {
+			defaultProvider = provider
+			break
+		}
+	}
+
+	jsonresp.Data = defaultProvider
+
+	app.writeJSON(w, http.StatusOK, jsonresp)
 }

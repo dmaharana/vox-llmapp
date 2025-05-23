@@ -4,8 +4,10 @@ import (
 	"crypto/rand"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"io"
 	"net/http"
+	"net/url"
 )
 
 const randomStringSource = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0987654321_+"
@@ -89,4 +91,14 @@ func (app *Config) randomString(n int) string {
 		s[i] = r[x%y]
 	}
 	return string(s)
+}
+
+func getBaseURL(rawurl string) (string, error) {
+    u, err := url.Parse(rawurl)
+    if err != nil {
+        return "", err
+    }
+    // Combine scheme and host to get the base URL
+    baseURL := fmt.Sprintf("%s://%s", u.Scheme, u.Host)
+    return baseURL, nil
 }

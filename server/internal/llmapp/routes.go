@@ -74,6 +74,8 @@ func (c *Config) routes() http.Handler {
 	mux.Get("/api/models", c.GetOpenAIModels)
 	mux.Post("/api/chat", c.ChatResponse)
 	mux.Delete("/api/cancel", c.CancelRequest)
+	mux.Get("/api/supported-providers", c.GetSupportedProviders)
+	mux.Get("/api/providers", c.GetDefaultProvider)
 
 	c.Mux = mux
 	return mux

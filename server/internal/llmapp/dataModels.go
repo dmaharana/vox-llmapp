@@ -119,7 +119,7 @@ var (
 	ProviderModelURLs = map[string]string{
 		"openrouter": "%s/api/v1/models",
 		"groq":       "%s/openai/v1/models",
-		"gemini":     "%s/v1beta/models",
+		"gemini":     "%s/v1beta/openai/models",
 		"ollama":     "%s/v1/models",
 	}
 

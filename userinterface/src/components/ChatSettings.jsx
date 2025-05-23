@@ -2,10 +2,8 @@ import { useRef } from "react";
 import { useSelector, useDispatch } from "react-redux";
 import { setSystemPrompt } from "../store/promptSlice";
 import {
-  Box,
   Text,
   Textarea,
-  Tooltip,
   IconButton,
   Button,
   Modal,
@@ -25,7 +23,6 @@ import { SettingsIcon } from "@chakra-ui/icons";
 import IncludeHistorySwitch from "./IncludeHistorySwitch";
 import PromptLibrary from "./PromptLibrary";
 import ProviderManagement from "./ProviderManagement";
-import AddProvider from "./Provider/AddProvider";
 
 function ChatSettings({
   includeHistory,

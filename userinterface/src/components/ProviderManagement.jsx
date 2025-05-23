@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from "react";
 import { useSelector, useDispatch } from "react-redux";
-import { setProviders } from "../store/providerSlice";
+import { setProviders, getSupportedProviders, getProviders } from "../store/providerSlice";
 import ShowAlert from "./ShowAlert";
 import {
   Box,
@@ -20,6 +20,7 @@ import {
   AlertDialogHeader,
   AlertDialogBody,
   AlertDialogFooter,
+  IconButton,
   Text,
   Table,
   Thead,
@@ -27,12 +28,14 @@ import {
   Tr,
   Th,
   Td,
+  Tooltip,
 } from "@chakra-ui/react";
 import { ProviderSearch } from "./Provider/ProviderSearch";
 import { ImportExportButtons } from "./PromptLibrary/ImportExportButtons";
-import AddProvider from "./Provider/AddProvider";
+import AddEditProvider from "./Provider/AddEditProvider";
 import generateUUID from "./scripts/utils";
 import { DEFAULT_MESSAGES } from "./Constants";
+import { EditIcon, DeleteIcon } from "@chakra-ui/icons";
 
 export default function ProviderManagement({ isOpen, onClose }) {
   const {
@@ -42,6 +45,10 @@ export default function ProviderManagement({ isOpen, onClose }) {
   } = useDisclosure();
   const dispatch = useDispatch();
   const providers = useSelector((state) => state.provider.providers);
+
+  useEffect(() => {
+    dispatch(getSupportedProviders());
+  }, [dispatch]);
 
   const cancelRef = useRef();
   const fileInputRef = useRef();
@@ -65,15 +72,16 @@ export default function ProviderManagement({ isOpen, onClose }) {
       }
     }
 
-    fetch("/api/providers")
-      .then((response) => {
-        if (!response.ok) throw new Error("Failed to fetch providers");
-        return response.json();
-      })
-      .then((data) => {
-        const serverProviders = data.providers || [];
-        const providersWithIds = serverProviders.map((provider) => ({
-          ...provider,
+    dispatch(getProviders())
+      .unwrap()
+      .then(({ providers, defaultProvider }) => {
+        let providersToStore = providers;
+        
+        if (defaultProvider && (!providers || providers.length === 0)) {
+          providersToStore = [defaultProvider];
+        }
+        
+        const providersWithIds = providersToStore.map((provider) => ({
           id: provider.id || generateUUID(),
           name: String(provider.name || "Unnamed Provider"),
           provider_name: String(provider.provider_name || ""),
@@ -262,21 +270,24 @@ export default function ProviderManagement({ isOpen, onClose }) {
                         <Td>{provider.endpoint}</Td>
                         <Td>
                           <HStack spacing={2}>
-                            <Button
+                            <Tooltip label={DEFAULT_MESSAGES.editProviderMessage}>
+                            <IconButton
                               size="sm"
-                              variant="outline"
+                              colorScheme="blue"
+                              variant="ghost"
                               onClick={() => handleEditProvider(provider.id)}
-                            >
-                              Edit
-                            </Button>
-                            <Button
+                              icon={<EditIcon />}
+                            />
+                            </Tooltip>
+                            <Tooltip label={DEFAULT_MESSAGES.deleteProviderMessage}>
+                            <IconButton
                               size="sm"
                               colorScheme="red"
-                              variant="outline"
+                              variant="ghost"
                               onClick={() => handleDeleteProvider(provider.id)}
-                            >
-                              Delete
-                            </Button>
+                              icon={<DeleteIcon />}
+                            />
+                            </Tooltip>
                           </HStack>
                         </Td>
                       </Tr>
@@ -345,7 +356,7 @@ export default function ProviderManagement({ isOpen, onClose }) {
         </AlertDialogOverlay>
       </AlertDialog>
 
-      <AddProvider
+      <AddEditProvider
         isOpen={showAddProvider}
         onClose={() => {
           setShowAddProvider(false);

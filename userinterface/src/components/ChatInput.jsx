@@ -25,7 +25,7 @@ export default function ChatInput({
           onChange={(e) => setQuery(e.target.value)}
           onKeyDown={(e) => handleKeyPress(e)}
           borderRadius={"1rem"}
-          autoSize={true}
+          autosize="true"
           maxH="10lh"
           paddingTop={"2rem"}
           color={bgText}

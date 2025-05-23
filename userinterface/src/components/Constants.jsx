@@ -23,6 +23,9 @@ export const DEFAULT_MESSAGES = {
   clearChatConfirmMessage: "Are you sure you want to clear the chat?",
   noResponseMessage: "Something went wrong. Please try again.",
 
+  editProviderMessage: "Edit provider",
+  deleteProviderMessage: "Delete provider",
+
   convUploadErrorTitle: "Failed to parse the file.",
   convUploadErrorMessage: "Please upload a valid JSON file.",
   convUploadSuccessMessage: "Conversation(s) uploaded successfully.",

@@ -22,8 +22,10 @@ import {
   HStack,
 } from "@chakra-ui/react";
 import { SearchIcon } from "@chakra-ui/icons";
+import { useSelector } from "react-redux";
+import { fetchModels } from "../../api/providerApi";
 
-function AddProvider({
+function AddEditProvider({
   isOpen,
   onClose,
   onSave,
@@ -31,19 +33,9 @@ function AddProvider({
   providerToEdit,
   existingNames = [],
 }) {
-  // Sample provider data
-  const providers = [
-    { name: "Ollama", endpoint: "http://localhost:11434" },
-    { name: "OpenRouter", endpoint: "https://openrouter.ai/api/v1" },
-    { name: "Groq", endpoint: "https://api.groq.com/openai/api/v1" },
-    {
-      name: "Gemini",
-      endpoint: "https://generativelanguage.googleapis.com/v1beta/openai",
-    },
-    { name: "Open AI Complaint", endpoint: "" },
-    { name: "Provider A", endpoint: "https://api.provider-a.com" },
-    { name: "Provider B", endpoint: "https://api.provider-b.com" },
-  ];
+  const supportedProviders = useSelector(
+    (state) => state.provider.supportedProviders
+  );
 
   // State management
   const [formData, setFormData] = useState({
@@ -69,7 +61,7 @@ function AddProvider({
         api_key: providerToEdit.api_key || "",
       });
       setSelectedModels(providerToEdit.models || []);
-      setModels(providerToEdit.models || []); // Pre-populate models
+      setModels(providerToEdit.models || []);
     } else {
       // Reset form for adding new provider
       setFormData({ provider_name: "", name: "", endpoint: "", api_key: "" });
@@ -81,14 +73,32 @@ function AddProvider({
 
   // Handle provider selection
   const handleProviderChange = (e) => {
-    const selectedProvider = providers.find((p) => p.name === e.target.value);
-    
+    const selectedProvider = supportedProviders.find(
+      (p) => p.name === e.target.value
+    );
+
+    // if name is empty, set it to provider name
+    if (isEditing) {
+      setFormData({
+        ...formData,
+        provider_name: selectedProvider?.name,
+        endpoint: selectedProvider?.endpoint,
+        api_key: "",
+      });
+    } else {
       setFormData({
         ...formData,
         name: selectedProvider?.name,
         provider_name: selectedProvider?.name,
         endpoint: selectedProvider?.endpoint,
+        api_key: "",
       });
+    }
+    // reset models
+    setModels([]);
+    setSelectedModels([]);
+    setModelFilter("");
+    setIsLoadingModels(false);
   };
 
   // Handle input changes
@@ -98,7 +108,7 @@ function AddProvider({
   };
 
   // Simulate fetching models
-  const fetchModels = async () => {
+  const handleFetchModels = async () => {
     if (!formData.provider_name) {
       toast({
         title: "Error",
@@ -110,26 +120,49 @@ function AddProvider({
       return;
     }
 
-    setIsLoadingModels(true);
-    // Simulate API call
-    setTimeout(() => {
-      const sampleModels = [
-        "Model 1",
-        "Model 2",
-        "Model 3",
-        "Advanced Model",
-        "Basic Model",
-      ];
-      setModels(sampleModels);
-      setIsLoadingModels(false);
+    const provider = supportedProviders.find(
+      (p) => p.name === formData.provider_name
+    );
+    if (!provider) {
       toast({
-        title: "Success",
-        description: "Models fetched successfully",
-        status: "success",
+        title: "Error",
+        description: "Provider not found",
+        status: "error",
         duration: 3000,
         isClosable: true,
       });
-    }, 1000);
+      return;
+    }
+
+    setIsLoadingModels(true);
+    const models = await fetchModels(
+      provider.provider_id,
+      formData.endpoint,
+      formData.api_key
+    );
+
+    if (models.length === 0) {
+      toast({
+        title: "Error",
+        description: "No models found",
+        status: "error",
+        duration: 3000,
+        isClosable: true,
+      });
+      setIsLoadingModels(false);
+      return;
+    }
+
+    setModels(models);
+    setIsLoadingModels(false);
+
+    toast({
+      title: "Success",
+      description: "Models fetched successfully",
+      status: "success",
+      duration: 3000,
+      isClosable: true,
+    });
   };
 
   // Filter models based on search
@@ -192,7 +225,6 @@ function AddProvider({
     // Reset form and close drawer
     setFormData({ provider_name: "", name: "", endpoint: "", api_key: "" });
     setSelectedModels([]);
-    setModels([]);
     setModelFilter("");
     onClose();
   };
@@ -201,7 +233,6 @@ function AddProvider({
   const handleCancel = () => {
     setFormData({ provider_name: "", name: "", endpoint: "", api_key: "" });
     setSelectedModels([]);
-    setModels([]);
     setModelFilter("");
     onClose();
   };
@@ -232,7 +263,7 @@ function AddProvider({
                   onChange={handleProviderChange}
                   placeholder="Select provider"
                 >
-                  {providers.map((provider) => (
+                  {supportedProviders.map((provider) => (
                     <option key={provider.name} value={provider.name}>
                       {provider.name}
                     </option>
@@ -300,7 +331,7 @@ function AddProvider({
               <FormControl isRequired>
                 <FormLabel>Models</FormLabel>
                 <Button
-                  onClick={fetchModels}
+                  onClick={() => handleFetchModels()}
                   colorScheme="teal"
                   isLoading={isLoadingModels}
                   mb={4}
@@ -385,4 +416,4 @@ function AddProvider({
   );
 }
 
-export default AddProvider;
+export default AddEditProvider;

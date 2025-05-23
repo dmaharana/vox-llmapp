@@ -17,6 +17,7 @@
     "@fontsource/open-sans": "^5.2.5",
     "@fontsource/raleway": "^5.2.5",
     "@reduxjs/toolkit": "^2.2.3",
+    "axios": "^1.9.0",
     "bootstrap": "^5.3.3",
     "chakra-ui-markdown": "^1.4.3",
     "chakra-ui-markdown-renderer": "^4.1.0",

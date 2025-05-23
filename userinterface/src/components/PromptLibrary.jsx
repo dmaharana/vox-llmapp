@@ -3,8 +3,6 @@ import { useSelector, useDispatch } from "react-redux";
 import { setPrompts, setSystemPrompt } from "../store/promptSlice";
 import ShowAlert from "./ShowAlert";
 import {
-  Textarea,
-  Input,
   Box,
   VStack,
   HStack,
@@ -24,7 +22,6 @@ import {
   AlertDialogBody,
   AlertDialogFooter,
 } from "@chakra-ui/react";
-import { AddIcon, EditIcon, DeleteIcon } from "@chakra-ui/icons";
 import { PromptSearch } from "./PromptLibrary/PromptSearch";
 import { ImportExportButtons } from "./PromptLibrary/ImportExportButtons";
 import { PromptItem } from "./PromptLibrary/PromptItem";

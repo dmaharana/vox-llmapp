@@ -48,7 +48,6 @@ export default function ChatScreen() {
   const prompts = useSelector((state) => state.prompt.prompts);
   const systemPrompt = useSelector((state) => state.prompt.systemPrompt);
   const providers = useSelector((state) => state.provider.providers);
-  const [isLibraryOpen, setIsLibraryOpen] = useState(false);
   const [conversation, setConversation] = useState([]);
   const [query, setQuery] = useState("");
   const [model, setModel] = useState("");
@@ -64,8 +63,6 @@ export default function ChatScreen() {
     return savedWidth ? parseInt(savedWidth) : 300;
   });
   const [isResizing, setIsResizing] = useState(false);
-  const [isProviderOpen, setIsProviderOpen] = useState(false);
-  const [isAddProviderOpen, setIsAddProviderOpen] = useState(false);
   const [selectedModel, setSelectedModel] = useState(null);
   const [selectedProviderId, setSelectedProviderId] = useState(null);
   const [selectedProvider, setSelectedProvider] = useState(null);
@@ -126,18 +123,8 @@ export default function ChatScreen() {
     };
   }, [isResizing]);
 
-  // Load prompts from localStorage on mount
+  // Load system prompt from localStorage on mount
   useEffect(() => {
-    const savedPrompts = localStorage.getItem("voxPrompts");
-    if (savedPrompts) {
-      try {
-        const parsed = JSON.parse(savedPrompts);
-        dispatch(setPrompts(parsed));
-      } catch (e) {
-        console.error("Failed to parse saved prompts", e);
-      }
-    }
-
     const savedSystemPrompt = localStorage.getItem("voxSystemPrompt");
     if (savedSystemPrompt) {
       try {
@@ -155,13 +142,6 @@ export default function ChatScreen() {
       dispatch(setSystemPrompt(DEFAULT_MESSAGES.SYSTEM_PROMPT));
     }
   }, [dispatch]);
-
-  // Save prompts to localStorage whenever prompts change
-  useEffect(() => {
-    if (prompts && prompts.length > 0) {
-      localStorage.setItem("voxPrompts", JSON.stringify(prompts));
-    }
-  }, [prompts]);
 
   // Save systemPrompt to localStorage whenever it changes
   useEffect(() => {
@@ -650,7 +630,6 @@ export default function ChatScreen() {
       <ChatHeader
         toggleColorMode={toggleColorMode}
         colorMode={colorMode}
-        setIsLibraryOpen={setIsLibraryOpen}
         toggleSidebar={toggleSidebar}
         model={model}
         setModel={setModel}
@@ -784,7 +763,7 @@ export default function ChatScreen() {
                 currentMsgId={currentMsgId}
                 initialAssistantMessage={initialAssistantMessage}
                 convHistory={convHistory}
-                setIsLibraryOpen={setIsLibraryOpen}
+
                 useColorModeValue={useColorModeValue}
                 model={model}
               />
@@ -803,8 +782,6 @@ export default function ChatScreen() {
                 includeHistory={includeHistory}
                 setIncludeHistory={setIncludeHistory}
                 waitingResponse={waitingResponse}
-                isLibraryOpen={isLibraryOpen}
-                setIsLibraryOpen={setIsLibraryOpen}
                 conversation={conversation}
                 convHistory={convHistory}
                 handleClearChat={handleClearChat}
@@ -813,10 +790,6 @@ export default function ChatScreen() {
                 setConvHistory={setConvHistory}
                 model={model}
                 setModel={setModel}
-                isProviderOpen={isProviderOpen}
-                setIsProviderOpen={setIsProviderOpen}
-                isAddProviderOpen={isAddProviderOpen}
-                setIsAddProviderOpen={setIsAddProviderOpen}
                 onModelSelect={handleModelSelect}
               />
             </VStack>

@@ -21,6 +21,14 @@ import ReactMarkdown from "markdown-to-jsx";
 import ChakraUIRenderer from "chakra-ui-markdown-renderer";
 import { DEFAULT_MESSAGES } from "../Constants";
 
+/**
+ * Strips all <think>...</think> tags and their content from a string.
+ * Used as a global safeguard before rendering markdown.
+ */
+function stripThinkTags(markdown) {
+  return markdown.replace(/<think>[\s\S]*?<\/think>/gi, "");
+}
+
 export function PromptItem({
   prompt,
   searchQuery,
@@ -115,9 +123,11 @@ export function PromptItem({
               borderRadius: "10px",
             }}
           >
-            {prompt.content.length <= maxContentLength || isExpanded
-              ? prompt.content
-              : prompt.content.substring(0, maxContentLength + 3) + "..."}
+            {stripThinkTags(
+              prompt.content.length <= maxContentLength || isExpanded
+                ? prompt.content
+                : prompt.content.substring(0, maxContentLength + 3) + "..."
+            )}
           </ReactMarkdown>
 
           {String(prompt.content).length > maxContentLength && (

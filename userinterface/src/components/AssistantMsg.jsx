@@ -80,6 +80,14 @@ const parseThinkContent = (content) => {
   return segments;
 };
 
+/**
+ * Strips all <think>...</think> tags and their content from a string.
+ * Used as a global safeguard before rendering markdown.
+ */
+function stripThinkTags(markdown) {
+  return markdown.replace(/<think>[\s\S]*?<\/think>/gi, "");
+}
+
 const ThinkBlock = ({ content }) => {
   const thinkBg = useColorModeValue("blue.50", "blue.900");
   const thinkBorder = useColorModeValue("blue.200", "blue.700");
@@ -100,7 +108,7 @@ const ThinkBlock = ({ content }) => {
           <Box color={thinkText}>💭</Box>
           <Box color={thinkText} fontSize="sm" fontStyle="italic" flex="1">
             <ReactMarkdown components={ChakraUIRenderer()}>
-              {content}
+              {stripThinkTags(content)}
             </ReactMarkdown>
           </Box>
         </HStack>
@@ -118,7 +126,7 @@ const MessageContent = ({ content }) => {
           <ThinkBlock key={index} content={segment.content} />
         ) : (
           <ReactMarkdown key={index} components={ChakraUIRenderer()}>
-            {segment.content}
+            {stripThinkTags(segment.content)}
           </ReactMarkdown>
         ),
       )}

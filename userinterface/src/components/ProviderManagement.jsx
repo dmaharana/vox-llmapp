@@ -41,7 +41,11 @@ import generateUUID from "./scripts/utils";
 import { DEFAULT_MESSAGES } from "./Constants";
 import { EditIcon, DeleteIcon } from "@chakra-ui/icons";
 
-export default function ProviderManagement({ isOpen, onClose }) {
+export default function ProviderManagement({
+  isOpen,
+  onClose,
+  isEmbedded = false,
+}) {
   const {
     isOpen: isDeleteDialogOpen,
     onOpen: onDeleteDialogOpen,
@@ -225,104 +229,92 @@ export default function ProviderManagement({ isOpen, onClose }) {
     setShowAddProvider(true);
   };
 
-  return (
-    <Modal
-      isOpen={isOpen}
-      onClose={onClose}
-      size="xl"
-      scrollBehavior="inside"
-      blockScrollOnMount={false}
-    >
-      <ModalOverlay />
-      <ModalContent maxW="container.md">
-        <ModalHeader>Provider Management</ModalHeader>
-        <ModalCloseButton />
-        <ModalBody pb={6}>
-          <Box maxH="80vh" overflowY="auto" pr={2}>
-            <ProviderSearch
-              searchQuery={searchQuery}
-              setSearchQuery={setSearchQuery}
-              showAddProvider={showAddProvider}
-              setShowAddProvider={setShowAddProvider}
-            />
+  const content = (
+    <Box maxH={isEmbedded ? "50vh" : "80vh"} overflowY="auto" pr={2}>
+      <ProviderSearch
+        searchQuery={searchQuery}
+        setSearchQuery={setSearchQuery}
+        showAddProvider={showAddProvider}
+        setShowAddProvider={setShowAddProvider}
+      />
 
-            {showProviders ? (
-              <Table variant="simple">
-                <Thead>
-                  <Tr>
-                    <Th>Name</Th>
-                    <Th>Provider</Th>
-                    <Th>Endpoint</Th>
-                    <Th>Actions</Th>
-                  </Tr>
-                </Thead>
-                <Tbody>
-                  {providers
-                    ?.filter((provider) => {
-                      const query = searchQuery.toLowerCase();
-                      return (
-                        provider.name.toLowerCase().includes(query) ||
-                        provider.provider_name.toLowerCase().includes(query)
-                      );
-                    })
-                    .map((provider) => (
-                      <Tr key={provider.id}>
-                        <Td>{provider.name}</Td>
-                        <Td>{provider.provider_name}</Td>
-                        <Td>{provider.endpoint}</Td>
-                        <Td>
-                          <HStack spacing={2}>
-                            <Tooltip
-                              label={DEFAULT_MESSAGES.editProviderMessage}
-                            >
-                              <IconButton
-                                size="sm"
-                                colorScheme="blue"
-                                variant="ghost"
-                                onClick={() => handleEditProvider(provider.id)}
-                                icon={<EditIcon />}
-                              />
-                            </Tooltip>
-                            <Tooltip
-                              label={DEFAULT_MESSAGES.deleteProviderMessage}
-                            >
-                              <IconButton
-                                size="sm"
-                                colorScheme="red"
-                                variant="ghost"
-                                onClick={() =>
-                                  handleDeleteProvider(provider.id)
-                                }
-                                icon={<DeleteIcon />}
-                              />
-                            </Tooltip>
-                          </HStack>
-                        </Td>
-                      </Tr>
-                    ))}
-                </Tbody>
-              </Table>
-            ) : (
-              <Text textAlign="center" mt={10} fontSize="lg" color="gray.500">
-                {DEFAULT_MESSAGES.addProviderMessage}
-              </Text>
-            )}
-          </Box>
-        </ModalBody>
+      {showProviders ? (
+        <Table variant="simple">
+          <Thead>
+            <Tr>
+              <Th>Name</Th>
+              <Th>Provider</Th>
+              <Th>Endpoint</Th>
+              <Th>Actions</Th>
+            </Tr>
+          </Thead>
+          <Tbody>
+            {providers
+              ?.filter((provider) => {
+                const query = searchQuery.toLowerCase();
+                return (
+                  provider.name.toLowerCase().includes(query) ||
+                  provider.provider_name.toLowerCase().includes(query)
+                );
+              })
+              .map((provider) => (
+                <Tr key={provider.id}>
+                  <Td>{provider.name}</Td>
+                  <Td>{provider.provider_name}</Td>
+                  <Td>{provider.endpoint}</Td>
+                  <Td>
+                    <HStack spacing={2}>
+                      <Tooltip label={DEFAULT_MESSAGES.editProviderMessage}>
+                        <IconButton
+                          size="sm"
+                          colorScheme="blue"
+                          variant="ghost"
+                          onClick={() => handleEditProvider(provider.id)}
+                          icon={<EditIcon />}
+                        />
+                      </Tooltip>
+                      <Tooltip label={DEFAULT_MESSAGES.deleteProviderMessage}>
+                        <IconButton
+                          size="sm"
+                          colorScheme="red"
+                          variant="ghost"
+                          onClick={() => handleDeleteProvider(provider.id)}
+                          icon={<DeleteIcon />}
+                        />
+                      </Tooltip>
+                    </HStack>
+                  </Td>
+                </Tr>
+              ))}
+          </Tbody>
+        </Table>
+      ) : (
+        <Text textAlign="center" mt={10} fontSize="lg" color="gray.500">
+          {DEFAULT_MESSAGES.addProviderMessage}
+        </Text>
+      )}
+    </Box>
+  );
 
-        {showImportAlert && (
-          <ShowAlert
-            status={importStatus}
-            title={
-              importStatus === "success" ? "Import Successful" : "Import Error"
-            }
-            message={importMessage}
-            resetStates={() => setShowImportAlert(false)}
-          />
-        )}
+  {
+    showImportAlert && (
+      <ShowAlert
+        status={importStatus}
+        title={
+          importStatus === "success" ? "Import Successful" : "Import Error"
+        }
+        message={importMessage}
+        resetStates={() => setShowImportAlert(false)}
+      />
+    );
+  }
 
-        <ModalFooter>
-          <HStack spacing={3}>
+  if (isEmbedded) {
+    return (
+      <>
+        {content}
+        <Box mt={4}>
+          <HStack spacing={3} justify="flex-end">
             <ImportExportButtons
               exportLabel={DEFAULT_MESSAGES.exportProviders}
               importLabel={DEFAULT_MESSAGES.importProviders}
@@ -331,50 +323,49 @@ export default function ProviderManagement({ isOpen, onClose }) {
               fileInputRef={fileInputRef}
               enableDownload={providers.length > 0}
             />
-            <Button colorScheme="blue" onClick={onClose}>
-              Close
-            </Button>
           </HStack>
-        </ModalFooter>
-      </ModalContent>
+        </Box>
 
-      <AlertDialog
-        isOpen={isDeleteDialogOpen}
-        leastDestructiveRef={cancelRef}
-        onClose={onDeleteDialogClose}
-      >
-        <AlertDialogOverlay>
-          <AlertDialogContent>
-            <AlertDialogHeader fontSize="lg" fontWeight="bold">
-              Delete Provider
-            </AlertDialogHeader>
-            <AlertDialogBody>
-              Are you sure you want to delete this provider? This action cannot
-              be undone.
-            </AlertDialogBody>
-            <AlertDialogFooter>
-              <Button ref={cancelRef} onClick={onDeleteDialogClose}>
-                Cancel
-              </Button>
-              <Button colorScheme="red" onClick={confirmDelete} ml={3}>
-                Delete
-              </Button>
-            </AlertDialogFooter>
-          </AlertDialogContent>
-        </AlertDialogOverlay>
-      </AlertDialog>
+        <AlertDialog
+          isOpen={isDeleteDialogOpen}
+          leastDestructiveRef={cancelRef}
+          onClose={onDeleteDialogClose}
+          motionPreset="slideInBottom"
+          isCentered
+        >
+          <AlertDialogOverlay>
+            <AlertDialogContent>
+              <AlertDialogHeader fontSize="lg" fontWeight="bold">
+                Delete Provider
+              </AlertDialogHeader>
+              <AlertDialogBody>
+                Are you sure you want to delete this provider? This action
+                cannot be undone.
+              </AlertDialogBody>
+              <AlertDialogFooter>
+                <Button ref={cancelRef} onClick={onDeleteDialogClose}>
+                  Cancel
+                </Button>
+                <Button colorScheme="red" onClick={confirmDelete} ml={3}>
+                  Delete
+                </Button>
+              </AlertDialogFooter>
+            </AlertDialogContent>
+          </AlertDialogOverlay>
+        </AlertDialog>
 
-      <AddEditProvider
-        isOpen={showAddProvider}
-        onClose={() => {
-          setShowAddProvider(false);
-          setEditingProvider(null);
-        }}
-        onSave={handleAddProvider}
-        isEditing={!!editingProvider}
-        providerToEdit={editingProvider}
-        existingNames={providers.map((p) => p.name)}
-      />
-    </Modal>
-  );
+        <AddEditProvider
+          isOpen={showAddProvider}
+          onClose={() => {
+            setShowAddProvider(false);
+            setEditingProvider(null);
+          }}
+          onSave={handleAddProvider}
+          isEditing={editingProvider}
+          providerToEdit={editingProvider}
+          existingNames={providers.map((p) => p.name)}
+        />
+      </>
+    );
+  }
 }

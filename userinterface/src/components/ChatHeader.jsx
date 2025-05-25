@@ -7,7 +7,6 @@ import { useColorModeValue } from "@chakra-ui/react";
 export default function ChatHeader({
   toggleColorMode,
   colorMode,
-  setIsLibraryOpen,
   toggleSidebar,
 }) {
   const prompts = useSelector((state) => state.prompt.prompts);

@@ -15,11 +15,6 @@ import {
   ModalOverlay,
   useDisclosure,
   VStack,
-  Divider,
-  Menu,
-  MenuButton,
-  MenuList,
-  MenuItem,
   Box,
   Tab,
   Tabs,
@@ -38,15 +33,6 @@ function ChatSettings({
   includeHistory,
   setIncludeHistory,
   waitingResponse,
-  isLibraryOpen,
-  setIsLibraryOpen,
-  onLibraryClose,
-  isProviderOpen,
-  setIsProviderOpen,
-  onProviderClose,
-  isAddProviderOpen,
-  setIsAddProviderOpen,
-  onAddProviderClose,
 }) {
   const dispatch = useDispatch();
   const systemPrompt = useSelector((state) => state.prompt.systemPrompt);
@@ -64,36 +50,15 @@ function ChatSettings({
 
   return (
     <>
-      <Menu>
-        <MenuButton
-          as={IconButton}
-          icon={<SettingsIcon />}
-          size="lg"
-          variant="ghost"
-          color="green.500"
-          ref={btnRef}
-          isDisabled={waitingResponse}
-        />
-        <MenuList>
-          <MenuItem onClick={onSettingsOpen}>Settings</MenuItem>
-          <MenuItem
-            onClick={() => {
-              onSettingsClose();
-              setIsLibraryOpen(true);
-            }}
-          >
-            Prompt Library
-          </MenuItem>
-          <MenuItem
-            onClick={() => {
-              onSettingsClose();
-              setIsProviderOpen(true);
-            }}
-          >
-            Provider Management
-          </MenuItem>
-        </MenuList>
-      </Menu>
+      <IconButton
+        icon={<SettingsIcon />}
+        size="lg"
+        variant="ghost"
+        color="green.500"
+        ref={btnRef}
+        isDisabled={waitingResponse}
+        onClick={onSettingsOpen}
+      />
 
       <Modal
         onClose={onSettingsClose}
@@ -102,7 +67,7 @@ function ChatSettings({
         scrollBehavior="inside"
       >
         <ModalOverlay />
-        <ModalContent>
+        <ModalContent maxW="container.md">
           <ModalHeader>Settings</ModalHeader>
           <ModalCloseButton />
           <ModalBody>
@@ -110,6 +75,8 @@ function ChatSettings({
               <TabList mb="1em">
                 <Tab>Profile</Tab>
                 <Tab>Chat</Tab>
+                <Tab>Prompts</Tab>
+                <Tab>Provider</Tab>
               </TabList>
               <TabPanels>
                 <TabPanel>
@@ -127,25 +94,6 @@ function ChatSettings({
                   <VStack spacing={6} align="stretch">
                     <Box>
                       <Text fontSize="xl" fontWeight="bold" mb={4}>Chat Settings</Text>
-                      <Box mb={4}>
-                        <Text mb={2}>System Prompt</Text>
-                        <Textarea
-                          size="sm"
-                          value={systemPrompt}
-                          onChange={(e) => handleChange(e)}
-                        />
-                        <Button
-                          mt={2}
-                          size="sm"
-                          variant="outline"
-                          onClick={() => {
-                            onSettingsClose();
-                            setIsLibraryOpen(true);
-                          }}
-                        >
-                          Select from Library
-                        </Button>
-                      </Box>
                       <Box>
                         <IncludeHistorySwitch
                           includeHistory={includeHistory}
@@ -156,6 +104,37 @@ function ChatSettings({
                     </Box>
                   </VStack>
                 </TabPanel>
+                <TabPanel>
+                  <VStack spacing={6} align="stretch">
+                    <Box>
+                      <Text fontSize="xl" fontWeight="bold" mb={4}>System Prompt</Text>
+                      <Box mb={4}>
+                        <Text mb={2}>Current Prompt</Text>
+                        <Textarea
+                          size="sm"
+                          value={systemPrompt}
+                          onChange={(e) => handleChange(e)}
+                          mb={3}
+                        />
+                      </Box>
+                      <Box>
+                        <Text fontSize="xl" fontWeight="bold" mb={4}>Prompt Library</Text>
+                        <PromptLibrary 
+                          isOpen={true} 
+                          onClose={() => {}} 
+                          isEmbedded={true}
+                        />
+                      </Box>
+                    </Box>
+                  </VStack>
+                </TabPanel>
+                <TabPanel>
+                  <ProviderManagement 
+                    isOpen={true} 
+                    onClose={() => {}}
+                    isEmbedded={true}
+                  />
+                </TabPanel>
               </TabPanels>
             </Tabs>
           </ModalBody>
@@ -165,9 +144,7 @@ function ChatSettings({
         </ModalContent>
       </Modal>
 
-      <PromptLibrary isOpen={isLibraryOpen} onClose={onLibraryClose} />
 
-      <ProviderManagement isOpen={isProviderOpen} onClose={onProviderClose} />
     </>
   );
 }

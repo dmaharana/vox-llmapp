@@ -18,6 +18,14 @@ import ChakraUIRenderer from "chakra-ui-markdown-renderer";
 import ReactMarkdown from "markdown-to-jsx";
 import { DEFAULT_MESSAGES } from "./Constants";
 
+/**
+ * Strips all <think>...</think> tags and their content from a string.
+ * Used as a global safeguard before rendering markdown.
+ */
+function stripThinkTags(markdown) {
+  return markdown.replace(/<think>[\s\S]*?<\/think>/gi, "");
+}
+
 function AssistantHistoryMessage({ msg, count, index }) {
   const { hasCopied, onCopy } = useClipboard(msg.content);
   const [isMsgExpanded, setIsMsgExpanded] = useState(false);
@@ -47,8 +55,8 @@ function AssistantHistoryMessage({ msg, count, index }) {
           }}
         >
           {msg.content.length >= standardTextLen && !isMsgExpanded
-            ? msg.content.substring(0, standardTextLen + 3) + "..."
-            : msg.content}
+            ? stripThinkTags(msg.content.substring(0, standardTextLen + 3) + "...")
+            : stripThinkTags(msg.content)}
         </ReactMarkdown>
 
         {msg.content.length >= standardTextLen && (

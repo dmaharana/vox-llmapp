@@ -9,8 +9,6 @@ export default function ChatFooterControls({
   includeHistory,
   setIncludeHistory,
   waitingResponse,
-  isLibraryOpen,
-  setIsLibraryOpen,
   conversation,
   convHistory,
   handleClearChat,
@@ -19,10 +17,6 @@ export default function ChatFooterControls({
   setConvHistory,
   model,
   setModel,
-  isProviderOpen,
-  setIsProviderOpen,
-  isAddProviderOpen,
-  setIsAddProviderOpen,
   onModelSelect,
 }) {
   return (
@@ -32,15 +26,6 @@ export default function ChatFooterControls({
           includeHistory={includeHistory}
           setIncludeHistory={setIncludeHistory}
           waitingResponse={waitingResponse}
-          isLibraryOpen={isLibraryOpen}
-          setIsLibraryOpen={setIsLibraryOpen}
-          onLibraryClose={() => setIsLibraryOpen(false)}
-          isProviderOpen={isProviderOpen}
-          setIsProviderOpen={setIsProviderOpen}
-          onProviderClose={() => setIsProviderOpen(false)}
-          isAddProviderOpen={isAddProviderOpen}
-          setIsAddProviderOpen={setIsAddProviderOpen}
-          onAddProviderClose={() => setIsAddProviderOpen(false)}
         />
 
         <ModelSelect model={model} setModel={setModel} onModelSelect={onModelSelect} />

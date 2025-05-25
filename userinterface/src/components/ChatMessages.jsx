@@ -23,7 +23,6 @@ export default function ChatMessages({
   currentMsgId,
   initialAssistantMessage,
   convHistory,
-  setIsLibraryOpen,
   useColorModeValue,
   model,
 }) {
@@ -104,7 +103,7 @@ export default function ChatMessages({
                   }
                   colorScheme="blue"
                   variant="ghost"
-                  onClick={() => setIsLibraryOpen(true)}
+                  isDisabled={true}
                 >
                   <Text
                     fontSize="md"

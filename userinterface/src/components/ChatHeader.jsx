@@ -20,10 +20,12 @@ export default function ChatHeader({
     <HStack
       w="100%"
       p={2}
-      borderRadius="1rem"
       bg={bgHeader}
       justifyContent="space-between"
       alignItems="center"
+      position="sticky"
+      top={0}
+      zIndex={1000}
     >
       <IconButton
         aria-label="Toggle sidebar"

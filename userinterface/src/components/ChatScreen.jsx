@@ -54,11 +54,16 @@ export default function ChatScreen() {
   const [model, setModel] = useState("");
   const [includeHistory, setIncludeHistory] = useState(true);
   const [convHistory, setConvHistory] = useState([]);
-  const [convId, setConvId] = useState(1);
 
   const [allChats, setAllChats] = useState([]);
   const [activeChatId, setActiveChatId] = useState(null);
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
+  const [isHovering, setIsHovering] = useState(false);
+  const [sidebarWidth, setSidebarWidth] = useState(() => {
+    const savedWidth = localStorage.getItem('sidebarWidth');
+    return savedWidth ? parseInt(savedWidth) : 300;
+  });
+  const [isResizing, setIsResizing] = useState(false);
   const [isProviderOpen, setIsProviderOpen] = useState(false);
   const [isAddProviderOpen, setIsAddProviderOpen] = useState(false);
   const [selectedModel, setSelectedModel] = useState(null);
@@ -73,6 +78,53 @@ export default function ChatScreen() {
   }, [selectedProviderId]);
 
   const toggleSidebar = () => setIsSidebarOpen((prev) => !prev);
+
+  const handleMouseDown = (e) => {
+    setIsResizing(true);
+    e.preventDefault();
+  };
+
+  const handleMouseMove = (e) => {
+    if (!isResizing) return;
+    
+    const newWidth = e.clientX;
+    const maxWidth = window.innerWidth / 2; // Half screen width
+    const minWidth = 200;
+
+    if (newWidth >= minWidth && newWidth <= maxWidth) {
+      setSidebarWidth(newWidth);
+      localStorage.setItem('sidebarWidth', newWidth.toString());
+    }
+  };
+
+  const handleMouseUp = () => {
+    setIsResizing(false);
+    // If sidebar was in hover mode, hide it after resize
+    if (!isSidebarOpen) {
+      setTimeout(() => setIsHovering(false), 200);
+    }
+  };
+
+  useEffect(() => {
+    if (isResizing) {
+      document.addEventListener('mousemove', handleMouseMove);
+      document.addEventListener('mouseup', handleMouseUp);
+      document.body.style.cursor = 'col-resize';
+      document.body.style.userSelect = 'none';
+    } else {
+      document.removeEventListener('mousemove', handleMouseMove);
+      document.removeEventListener('mouseup', handleMouseUp);
+      document.body.style.cursor = '';
+      document.body.style.userSelect = '';
+    }
+
+    return () => {
+      document.removeEventListener('mousemove', handleMouseMove);
+      document.removeEventListener('mouseup', handleMouseUp);
+      document.body.style.cursor = '';
+      document.body.style.userSelect = '';
+    };
+  }, [isResizing]);
 
   // Load prompts from localStorage on mount
   useEffect(() => {
@@ -160,7 +212,7 @@ export default function ChatScreen() {
               ...chat,
               model,
             }
-          : chat
+          : chat,
       );
       localStorage.setItem("voxChats", JSON.stringify(updated));
       return updated;
@@ -209,7 +261,7 @@ export default function ChatScreen() {
                   conversation,
                   title: generateChatTitle(conversation),
                 }
-              : chat
+              : chat,
           );
         } else {
           const newChat = {
@@ -267,8 +319,8 @@ export default function ChatScreen() {
                     },
                   ],
                 }
-              : item
-          )
+              : item,
+          ),
         );
       } else {
         setConvHistory([
@@ -306,8 +358,8 @@ export default function ChatScreen() {
               assistant: newMessage.assistant,
               resTime: newMessage.resTime,
             }
-          : m
-      )
+          : m,
+      ),
     );
 
     callLlmService(newMessage);
@@ -320,8 +372,8 @@ export default function ChatScreen() {
     if (message) {
       setConversation((conversation) =>
         conversation.map((msg) =>
-          msg.id === id ? { ...msg, user: newQuery } : msg
-        )
+          msg.id === id ? { ...msg, user: newQuery } : msg,
+        ),
       );
     }
   };
@@ -333,8 +385,8 @@ export default function ChatScreen() {
     if (message) {
       setConversation((conversation) =>
         conversation.map((msg) =>
-          msg.id === id ? { ...msg, assistant: editedAssistantMsg } : msg
-        )
+          msg.id === id ? { ...msg, assistant: editedAssistantMsg } : msg,
+        ),
       );
     }
   };
@@ -418,15 +470,19 @@ export default function ChatScreen() {
     const msgId = message.id;
     const startTime = new Date().getTime();
 
+    console.log(model);
+    console.log(selectedProvider);
+
     let reqBody = {
       model: model,
       prompt: query,
+      raw: false,
       stream: true,
       includeHistory: includeHistory,
       systemPrompt: systemPrompt,
-      providerName: selectedProvider.name,
+      providerUrl: selectedProvider.endpoint,
+      providerName: selectedProvider.provider_name,
       providerApiKey: selectedProvider.api_key,
-      providerApiUrl: selectedProvider.endpoint,
     };
 
     if (conversation.length > 0 && includeHistory) {
@@ -443,6 +499,7 @@ export default function ChatScreen() {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
+          "X-Api-Key": selectedProvider.api_key,
         },
         body: JSON.stringify(reqBody),
       });
@@ -459,8 +516,8 @@ export default function ChatScreen() {
                   model,
                   resTime: "0s",
                 }
-              : m
-          )
+              : m,
+          ),
         );
 
         setWaitingResponse(false);
@@ -502,8 +559,8 @@ export default function ChatScreen() {
                       assistant: text,
                       resTime: `${resTime.toFixed(2)}s`,
                     }
-                  : m
-              )
+                  : m,
+              ),
             );
           } catch (error) {
             console.error(error);
@@ -531,8 +588,8 @@ export default function ChatScreen() {
                   model,
                   resTime: "0s",
                 }
-              : m
-          )
+              : m,
+          ),
         );
       }
 
@@ -557,8 +614,8 @@ export default function ChatScreen() {
     setConvHistory([]);
     setAllChats((prev) =>
       prev.map((chat) =>
-        chat.id === activeChatId ? { ...chat, conversation: [] } : chat
-      )
+        chat.id === activeChatId ? { ...chat, conversation: [] } : chat,
+      ),
     );
     localStorage.setItem("voxChats", JSON.stringify(allChats));
   };
@@ -585,43 +642,126 @@ export default function ChatScreen() {
   };
 
   const handleModelSelect = (model) => {
-    setSelectedModel(model);
-    setModel(model.name);
+    setSelectedModel(model.modelName);
+    setModel(model.modelName);
     setSelectedProviderId(model.providerId);
   };
 
   return (
-    <Box position="relative">
-      <HStack align="stretch" h="90vh">
-        {isSidebarOpen && (
-          <ChatSidebar
-            isSidebarOpen={isSidebarOpen}
-            allChats={allChats}
-            setAllChats={setAllChats}
-            activeChatId={activeChatId}
-            handleNewChat={handleNewChat}
-            handleSelectChat={handleSelectChat}
-            handleDeleteChat={handleDeleteChat}
+    <Box position="relative" h="100vh">
+      <ChatHeader
+        toggleColorMode={toggleColorMode}
+        colorMode={colorMode}
+        setIsLibraryOpen={setIsLibraryOpen}
+        toggleSidebar={toggleSidebar}
+        model={model}
+        setModel={setModel}
+      />
+      <HStack align="stretch" h="calc(100vh - 64px)" position="relative">
+        {/* Hover trigger area for collapsed sidebar */}
+        {!isSidebarOpen && (
+          <Box
+            position="absolute"
+            left={0}
+            top={0}
+            w="30px"
+            h="100%"
+            zIndex={999}
+            bg="transparent"
+            onMouseEnter={() => setIsHovering(true)}
+            onMouseLeave={() => setIsHovering(false)}
           />
+        )}
+
+        {/* Sidebar - show if open OR hovering when closed */}
+        {(isSidebarOpen || (!isSidebarOpen && isHovering)) && (
+          <Box
+            position={!isSidebarOpen && isHovering ? "absolute" : "relative"}
+            left={0}
+            top={0}
+            zIndex={!isSidebarOpen && isHovering ? 998 : "auto"}
+            h="100%"
+            w={`${sidebarWidth}px`}
+            transition={isResizing ? "none" : "all 0.3s ease"}
+            onMouseEnter={() => !isSidebarOpen && setIsHovering(true)}
+            onMouseLeave={() => {
+              if (!isSidebarOpen && !isResizing) {
+                // Add a small delay to prevent flickering
+                setTimeout(() => {
+                  if (!isResizing) {
+                    setIsHovering(false);
+                  }
+                }, 100);
+              }
+            }}
+            display="flex"
+          >
+            <Box flex="1" display="flex" flexDirection="column">
+              <ChatSidebar
+                isSidebarOpen={isSidebarOpen}
+                isHoverMode={!isSidebarOpen && isHovering}
+                allChats={allChats}
+                setAllChats={setAllChats}
+                activeChatId={activeChatId}
+                handleNewChat={handleNewChat}
+                handleSelectChat={handleSelectChat}
+                handleDeleteChat={handleDeleteChat}
+                sidebarWidth={sidebarWidth}
+              />
+            </Box>
+            {/* Resize handle */}
+            {(isSidebarOpen || (!isSidebarOpen && isHovering)) && (
+              <Box
+                w="6px"
+                h="100%"
+                bg="transparent"
+                cursor="col-resize"
+                onMouseDown={handleMouseDown}
+                onMouseEnter={() => {
+                  if (!isSidebarOpen) setIsHovering(true);
+                }}
+                _hover={{
+                  bg: "blue.100",
+                }}
+                _active={{
+                  bg: "blue.200",
+                }}
+                transition="background-color 0.2s ease"
+                flexShrink={0}
+                position="relative"
+                zIndex={1001}
+                userSelect="none"
+                display="flex"
+                alignItems="center"
+                justifyContent="center"
+                borderLeft="1px solid"
+                borderColor="gray.200"
+              >
+                <Box
+                  w="2px"
+                  h="30px"
+                  bg="gray.400"
+                  borderRadius="1px"
+                  opacity={0.7}
+                  transition="all 0.2s ease"
+                  _hover={{
+                    opacity: 1,
+                    bg: "blue.400",
+                  }}
+                />
+              </Box>
+            )}
+          </Box>
         )}
         <Box flex="1" position="relative">
           <VStack
-            h={"90vh"}
+            h={"100%"}
             bg={bgMain}
             py={4}
             px={2}
             borderRadius={"1rem"}
             justifyContent="space-between"
           >
-            <ChatHeader
-              toggleColorMode={toggleColorMode}
-              colorMode={colorMode}
-              setIsLibraryOpen={setIsLibraryOpen}
-              toggleSidebar={toggleSidebar}
-              model={model}
-              setModel={setModel}
-            />
-
             <ChatMessages
               conversation={conversation}
               waitingResponse={waitingResponse}

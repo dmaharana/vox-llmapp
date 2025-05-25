@@ -1,6 +1,11 @@
 #root {
   max-width: 110rem;
   margin: 0 auto;
-  padding: 2rem;
+  padding: 0;
   text-align: center;
+}
+
+body {
+  margin: 0;
+  padding: 0;
 }

@@ -29,6 +29,8 @@ import JSZip from "jszip";
 
 function ChatSidebar({
   isSidebarOpen,
+  isHoverMode = false,
+  sidebarWidth,
   allChats,
   setAllChats,
   activeChatId,
@@ -129,17 +131,14 @@ function ChatSidebar({
   return (
     <>
       <VStack
-        minW="200px"
-        maxW="25%"
+        w="100%"
         bg={sidebarBg}
         p={2}
         spacing={2}
-        // overflowY="auto"
-        borderRight="1px solid gray"
-        borderRadius="md"
-        m={2}
-        boxShadow="md"
+        boxShadow={isHoverMode ? "2xl" : "md"}
         flexShrink={0}
+        h="100%"
+        borderRadius="md"
       >
         <HStack w="100%" spacing={2}>
           <InputGroup size="sm" flex="1">

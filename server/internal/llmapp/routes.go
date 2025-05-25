@@ -9,6 +9,7 @@ import (
 	"net/http"
 	"os"
 	"sync"
+	"time"
 
 	ui "llmserver"
 
@@ -24,6 +25,33 @@ type Config struct {
 	PromptsFile     string
 	ContextMap      map[string]context.CancelFunc
 	TokenToCtxMutex *sync.Mutex
+	WorkerPool      *LLMWorkerPool
+	shutdownChan    chan struct{}
+}
+
+// NewConfig creates a new Config with initialized worker pool
+func NewConfig(webPort, llmUrl, promptsFile string) *Config {
+	return &Config{
+		WebPort:         webPort,
+		LlmUrl:          llmUrl,
+		PromptsFile:     promptsFile,
+		ContextMap:      make(map[string]context.CancelFunc),
+		TokenToCtxMutex: &sync.Mutex{},
+		WorkerPool:      NewLLMWorkerPool(5), // Initialize with 5 workers
+		shutdownChan:    make(chan struct{}),
+	}
+}
+
+// StartWorkers starts the worker pool
+func (c *Config) StartWorkers() {
+	c.WorkerPool.Start()
+}
+
+// StopWorkers stops the worker pool
+func (c *Config) StopWorkers() {
+	if c.WorkerPool != nil {
+		c.WorkerPool.Stop()
+	}
 }
 
 const (
@@ -37,7 +65,7 @@ const (
 	genApi  = "/api/generate"
 	chatApi = "/api/chat"
 	tagApi  = "/api/tags"
-	model   = "llama3:latest"
+	// model   = "llama3:latest"
 )
 
 func (c *Config) routes() http.Handler {
@@ -72,10 +100,13 @@ func (c *Config) routes() http.Handler {
 
 	mux.Get("/api/prompts", c.GetSystemPrompts)
 	mux.Get("/api/models", c.GetOpenAIModels)
-	mux.Post("/api/chat", c.ChatResponse)
-	mux.Delete("/api/cancel", c.CancelRequest)
 	mux.Get("/api/supported-providers", c.GetSupportedProviders)
 	mux.Get("/api/providers", c.GetDefaultProvider)
+	mux.Get("/api/worker-status", c.GetWorkerPoolStatus)
+
+	mux.Post("/api/chat", c.ChatResponse)
+
+	mux.Delete("/api/cancel", c.CancelRequest)
 
 	c.Mux = mux
 	return mux
@@ -83,13 +114,23 @@ func (c *Config) routes() http.Handler {
 
 func (c *Config) sessionMiddleware(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		// Do stuff here
+		// Add configuration to context
 		ctx := context.WithValue(r.Context(), sessionDataKey, c)
+
+		// Add timeout to all requests
+		ctx, cancel := context.WithTimeout(ctx, 5*time.Minute)
+		defer cancel()
+
 		next.ServeHTTP(w, r.WithContext(ctx))
 	})
 }
 
 func (c *Config) StartServer() error {
+	// Start worker pool before server
+	c.StartWorkers()
+	log.Println("Worker pool started successfully")
+
+	// Start server
 	cert, err := c.loadPEMCertificate(certPath, keyPath)
 	if err != nil {
 		log.Println("Error loading PEM certificate and key:", err)
@@ -130,14 +171,33 @@ func (c *Config) startHTTPSServer(cert *tls.Certificate) error {
 		},
 	}
 
-	// Start the HTTPS server
-	log.Printf("Starting HTTPS server on :%s", c.WebPort)
-	err := server.ListenAndServeTLS("", "")
-	if err != nil {
-		log.Println("Error starting HTTPS server:", err)
+	// Start server in a goroutine
+	go func() {
+		log.Printf("Starting HTTPS server on :%s", c.WebPort)
+		if err := server.ListenAndServeTLS("", ""); err != nil && err != http.ErrServerClosed {
+			log.Printf("HTTPS server error: %v", err)
+		}
+	}()
+
+	// Wait for shutdown signal
+	<-c.shutdownChan
+
+	// Shutdown server gracefully
+	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+	defer cancel()
+
+	// Stop worker pool
+	c.StopWorkers()
+	log.Println("Worker pool stopped")
+
+	// Shutdown server
+	if err := server.Shutdown(ctx); err != nil {
+		log.Printf("Server forced to shutdown: %v", err)
+		return err
 	}
 
-	return err
+	log.Println("Server stopped gracefully")
+	return nil
 }
 
 func (c *Config) startHTTPServer() error {
@@ -147,12 +207,36 @@ func (c *Config) startHTTPServer() error {
 		Handler: c.routes(),
 	}
 
-	// Start the HTTP server
-	log.Printf("Starting HTTP server on :%s", c.WebPort)
-	err := server.ListenAndServe()
-	if err != nil {
-		log.Println("Error starting HTTP server:", err)
+	// Start server in a goroutine
+	go func() {
+		log.Printf("Starting HTTP server on :%s", c.WebPort)
+		if err := server.ListenAndServe(); err != nil && err != http.ErrServerClosed {
+			log.Printf("HTTP server error: %v", err)
+		}
+	}()
+
+	// Wait for shutdown signal
+	<-c.shutdownChan
+
+	// Shutdown server gracefully
+	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+	defer cancel()
+
+	// Stop worker pool
+	c.StopWorkers()
+	log.Println("Worker pool stopped")
+
+	// Shutdown server
+	if err := server.Shutdown(ctx); err != nil {
+		log.Printf("Server forced to shutdown: %v", err)
+		return err
 	}
 
-	return err
+	log.Println("Server stopped gracefully")
+	return nil
+}
+
+// GetShutdownChan returns the shutdown channel for graceful server termination
+func (c *Config) GetShutdownChan() chan struct{} {
+	return c.shutdownChan
 }

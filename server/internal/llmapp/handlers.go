@@ -1,20 +1,19 @@
 package llmapp
 
 import (
-	"bufio"
-	"bytes"
 	"context"
 	"encoding/json"
 	"fmt"
-	"io"
 	"llmserver/internal/prompts"
 	"log"
 	"net/http"
+	"strings"
+	"time"
 )
 
-var (
-	client = &http.Client{}
-)
+// var (
+// 	client = &http.Client{}
+// )
 
 const (
 	tokenLength    = 32
@@ -46,186 +45,249 @@ func (app *Config) ChatResponse(w http.ResponseWriter, r *http.Request) {
 	log.Printf("Received model: %s", reqPayload.Model)
 	log.Printf("Original question: %s", reqPayload.Prompt)
 
-	// Refine short queries
+	// Validate payload
 	if reqPayload.Prompt == "" {
-		app.errorJSON(w, err)
+		app.errorJSON(w, fmt.Errorf("prompt cannot be empty"))
 		return
 	}
 
-	if len(reqPayload.ChatMessages) > 0 {
-		reqPayload.Prompt = refineShortQuery(reqPayload.Prompt)
-		log.Printf("Processed question: %s", reqPayload.Prompt)
+	// Validate provider
+	providerId := strings.ToLower(reqPayload.ProviderName)
+	if providerId == "" {
+		app.errorJSON(w, fmt.Errorf("provider name cannot be empty"))
+		return
 	}
 
+	log.Printf("Chat messages: %+v", reqPayload.ChatMessages)
 	log.Printf("Payload: %+v", reqPayload)
 
-	// responses := []string{}
-
-	// ollama request body
-	var llmRequest RequestData
-	llmRequest.Model = reqPayload.Model
-
-	// ollama request options
-	var requestOptions RequestOptions
-	// if request payload has temperature, stream, and numcontext, then set them
-	if reqPayload.Temperature != 0 {
-		requestOptions.Temperature = reqPayload.Temperature
-	} else {
-		requestOptions.Temperature = defaultTemperature
-	}
-	if reqPayload.Stream {
-		llmRequest.Stream = reqPayload.Stream
-	}
-	if reqPayload.NumContext != 0 {
-		requestOptions.NumContext = reqPayload.NumContext
-	} else {
-		requestOptions.NumContext = defaultNumContext
-	}
-	if reqPayload.Raw {
-		llmRequest.Raw = reqPayload.Raw
-	}
-
-	// set default values for rest of the options
-	requestOptions.NumKeep = defaultNumKeep
-	requestOptions.Seed = defaultSeed
-
-	// set options
-	llmRequest.Options = requestOptions
-
-	// if includehistory is true, then set messages
-	if reqPayload.IncludeHistory {
-		llmRequest.Messages = createMessages(reqPayload)
-	} else {
-		llmRequest.Prompt = reqPayload.Prompt
-	}
-
-	// if includehistory is false and systemprompt is not empty, then prepend it to the prompt
-	if !reqPayload.IncludeHistory && reqPayload.SystemPrompt != "" {
-		llmRequest.Prompt = reqPayload.SystemPrompt + "\n" + reqPayload.Prompt
-	}
-
-	jsonData, err := json.Marshal(llmRequest)
-	if err != nil {
-		app.errorJSON(w, err)
+	// get api key from header
+	apiKey := r.Header.Get(AuthorizationHeader)
+	if apiKey == "" && providerId != "ollama" {
+		app.errorJSON(w, fmt.Errorf("api key not found"))
 		return
 	}
 
-	log.Printf("Sending request: %s", string(jsonData))
-
-	apiEndpoint := provider_url + genApi
-	if reqPayload.IncludeHistory {
-		apiEndpoint = provider_url + chatApi
-	}
-	log.Printf("Sending request to: %s", apiEndpoint)
-
-	// Create a context with a cancellation option
+	// Generate token for cancellation
 	token := app.randomString(tokenLength)
-	ctx, cancel := context.WithCancel(r.Context())
+	log.Printf("Token: %s", token)
 
-	app.TokenToCtxMutex.Lock()
-	app.ContextMap[token] = cancel
-	app.TokenToCtxMutex.Unlock()
+	// Create buffered channels for worker communication
+	responseChan := make(chan LLMResponse, 100) // Larger buffer for streaming responses
+	errorChan := make(chan error, 1)
+	cancelChan := make(chan bool, 1)
 
+	// Ensure channels are properly closed when handler exits
+	defer func() {
+		close(responseChan)
+		close(errorChan)
+		// cancelChan is closed by the worker
+	}()
+
+	// Create request context with timeout
+	ctx, cancel := context.WithTimeout(r.Context(), 5*time.Minute)
 	defer cancel()
 
-	log.Printf("Token: %s", token)
-	log.Printf("Context map: %+v", app.ContextMap)
-
-	req, err := http.NewRequestWithContext(ctx, http.MethodPost, apiEndpoint, bytes.NewBuffer(jsonData))
-	if err != nil {
-		app.errorJSON(w, err)
-		return
-	}
-	req.Header.Set("Content-Type", "application/json")
-
-	// client := &http.Client{}
-	res, err := client.Do(req)
-	if err != nil {
-		app.errorJSON(w, err)
-		return
-	}
-	defer res.Body.Close()
-
-	log.Printf("Status code: %d", res.StatusCode)
-
-	if res.StatusCode != http.StatusOK {
-		app.errorJSON(w, fmt.Errorf("(%d) %s: Not able to process request with the selected model", res.StatusCode, http.StatusText(res.StatusCode)))
-		return
+	// Create LLM request
+	llmRequest := LLMRequest{
+		ID:             token,
+		RequestPayload: reqPayload,
+		APIKey:         apiKey,
+		ResponseChan:   responseChan,
+		ErrorChan:      errorChan,
+		CancelChan:     cancelChan,
+		CancelToken:    token,
 	}
 
-	// read response
-	if reqPayload.Stream {
-		app.readStream(w, res, token, reqPayload)
-	} else {
-		app.readPostResponse(w, res)
+	// Submit request to worker pool
+	app.WorkerPool.SubmitRequest(llmRequest)
+
+	// Create a channel to track if cancellation has already occurred
+	cancelled := make(chan struct{})
+
+	// Store cancellation function that also cancels the worker request
+	cancelFunc := func() {
+		// Try to close cancelled channel - if already closed, cancellation already happened
+		select {
+		case <-cancelled:
+			return // Already cancelled
+		default:
+			close(cancelled)
+		}
+
+		// Signal the worker to cancel the request if channel is still open
+		select {
+		case cancelChan <- true:
+			log.Printf("Cancellation signal sent for request %s", token)
+		default:
+			// Channel either full or closed, which is fine as request may be done
+			log.Printf("Skipping cancellation signal for request %s (already cancelled or completed)", token)
+		}
+		cancel()
 	}
 
-	// Delete the context from the map
 	app.TokenToCtxMutex.Lock()
-	delete(app.ContextMap, token)
+	app.ContextMap[token] = cancelFunc
 	app.TokenToCtxMutex.Unlock()
+
+	defer func() {
+		cancelFunc()
+		app.TokenToCtxMutex.Lock()
+		delete(app.ContextMap, token)
+		app.TokenToCtxMutex.Unlock()
+	}()
+
+	// Handle response based on streaming mode
+	if reqPayload.Stream {
+		app.handleStreamResponse(w, responseChan, errorChan, ctx)
+	} else {
+		app.handleNonStreamResponse(w, responseChan, errorChan, ctx)
+	}
 }
 
-// read streaming response
-func (app *Config) readStream(w http.ResponseWriter, res *http.Response, token string, reqPayload RequestPayload) {
-	log.Printf("Reading stream")
+// handleStreamResponse processes streaming responses from worker
+func (app *Config) handleStreamResponse(w http.ResponseWriter, responseChan chan LLMResponse, errorChan chan error, ctx context.Context) {
+	log.Printf("Handling stream response")
 
-	ws := w.(http.Flusher)
+	flusher, ok := w.(http.Flusher)
+	if !ok {
+		select {
+		case errorChan <- fmt.Errorf("streaming not supported"):
+		default:
+			log.Printf("Error channel closed or blocked while sending streaming error")
+		}
+		app.errorJSON(w, fmt.Errorf("streaming not supported"))
+		return
+	}
 
 	w.Header().Set("Content-Type", "text/event-stream")
 	w.Header().Set("Cache-Control", "no-cache")
 	w.Header().Set("Connection", "keep-alive")
+	w.Header().Set("X-Accel-Buffering", "no") // Disable buffering in Nginx
 
-	reader := bufio.NewReader(res.Body)
-	for {
-		line, err := reader.ReadBytes('\n')
-		if err != nil {
-			if err == io.EOF {
-				break
+	// Create error channel for goroutine communication
+	streamErrChan := make(chan error, 1)
+	defer close(streamErrChan)
+
+	// Start response processing in a goroutine
+	go func() {
+		for {
+			select {
+			case response, ok := <-responseChan:
+				if !ok {
+					log.Printf("Response channel closed")
+					select {
+					case streamErrChan <- fmt.Errorf("response channel closed unexpectedly"):
+					default:
+						log.Printf("Stream error channel closed or blocked")
+					}
+					return
+				}
+
+				if response.Error != nil {
+					select {
+					case streamErrChan <- response.Error:
+					default:
+						log.Printf("Stream error channel closed or blocked")
+					}
+					return
+				}
+
+				// Send response chunk to client
+				err := app.writeJSON(w, http.StatusOK, response.Data)
+				if err != nil {
+					streamErrChan <- err
+					return
+				}
+				flusher.Flush()
+
+				if response.IsComplete {
+					log.Printf("Stream completed successfully")
+					select {
+					case streamErrChan <- err:
+					default:
+						log.Printf("Stream error channel closed or blocked")
+					}
+					return
+				}
+
+			case err := <-errorChan:
+				if err != nil {
+					select {
+					case streamErrChan <- err:
+					default:
+						log.Printf("Stream error channel closed or blocked")
+					}
+				}
+				return
+
+			case <-ctx.Done():
+				log.Printf("Stream cancelled by context")
+				streamErrChan <- ctx.Err()
+				return
 			}
+		}
+	}()
+
+	// Wait for completion or error
+	select {
+	case err := <-streamErrChan:
+		if err != nil && err != context.Canceled {
 			app.errorJSON(w, err)
-			return
 		}
-
-		var llmRes ResponseData
-		err = json.Unmarshal(line, &llmRes)
-		if err != nil {
-			app.errorJSON(w, err)
-			return
-		}
-
-		if reqPayload.IncludeHistory {
-			llmRes.Response = llmRes.Message.Content
-		}
-
-		// log.Printf("Response: %s", llmRes.Response)
-
-		llmRes.CancelToken = token
-		app.writeJSON(w, http.StatusOK, llmRes)
-
-		ws.Flush()
+	case <-ctx.Done():
+		log.Printf("Stream context cancelled")
 	}
 }
 
-// read POST response
-func (app *Config) readPostResponse(w http.ResponseWriter, res *http.Response) {
-	log.Printf("Reading post response")
-	defer res.Body.Close()
-	body, err := io.ReadAll(res.Body)
-	if err != nil {
-		app.errorJSON(w, err)
-		return
-	}
-	log.Printf("Body: %s", string(body))
+// handleNonStreamResponse processes non-streaming responses from worker
+func (app *Config) handleNonStreamResponse(w http.ResponseWriter, responseChan chan LLMResponse, errorChan chan error, ctx context.Context) {
+	log.Printf("Handling non-stream response")
 
-	// read into json
-	resData := ResponseData{}
-	err = json.Unmarshal(body, &resData)
-	if err != nil {
-		app.errorJSON(w, err)
-		return
+	// Add timeout for non-streaming responses
+	timeoutCtx, cancel := context.WithTimeout(ctx, 30*time.Second)
+	defer cancel()
+
+	// Create error channel for internal errors
+	internalErrChan := make(chan error, 1)
+	defer close(internalErrChan)
+
+	select {
+	case response, ok := <-responseChan:
+		if !ok {
+			err := fmt.Errorf("response channel closed unexpectedly")
+			log.Printf("Response error: %v", err)
+			app.errorJSON(w, err)
+			return
+		}
+
+		if response.Error != nil {
+			log.Printf("Response error: %v", response.Error)
+			app.errorJSON(w, response.Error)
+			return
+		}
+
+		if err := app.writeJSON(w, http.StatusOK, response.Data); err != nil {
+			log.Printf("Error writing response: %v", err)
+			app.errorJSON(w, fmt.Errorf("error writing response: %v", err))
+			return
+		}
+
+	case err := <-errorChan:
+		if err != nil {
+			log.Printf("Error from worker: %v", err)
+			app.errorJSON(w, err)
+			return
+		}
+
+	case <-timeoutCtx.Done():
+		log.Printf("Request timed out")
+		app.errorJSON(w, fmt.Errorf("request timed out after 30 seconds"))
+
+	case <-ctx.Done():
+		log.Printf("Request cancelled by client")
+		app.errorJSON(w, fmt.Errorf("request cancelled by client"))
 	}
-	app.writeJSON(w, http.StatusOK, resData)
 }
 
 // handle model list get
@@ -262,13 +324,14 @@ func (app *Config) GetOpenAIModels(w http.ResponseWriter, r *http.Request) {
 		Message: "success",
 	}
 
+	client := &http.Client{}
+
 	// get provider from path
 	provider := r.URL.Query().Get("provider")
 	log.Printf("Provider: %s", provider)
 
 	// get query parameter provider_url
 	providerUrl := r.URL.Query().Get("provider_url")
-	log.Printf("Provider URL: %s", providerUrl)
 
 	// if providerUrl empty, then get from llmapp ProviderURL
 	if providerUrl == "" {
@@ -294,9 +357,7 @@ func (app *Config) GetOpenAIModels(w http.ResponseWriter, r *http.Request) {
 		app.errorJSON(w, err)
 		return
 	}
-	log.Printf("Provider Base URL: %s", providerBaseUrl)
 	modelURL := fmt.Sprintf(ProviderModelURLs[provider], providerBaseUrl)
-	log.Printf("Model URL: %s", modelURL)
 
 	// get bearer token
 	bearerToken := r.Header.Get(AuthorizationHeader)
@@ -304,8 +365,6 @@ func (app *Config) GetOpenAIModels(w http.ResponseWriter, r *http.Request) {
 		app.errorJSON(w, fmt.Errorf("bearer token not found"))
 		return
 	}
-
-	log.Printf("Bearer token: %s", bearerToken)
 
 	// call the tag list endpoint
 	req, err := http.NewRequest("GET", modelURL, nil)
@@ -332,8 +391,15 @@ func (app *Config) GetOpenAIModels(w http.ResponseWriter, r *http.Request) {
 
 	providerModels := []string{}
 	for _, model := range models.Data {
-		providerModels = append(providerModels, model.ID)
+		modelID := model.ID
+		// Remove "model/" prefix for gemini provider
+		if provider == "gemini" && strings.HasPrefix(modelID, "models/") {
+			modelID = strings.TrimPrefix(modelID, "models/")
+		}
+		providerModels = append(providerModels, modelID)
 	}
+
+	log.Printf("Models: %+v", providerModels)
 
 	jsonresp.Data = providerModels
 
@@ -355,12 +421,19 @@ func (app *Config) GetSystemPrompts(w http.ResponseWriter, r *http.Request) {
 func createMessages(payload RequestPayload) []Message {
 	log.Printf("Creating messages: %+v", payload)
 	var messages []Message
-	messages = append(messages, Message{
-		Role:    "system",
-		Content: payload.SystemPrompt,
-	})
+
+	// skip if system prompt is empty
+	if payload.SystemPrompt != "" {
+		messages = append(messages, Message{
+			Role:    "system",
+			Content: payload.SystemPrompt,
+		})
+	}
 
 	for _, c := range payload.ChatMessages {
+		if c.Prompt == "" || c.Response == "" {
+			continue
+		}
 		messages = append(messages, Message{
 			Role:    "user",
 			Content: c.Prompt,
@@ -383,47 +456,37 @@ func createMessages(payload RequestPayload) []Message {
 func (app *Config) CancelRequest(w http.ResponseWriter, r *http.Request) {
 	log.Println("Received cancel request")
 
-	// get session data
-	// sessionData := r.Context().Value(sessionDataKey).(*Config)
-	// log.Printf("Session data: %+v", sessionData)
-
-	app.TokenToCtxMutex.Lock()
-	defer app.TokenToCtxMutex.Unlock()
-
 	jsonresp := jsonResponse{
 		Error:   false,
 		Message: "success",
 	}
 
-	log.Printf("Cancel token: %s", r.URL.Query().Get(qToken))
+	token := r.URL.Query().Get(qToken)
+	log.Printf("Cancel token: %s", token)
 
-	if r.URL.Query().Get(qToken) == "" {
+	if token == "" {
 		jsonresp.Error = true
-		jsonresp.Message = "request not found"
-		app.writeJSON(w, http.StatusOK, jsonresp)
+		jsonresp.Message = "token not provided"
+		app.writeJSON(w, http.StatusBadRequest, jsonresp)
 		return
 	}
 
-	log.Printf("Context map: %+v", app.ContextMap)
+	app.TokenToCtxMutex.Lock()
+	cancelFunc := app.ContextMap[token]
+	app.TokenToCtxMutex.Unlock()
 
-	// token := chi.URLParam(r, "token")
-	token := r.URL.Query().Get(qToken)
-	log.Printf("Token: %s", token)
-	cancel := app.ContextMap[token]
-	if cancel != nil {
-		log.Printf("Canceling context for token: %s", token)
-		cancel()
-		delete(app.ContextMap, token)
+	if cancelFunc != nil {
+		log.Printf("Canceling request for token: %s", token)
+		cancelFunc() // This will trigger both context cancellation and worker cancellation
 
-		jsonresp.Message = "request cancelled"
+		jsonresp.Message = "request cancelled successfully"
 		app.writeJSON(w, http.StatusOK, jsonresp)
 	} else {
-		log.Printf("No context found for token: %s", token)
+		log.Printf("No active request found for token: %s", token)
 		jsonresp.Error = true
-		jsonresp.Message = "request not found"
-		app.writeJSON(w, http.StatusOK, jsonresp)
+		jsonresp.Message = "request not found or already completed"
+		app.writeJSON(w, http.StatusNotFound, jsonresp)
 	}
-
 }
 
 func (app *Config) GetSupportedProviders(w http.ResponseWriter, r *http.Request) {
@@ -452,6 +515,24 @@ func (app *Config) GetDefaultProvider(w http.ResponseWriter, r *http.Request) {
 	}
 
 	jsonresp.Data = defaultProvider
+
+	app.writeJSON(w, http.StatusOK, jsonresp)
+}
+
+// GetWorkerPoolStatus returns the current status of the worker pool
+func (app *Config) GetWorkerPoolStatus(w http.ResponseWriter, r *http.Request) {
+	jsonresp := jsonResponse{
+		Error:   false,
+		Message: "success",
+	}
+
+	status := map[string]any{
+		"workers":        app.WorkerPool.Workers,
+		"queueSize":      app.WorkerPool.GetQueueSize(),
+		"activeRequests": len(app.ContextMap),
+	}
+
+	jsonresp.Data = status
 
 	app.writeJSON(w, http.StatusOK, jsonresp)
 }

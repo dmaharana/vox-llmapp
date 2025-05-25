@@ -1,0 +1,427 @@
+package llmapp
+
+import (
+	"bufio"
+	"bytes"
+	"context"
+	"encoding/json"
+	"fmt"
+	"io"
+	"log"
+	"net/http"
+	"strings"
+	"time"
+)
+
+// NewLLMWorkerPool creates a new worker pool
+func NewLLMWorkerPool(workers int) *LLMWorkerPool {
+	return &LLMWorkerPool{
+		RequestChan: make(chan LLMRequest, 100), // Buffered channel for requests
+		Workers:     workers,
+		QuitChan:    make(chan bool),
+	}
+}
+
+// Start initializes and starts the worker pool
+func (pool *LLMWorkerPool) Start() {
+	log.Printf("Starting LLM worker pool with %d workers", pool.Workers)
+
+	for i := range pool.Workers {
+		go pool.worker(i)
+	}
+}
+
+// Stop gracefully shuts down the worker pool
+func (pool *LLMWorkerPool) Stop() {
+	log.Println("Stopping LLM worker pool")
+	// Signal all workers to stop
+	close(pool.QuitChan)
+
+	// Wait a moment for workers to finish current requests
+	time.Sleep(100 * time.Millisecond)
+
+	// Safely close request channel
+	select {
+	case <-pool.RequestChan:
+		// Drain any remaining requests
+	default:
+	}
+	close(pool.RequestChan)
+}
+
+// worker processes LLM requests
+func (pool *LLMWorkerPool) worker(id int) {
+	log.Printf("Worker %d started", id)
+
+	for {
+		select {
+		case request, ok := <-pool.RequestChan:
+			if !ok {
+				log.Printf("Worker %d stopping (request channel closed)", id)
+				return
+			}
+			log.Printf("Worker %d processing request %s", id, request.ID)
+			// Process request in a separate goroutine to allow for cancellation
+			go func(req LLMRequest) {
+				pool.processRequest(req)
+			}(request)
+		case <-pool.QuitChan:
+			log.Printf("Worker %d stopping (quit signal received)", id)
+			return
+		}
+	}
+}
+
+// processRequest handles the actual LLM communication
+func (pool *LLMWorkerPool) processRequest(request LLMRequest) {
+	// Create a context with cancellation for this request
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+
+	// Handle cancellation signals
+	go func() {
+		select {
+		case <-request.CancelChan:
+			log.Printf("Request %s cancelled, cleaning up", request.ID)
+			cancel()
+		case <-ctx.Done():
+			return
+		}
+	}()
+
+	reqPayload := request.RequestPayload
+	providerId := strings.ToLower(reqPayload.ProviderName)
+
+	client := &http.Client{
+		Timeout: 30 * time.Second, // Add timeout for HTTP requests
+	}
+
+	log.Printf("Processing model: %s", reqPayload.Model)
+	log.Printf("Original question: %s", reqPayload.Prompt)
+
+	// Refine short queries if needed
+	if reqPayload.Prompt == "" {
+		request.ErrorChan <- fmt.Errorf("prompt cannot be empty")
+		return
+	}
+
+	if len(reqPayload.ChatMessages) == 0 {
+		reqPayload.Prompt = refineShortQuery(reqPayload.Prompt)
+		log.Printf("Processed question: %s", reqPayload.Prompt)
+	}
+
+	// Build LLM request
+	llmRequest := buildLLMRequest(reqPayload)
+
+	log.Printf("LLM Request: %+v", llmRequest)
+
+	jsonData, err := json.Marshal(llmRequest)
+	if err != nil {
+		select {
+		case request.ErrorChan <- err:
+		default:
+			log.Printf("Error channel closed or blocked for request %s: %v", request.ID, err)
+		}
+		return
+	}
+
+	log.Printf("Sending request: %s", string(jsonData))
+
+	// Get provider URL
+	providerBaseUrl := ProviderURLs[providerId]
+	if providerBaseUrl == "" {
+		request.ErrorChan <- fmt.Errorf("provider %s not found", reqPayload.ProviderName)
+		return
+	}
+
+	// Build API endpoint
+	apiEndpoint := fmt.Sprintf(ProviderGenerateURLs[providerId], providerBaseUrl)
+	if reqPayload.IncludeHistory {
+		apiEndpoint = fmt.Sprintf(ProviderChatURLs[providerId], providerBaseUrl)
+	}
+	log.Printf("Sending request to: %s", apiEndpoint)
+
+	// Validate API key
+	if request.APIKey == "" && providerId != "ollama" {
+		request.ErrorChan <- fmt.Errorf("api key not found")
+		return
+	}
+
+	// Create HTTP request with context that can be cancelled
+	ctx, cancel = context.WithCancel(context.Background())
+	defer cancel()
+
+	// Start a goroutine to listen for cancellation
+	go func() {
+		select {
+		case <-request.CancelChan:
+			log.Printf("Request %s cancelled during processing", request.ID)
+			cancel()
+		case <-ctx.Done():
+			// Context already cancelled
+		}
+	}()
+
+	log.Println("Creating request")
+	req, err := http.NewRequestWithContext(ctx, http.MethodPost, apiEndpoint, bytes.NewBuffer(jsonData))
+	if err != nil {
+		log.Printf("Error creating request: %v", err)
+		request.ErrorChan <- err
+		return
+	}
+
+	req.Header.Set("Content-Type", "application/json")
+	if request.APIKey != "" {
+		req.Header.Set("Authorization", fmt.Sprintf("Bearer %s", request.APIKey))
+	}
+
+	log.Println("Executing request")
+	// Execute request with context
+	res, err := client.Do(req.WithContext(ctx))
+	if err != nil {
+		log.Printf("Error creating request: %v", err)
+		select {
+		case request.ErrorChan <- err:
+		default:
+			log.Printf("Could not send error on channel for request %s: %v", request.ID, err)
+		}
+		return
+	}
+	defer res.Body.Close()
+
+	log.Printf("Status code: %d", res.StatusCode)
+
+	if res.StatusCode != http.StatusOK {
+		request.ErrorChan <- fmt.Errorf("(%d) %s: Not able to process request with the selected model", res.StatusCode, http.StatusText(res.StatusCode))
+		return
+	}
+
+	// Process response based on streaming mode
+	if reqPayload.Stream {
+		pool.processStreamResponse(res, request)
+	} else {
+		pool.processNonStreamResponse(res, request)
+	}
+}
+
+// processStreamResponse handles streaming responses
+func (pool *LLMWorkerPool) processStreamResponse(res *http.Response, request LLMRequest) {
+	log.Println("Entering processStreamResponse")
+
+	reader := bufio.NewReader(res.Body)
+	// Create a context with cancellation
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+
+	// Handle cancellation in a separate goroutine
+	go func() {
+		select {
+		case <-request.CancelChan:
+			log.Printf("Stream cancelled for request %s", request.ID)
+			cancel()
+		case <-ctx.Done():
+			return
+		}
+	}()
+
+	for {
+		select {
+		case <-ctx.Done():
+			log.Printf("Stream processing stopped for request %s", request.ID)
+			return
+		default:
+			// Continue with normal processing
+		}
+
+		line, err := reader.ReadBytes('\n')
+		if err != nil {
+			log.Printf("Error reading stream: %v", err)
+			if err == io.EOF {
+				// Send completion signal
+				request.ResponseChan <- LLMResponse{
+					ID:         request.ID,
+					IsStream:   true,
+					IsComplete: true,
+				}
+				break
+			}
+			request.ErrorChan <- err
+			return
+		}
+
+		if string(line) == "data: [DONE]\n" {
+			request.ResponseChan <- LLMResponse{
+				ID:         request.ID,
+				IsStream:   true,
+				IsComplete: true,
+			}
+			break
+		}
+
+		// Check if line contains "data:" prefix
+		if bytes.HasPrefix(line, []byte("data: ")) {
+			// Split at "data:" and take the second portion as content
+			line = bytes.TrimPrefix(line, []byte("data: "))
+
+		} else {
+			continue
+		}
+
+		var llmRes ResponseData
+		var sResp StreamChatCompletionResponse
+		err = json.Unmarshal(line, &sResp)
+		if err != nil {
+			log.Printf("Error parsing response: %v", err)
+			request.ErrorChan <- err
+			return
+		}
+
+		llmRes.Model = sResp.Model
+		llmRes.Response = sResp.Choices[0].Delta.Content
+		llmRes.CancelToken = request.CancelToken
+
+		// Send response chunk through channel with safety check
+		select {
+		case request.ResponseChan <- LLMResponse{
+			ID:         request.ID,
+			Data:       llmRes,
+			IsStream:   true,
+			IsComplete: llmRes.Done,
+		}:
+		default:
+			// Channel is closed or blocked, stop processing
+			log.Printf("Response channel closed or blocked for request %s", request.ID)
+			return
+		}
+
+		if llmRes.Done {
+			break
+		}
+	}
+}
+
+// processNonStreamResponse handles non-streaming responses
+func (pool *LLMWorkerPool) processNonStreamResponse(res *http.Response, request LLMRequest) {
+	body, err := io.ReadAll(res.Body)
+	if err != nil {
+		request.ErrorChan <- err
+		return
+	}
+
+	log.Printf("Body: %s", string(body))
+
+	var resData ResponseData
+	err = json.Unmarshal(body, &resData)
+	if err != nil {
+		request.ErrorChan <- err
+		return
+	}
+
+	resData.CancelToken = request.CancelToken
+
+	log.Printf("Response data: %+vresData", resData)
+
+	// if chat then choices will have the value
+	if len(resData.Choices) > 0 {
+		resData.Response = resData.Choices[0].Message.Content
+	}
+
+	// Send complete response through channel with safety check
+	select {
+	case request.ResponseChan <- LLMResponse{
+		ID:         request.ID,
+		Data:       resData,
+		IsStream:   false,
+		IsComplete: true,
+	}:
+	default:
+		log.Printf("Response channel closed or blocked for request %s", request.ID)
+		return
+	}
+}
+
+// buildLLMRequest constructs the LLM request from the payload
+func buildLLMRequest(reqPayload RequestPayload) RequestData {
+	var llmRequest RequestData
+	llmRequest.Model = reqPayload.Model
+
+	// Set request options
+	var requestOptions RequestOptions
+	if reqPayload.Temperature != 0 {
+		requestOptions.Temperature = reqPayload.Temperature
+	} else {
+		requestOptions.Temperature = defaultTemperature
+	}
+
+	// if reqPayload.NumContext != 0 {
+	// 	requestOptions.NumContext = reqPayload.NumContext
+	// } else {
+	// 	requestOptions.NumContext = defaultNumContext
+	// }
+
+	if reqPayload.Stream {
+		llmRequest.Stream = reqPayload.Stream
+		providerId := strings.ToLower(reqPayload.ProviderName)
+		if providerId == "openrouter" {
+			llmRequest.Stream = false
+		}
+	}
+
+	// if reqPayload.Raw {
+	// 	llmRequest.Raw = reqPayload.Raw
+	// }
+
+	llmRequest.Raw = true
+
+	// Set default values
+	requestOptions.NumKeep = defaultNumKeep
+	requestOptions.Seed = defaultSeed
+	llmRequest.Options = requestOptions
+
+	// Set messages or prompt
+	if reqPayload.IncludeHistory {
+		llmRequest.Messages = createMessages(reqPayload)
+	} else {
+		llmRequest.Prompt = reqPayload.Prompt
+		if reqPayload.SystemPrompt != "" {
+			llmRequest.Prompt = reqPayload.SystemPrompt + "\n" + reqPayload.Prompt
+		}
+	}
+
+	return llmRequest
+}
+
+// SubmitRequest submits a request to the worker pool
+func (pool *LLMWorkerPool) SubmitRequest(request LLMRequest) {
+	// Try to submit the request with a timeout
+	select {
+	case pool.RequestChan <- request:
+		log.Printf("Request %s submitted to worker pool", request.ID)
+		return
+	case <-time.After(5 * time.Second):
+		log.Printf("Request %s timed out while submitting to worker pool", request.ID)
+	}
+
+	// If we get here, submission failed - send error if possible
+	select {
+	case request.ErrorChan <- fmt.Errorf("worker pool is busy, please try again later"):
+		log.Printf("Request %s rejected due to timeout", request.ID)
+	default:
+		log.Printf("Failed to send error for request %s (error channel closed or full)", request.ID)
+	}
+}
+
+// GetQueueSize returns the current queue size
+func (pool *LLMWorkerPool) GetQueueSize() int {
+	return len(pool.RequestChan)
+}
+
+// CancelRequest cancels a specific request by ID
+func (pool *LLMWorkerPool) CancelRequest(requestID string, cancelChan chan bool) {
+	select {
+	case cancelChan <- true:
+		log.Printf("Cancellation signal sent for request %s", requestID)
+	default:
+		log.Printf("Failed to send cancellation signal for request %s (channel full or closed)", requestID)
+	}
+}

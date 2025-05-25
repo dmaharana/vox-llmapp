@@ -60,7 +60,7 @@ export default function ChatScreen() {
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
   const [isHovering, setIsHovering] = useState(false);
   const [sidebarWidth, setSidebarWidth] = useState(() => {
-    const savedWidth = localStorage.getItem('sidebarWidth');
+    const savedWidth = localStorage.getItem("sidebarWidth");
     return savedWidth ? parseInt(savedWidth) : 300;
   });
   const [isResizing, setIsResizing] = useState(false);
@@ -86,14 +86,14 @@ export default function ChatScreen() {
 
   const handleMouseMove = (e) => {
     if (!isResizing) return;
-    
+
     const newWidth = e.clientX;
     const maxWidth = window.innerWidth / 2; // Half screen width
     const minWidth = 200;
 
     if (newWidth >= minWidth && newWidth <= maxWidth) {
       setSidebarWidth(newWidth);
-      localStorage.setItem('sidebarWidth', newWidth.toString());
+      localStorage.setItem("sidebarWidth", newWidth.toString());
     }
   };
 
@@ -107,22 +107,22 @@ export default function ChatScreen() {
 
   useEffect(() => {
     if (isResizing) {
-      document.addEventListener('mousemove', handleMouseMove);
-      document.addEventListener('mouseup', handleMouseUp);
-      document.body.style.cursor = 'col-resize';
-      document.body.style.userSelect = 'none';
+      document.addEventListener("mousemove", handleMouseMove);
+      document.addEventListener("mouseup", handleMouseUp);
+      document.body.style.cursor = "col-resize";
+      document.body.style.userSelect = "none";
     } else {
-      document.removeEventListener('mousemove', handleMouseMove);
-      document.removeEventListener('mouseup', handleMouseUp);
-      document.body.style.cursor = '';
-      document.body.style.userSelect = '';
+      document.removeEventListener("mousemove", handleMouseMove);
+      document.removeEventListener("mouseup", handleMouseUp);
+      document.body.style.cursor = "";
+      document.body.style.userSelect = "";
     }
 
     return () => {
-      document.removeEventListener('mousemove', handleMouseMove);
-      document.removeEventListener('mouseup', handleMouseUp);
-      document.body.style.cursor = '';
-      document.body.style.userSelect = '';
+      document.removeEventListener("mousemove", handleMouseMove);
+      document.removeEventListener("mouseup", handleMouseUp);
+      document.body.style.cursor = "";
+      document.body.style.userSelect = "";
     };
   }, [isResizing]);
 
@@ -470,13 +470,10 @@ export default function ChatScreen() {
     const msgId = message.id;
     const startTime = new Date().getTime();
 
-    console.log(model);
-    console.log(selectedProvider);
-
     let reqBody = {
       model: model,
       prompt: query,
-      raw: false,
+      // raw: true,
       stream: true,
       includeHistory: includeHistory,
       systemPrompt: systemPrompt,

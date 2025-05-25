@@ -33,9 +33,6 @@ export function AddPromptForm({
   const handleSubmit = (e) => {
     e.preventDefault();
 
-    console.log("newPromptName", newPromptName);
-    console.log("newPromptContent", newPromptContent);
-
     // check for unique name
     const otherNames = prompts.map((prompt) => prompt.name);
     if (otherNames.includes(newPromptName)) {

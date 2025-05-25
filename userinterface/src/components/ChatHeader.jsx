@@ -15,7 +15,6 @@ export default function ChatHeader({
   const bgText = useColorModeValue("blue.900", "blue.100");
   const bgHeader = useColorModeValue("blue.100", "blue.600");
 
-
   return (
     <HStack
       w="100%"
@@ -54,7 +53,7 @@ export default function ChatHeader({
         {(() => {
           if (systemPrompt !== DEFAULT_MESSAGES.SYSTEM_PROMPT) {
             const matchedPrompt = prompts?.find(
-              (p) => p.content === systemPrompt
+              (p) => p.content === systemPrompt,
             );
             if (matchedPrompt) {
               return ` as ${matchedPrompt.name}`;
@@ -68,7 +67,7 @@ export default function ChatHeader({
 
       <IconButton
         aria-label="Toggle dark mode"
-        icon={colorMode === "light" ? <MoonIcon /> : <SunIcon />}
+        icon={colorMode === "light" ? <SunIcon /> : <MoonIcon />}
         onClick={toggleColorMode}
         variant="ghost"
         size="lg"

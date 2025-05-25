@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import {
   Avatar,
   Box,
@@ -10,6 +10,8 @@ import {
   useClipboard,
   useColorModeValue,
   Textarea,
+  Card,
+  CardBody,
 } from "@chakra-ui/react";
 import {
   CopyIcon,
@@ -41,6 +43,88 @@ import avatarImage12 from "../assets/formal/assistant5.png";
 import avatarImage13 from "../assets/formal/assistant6.png";
 
 import AssistantHistory from "./AssistantHistory";
+
+// Function to parse content with think tags
+const parseThinkContent = (content) => {
+  const segments = [];
+  let currentIndex = 0;
+  const regex = /<think>([\s\S]*?)<\/think>/g;
+
+  let match;
+  while ((match = regex.exec(content)) !== null) {
+    // Add text before the think tag if exists
+    if (match.index > currentIndex) {
+      segments.push({
+        type: "text",
+        content: content.slice(currentIndex, match.index),
+      });
+    }
+
+    // Add the think content
+    segments.push({
+      type: "think",
+      content: match[1].trim(),
+    });
+
+    currentIndex = match.index + match[0].length;
+  }
+
+  // Add remaining text if exists
+  if (currentIndex < content.length) {
+    segments.push({
+      type: "text",
+      content: content.slice(currentIndex),
+    });
+  }
+
+  return segments;
+};
+
+const ThinkBlock = ({ content }) => {
+  const thinkBg = useColorModeValue("blue.50", "blue.900");
+  const thinkBorder = useColorModeValue("blue.200", "blue.700");
+  const thinkText = useColorModeValue("blue.800", "blue.100");
+
+  return (
+    <Card
+      bg={thinkBg}
+      borderColor={thinkBorder}
+      borderWidth="1px"
+      borderStyle="solid"
+      borderRadius="md"
+      mb={3}
+      shadow="sm"
+    >
+      <CardBody p={3}>
+        <HStack align="flex-start" spacing={3}>
+          <Box color={thinkText}>💭</Box>
+          <Box color={thinkText} fontSize="sm" fontStyle="italic" flex="1">
+            <ReactMarkdown components={ChakraUIRenderer()}>
+              {content}
+            </ReactMarkdown>
+          </Box>
+        </HStack>
+      </CardBody>
+    </Card>
+  );
+};
+
+const MessageContent = ({ content }) => {
+  const segments = parseThinkContent(content);
+  return (
+    <>
+      {segments.map((segment, index) =>
+        segment.type === "think" ? (
+          <ThinkBlock key={index} content={segment.content} />
+        ) : (
+          <ReactMarkdown key={index} components={ChakraUIRenderer()}>
+            {segment.content}
+          </ReactMarkdown>
+        ),
+      )}
+    </>
+  );
+};
 
 const avatarImagesInformal = [
   avatarImage,
@@ -98,10 +182,10 @@ export function AssistantMsg({
   const assistantTextColor = useColorModeValue("black", "white");
 
   const conversation = chatHistory?.find(
-    (conv) => conv.id === convId
+    (conv) => conv.id === convId,
   )?.messages;
   const count = conversation?.filter(
-    (msg) => msg.role === DEFAULT_MESSAGES.assistantRole
+    (msg) => msg.role === DEFAULT_MESSAGES.assistantRole,
   )?.length;
   const [isExpanded, setIsExpanded] = useState(false);
   const [isMsgExpanded, setIsMsgExpanded] = useState(waitingResponse);
@@ -145,19 +229,21 @@ export function AssistantMsg({
             />
           ) : (
             <>
-              <ReactMarkdown
-                components={ChakraUIRenderer()}
-                skiphtml="true"
+              <Box
                 align="left"
                 sx={{
                   p: "20px",
                   borderRadius: "10px",
                 }}
               >
-                {msg.length <= maxContentLength || isMsgExpanded
-                  ? msg
-                  : msg.substring(0, maxContentLength) + "..."}
-              </ReactMarkdown>
+                <MessageContent
+                  content={
+                    msg.length <= maxContentLength || isMsgExpanded
+                      ? msg
+                      : msg.substring(0, maxContentLength) + "..."
+                  }
+                />
+              </Box>
 
               {String(msg).length > maxContentLength && (
                 <Button

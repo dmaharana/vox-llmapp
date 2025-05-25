@@ -62,10 +62,8 @@ export default function Vox() {
         }
         const chunkValue = decoder.decode(value);
         const cJson = JSON.parse(chunkValue);
-        console.log(cJson);
         text += cJson["response"];
         setResponse(text);
-        // console.log(text);
       }
     } catch (error) {
       console.error(error);

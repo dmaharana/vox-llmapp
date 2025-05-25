@@ -1,6 +1,10 @@
 import { useState, useEffect, useRef } from "react";
 import { useSelector, useDispatch } from "react-redux";
-import { setProviders, getSupportedProviders, getProviders } from "../store/providerSlice";
+import {
+  setProviders,
+  getSupportedProviders,
+  getProviders,
+} from "../store/providerSlice";
 import ShowAlert from "./ShowAlert";
 import {
   Box,
@@ -76,11 +80,11 @@ export default function ProviderManagement({ isOpen, onClose }) {
       .unwrap()
       .then(({ providers, defaultProvider }) => {
         let providersToStore = providers;
-        
+
         if (defaultProvider && (!providers || providers.length === 0)) {
           providersToStore = [defaultProvider];
         }
-        
+
         const providersWithIds = providersToStore.map((provider) => ({
           id: provider.id || generateUUID(),
           name: String(provider.name || "Unnamed Provider"),
@@ -128,8 +132,6 @@ export default function ProviderManagement({ isOpen, onClose }) {
   };
 
   const handleExportProviders = () => {
-    console.log("Exporting providers...");
-    console.log(providers);
     if (providers.length === 0) {
       console.error("No providers to export");
       return;
@@ -197,9 +199,9 @@ export default function ProviderManagement({ isOpen, onClose }) {
                   api_key: providerData.api_key,
                   models: providerData.models,
                 }
-              : p
-          )
-        )
+              : p,
+          ),
+        ),
       );
     } else {
       // Add new provider
@@ -270,23 +272,29 @@ export default function ProviderManagement({ isOpen, onClose }) {
                         <Td>{provider.endpoint}</Td>
                         <Td>
                           <HStack spacing={2}>
-                            <Tooltip label={DEFAULT_MESSAGES.editProviderMessage}>
-                            <IconButton
-                              size="sm"
-                              colorScheme="blue"
-                              variant="ghost"
-                              onClick={() => handleEditProvider(provider.id)}
-                              icon={<EditIcon />}
-                            />
+                            <Tooltip
+                              label={DEFAULT_MESSAGES.editProviderMessage}
+                            >
+                              <IconButton
+                                size="sm"
+                                colorScheme="blue"
+                                variant="ghost"
+                                onClick={() => handleEditProvider(provider.id)}
+                                icon={<EditIcon />}
+                              />
                             </Tooltip>
-                            <Tooltip label={DEFAULT_MESSAGES.deleteProviderMessage}>
-                            <IconButton
-                              size="sm"
-                              colorScheme="red"
-                              variant="ghost"
-                              onClick={() => handleDeleteProvider(provider.id)}
-                              icon={<DeleteIcon />}
-                            />
+                            <Tooltip
+                              label={DEFAULT_MESSAGES.deleteProviderMessage}
+                            >
+                              <IconButton
+                                size="sm"
+                                colorScheme="red"
+                                variant="ghost"
+                                onClick={() =>
+                                  handleDeleteProvider(provider.id)
+                                }
+                                icon={<DeleteIcon />}
+                              />
                             </Tooltip>
                           </HStack>
                         </Td>

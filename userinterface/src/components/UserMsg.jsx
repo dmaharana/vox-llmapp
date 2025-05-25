@@ -16,6 +16,7 @@ import {
   ChevronUpIcon,
   CloseIcon,
 } from "@chakra-ui/icons";
+import { useSelector } from "react-redux";
 
 import { DEFAULT_MESSAGES } from "./Constants";
 
@@ -30,6 +31,8 @@ export function UserMsg({
   const { hasCopied, onCopy } = useClipboard(msg);
   const [isExpanded, setIsExpanded] = useState(false);
   const standardTextLen = 200;
+
+  const { userName, avatarImage, avatarType } = useSelector((state) => state.user);
 
   const userBg = useColorModeValue("green.50", "gray.600");
   const userAvatarText = useColorModeValue("gray.200", "gray.800");
@@ -51,7 +54,15 @@ export function UserMsg({
       w={"100%"}
     >
       <HStack>
-        <Avatar size={"sm"} name={DEFAULT_MESSAGES.USER_NAME} mb={2} mr={3} bg={userAvatarBg} color={userAvatarText} />
+        <Avatar 
+          size={"sm"} 
+          name={userName} 
+          src={avatarType === "custom" ? avatarImage : null}
+          mb={2} 
+          mr={3} 
+          bg={userAvatarBg} 
+          color={userAvatarText} 
+        />
         <Box w={"100%"} align={"start"}>
           <Text
             fontWeight={"bold"}
@@ -60,7 +71,7 @@ export function UserMsg({
             color={userAvatarName}
             align={"start"}
           >
-            {DEFAULT_MESSAGES.USER_NAME}
+            {userName}
           </Text>
           {isEditing ? (
             <Textarea

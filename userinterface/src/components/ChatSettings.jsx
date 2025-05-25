@@ -14,15 +14,25 @@ import {
   ModalHeader,
   ModalOverlay,
   useDisclosure,
+  VStack,
+  Divider,
   Menu,
   MenuButton,
   MenuList,
   MenuItem,
+  Box,
+  Tab,
+  Tabs,
+  TabList,
+  TabPanel,
+  TabPanels,
 } from "@chakra-ui/react";
 import { SettingsIcon } from "@chakra-ui/icons";
 import IncludeHistorySwitch from "./IncludeHistorySwitch";
 import PromptLibrary from "./PromptLibrary";
 import ProviderManagement from "./ProviderManagement";
+import AvatarUpload from "./AvatarUpload";
+import UserNameEdit from "./UserNameEdit";
 
 function ChatSettings({
   includeHistory,
@@ -96,28 +106,58 @@ function ChatSettings({
           <ModalHeader>Settings</ModalHeader>
           <ModalCloseButton />
           <ModalBody>
-            <Text mb={2}>System Prompt</Text>
-            <Textarea
-              size="sm"
-              value={systemPrompt}
-              onChange={(e) => handleChange(e)}
-            />
-            <Button
-              mt={2}
-              size="sm"
-              variant="outline"
-              onClick={() => {
-                onSettingsClose();
-                setIsLibraryOpen(true);
-              }}
-            >
-              Select from Library
-            </Button>
-            <IncludeHistorySwitch
-              includeHistory={includeHistory}
-              setIncludeHistory={setIncludeHistory}
-              waitingResponse={waitingResponse}
-            />
+            <Tabs isFitted variant="enclosed">
+              <TabList mb="1em">
+                <Tab>Profile</Tab>
+                <Tab>Chat</Tab>
+              </TabList>
+              <TabPanels>
+                <TabPanel>
+                  <VStack spacing={6} align="stretch">
+                    <Box>
+                      <Text fontSize="xl" fontWeight="bold" mb={4}>User Profile</Text>
+                      <UserNameEdit />
+                      <Box mt={4}>
+                        <AvatarUpload />
+                      </Box>
+                    </Box>
+                  </VStack>
+                </TabPanel>
+                <TabPanel>
+                  <VStack spacing={6} align="stretch">
+                    <Box>
+                      <Text fontSize="xl" fontWeight="bold" mb={4}>Chat Settings</Text>
+                      <Box mb={4}>
+                        <Text mb={2}>System Prompt</Text>
+                        <Textarea
+                          size="sm"
+                          value={systemPrompt}
+                          onChange={(e) => handleChange(e)}
+                        />
+                        <Button
+                          mt={2}
+                          size="sm"
+                          variant="outline"
+                          onClick={() => {
+                            onSettingsClose();
+                            setIsLibraryOpen(true);
+                          }}
+                        >
+                          Select from Library
+                        </Button>
+                      </Box>
+                      <Box>
+                        <IncludeHistorySwitch
+                          includeHistory={includeHistory}
+                          setIncludeHistory={setIncludeHistory}
+                          waitingResponse={waitingResponse}
+                        />
+                      </Box>
+                    </Box>
+                  </VStack>
+                </TabPanel>
+              </TabPanels>
+            </Tabs>
           </ModalBody>
           <ModalFooter>
             <Button onClick={onSettingsClose}>Close</Button>

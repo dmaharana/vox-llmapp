@@ -3,7 +3,6 @@ export const listModelsApi = "/api/models";
 
 export const DEFAULT_MESSAGES = {
   APP_TITLE: "Vox",
-  USER_NAME: "Me",
   SYSTEM_PROMPT:
     "You are a helpful assistant. Answer as concisely as possible.",
   ASSISTANT_PROMPT: "Assistant is typing...",

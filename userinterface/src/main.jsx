@@ -9,7 +9,6 @@ import { ChakraProvider, ColorModeScript, extendTheme } from "@chakra-ui/react";
 import { Provider } from "react-redux";
 import { store } from "./store";
 
-// 2. Objects can be created inside the extendTheme function or elsewhere and imported
 const colors = {
   primaryFontColor: {
     lightMode: "gray.700",
@@ -19,8 +18,8 @@ const colors = {
     lightMode: "gray.600",
     darkMode: "gray.400",
   },
-  plainOldBlue: "blue"
-}
+  plainOldBlue: "blue",
+};
 
 const config = {
   initialColorMode: "light",
@@ -41,5 +40,5 @@ ReactDOM.createRoot(document.getElementById("root")).render(
         <App />
       </ChakraProvider>
     </Provider>
-  </React.StrictMode>
+  </React.StrictMode>,
 );

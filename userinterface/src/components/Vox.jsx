@@ -1,27 +1,5 @@
-// import { Container, Row, Col, InputGroup, Form, Button } from "react-bootstrap";
 import { useState } from "react";
-import {
-  Box,
-  Button,
-  Container,
-  Flex,
-  Heading,
-  IconButton,
-  Stack,
-  SimpleGrid,
-  Text,
-  Textarea,
-  HStack,
-  Icon,
-} from "@chakra-ui/react";
-// import {
-//   //   FaSun,
-//   //   FaMoon,
-//   //   FaFacebook,
-//   //   FaTwitter,
-//   //   FaWhatsapp,
-//   FaTelegram,
-// } from "react-icons/fa";
+import { Box, Button, Flex, Textarea, HStack } from "@chakra-ui/react";
 import { ChatIcon } from "@chakra-ui/icons";
 
 export default function Vox() {
@@ -52,10 +30,6 @@ export default function Vox() {
       let text = "";
       while (!done) {
         const { value, done: doneReading } = await reader.read();
-        // console.log(`rtxt: ${value}, done: ${doneReading}`);
-
-        // const decodedChunk = decoder.decode(value, { stream: true });
-
         done = doneReading;
         if (done) {
           break;

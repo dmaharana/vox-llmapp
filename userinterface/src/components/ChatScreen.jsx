@@ -645,7 +645,8 @@ export default function ChatScreen() {
   };
 
   return (
-    <Box position="relative" h="100vh">
+    <Box position="relative" h="100vh" w="100vw">
+      {/* Full-width header */}
       <ChatHeader
         toggleColorMode={toggleColorMode}
         colorMode={colorMode}
@@ -654,7 +655,9 @@ export default function ChatScreen() {
         model={model}
         setModel={setModel}
       />
-      <HStack align="stretch" h="calc(100vh - 64px)" position="relative">
+      
+      {/* Main content area with sidebar and chat */}
+      <HStack align="stretch" h="calc(100vh - 64px)" position="relative" spacing={0}>
         {/* Hover trigger area for collapsed sidebar */}
         {!isSidebarOpen && (
           <Box
@@ -670,7 +673,7 @@ export default function ChatScreen() {
           />
         )}
 
-        {/* Sidebar - show if open OR hovering when closed */}
+        {/* Sidebar - positioned outside chat container */}
         {(isSidebarOpen || (!isSidebarOpen && isHovering)) && (
           <Box
             position={!isSidebarOpen && isHovering ? "absolute" : "relative"}
@@ -692,6 +695,7 @@ export default function ChatScreen() {
               }
             }}
             display="flex"
+            flexShrink={0}
           >
             <Box flex="1" display="flex" flexDirection="column">
               <ChatSidebar
@@ -707,104 +711,116 @@ export default function ChatScreen() {
               />
             </Box>
             {/* Resize handle */}
-            {(isSidebarOpen || (!isSidebarOpen && isHovering)) && (
+            <Box
+              w="6px"
+              h="100%"
+              bg="transparent"
+              cursor="col-resize"
+              onMouseDown={handleMouseDown}
+              onMouseEnter={() => {
+                if (!isSidebarOpen) setIsHovering(true);
+              }}
+              _hover={{
+                bg: "blue.100",
+              }}
+              _active={{
+                bg: "blue.200",
+              }}
+              transition="background-color 0.2s ease"
+              flexShrink={0}
+              position="relative"
+              zIndex={1001}
+              userSelect="none"
+              display="flex"
+              alignItems="center"
+              justifyContent="center"
+              borderLeft="1px solid"
+              borderColor="gray.200"
+            >
               <Box
-                w="6px"
-                h="100%"
-                bg="transparent"
-                cursor="col-resize"
-                onMouseDown={handleMouseDown}
-                onMouseEnter={() => {
-                  if (!isSidebarOpen) setIsHovering(true);
-                }}
+                w="2px"
+                h="30px"
+                bg="gray.400"
+                borderRadius="1px"
+                opacity={0.7}
+                transition="all 0.2s ease"
                 _hover={{
-                  bg: "blue.100",
+                  opacity: 1,
+                  bg: "blue.400",
                 }}
-                _active={{
-                  bg: "blue.200",
-                }}
-                transition="background-color 0.2s ease"
-                flexShrink={0}
-                position="relative"
-                zIndex={1001}
-                userSelect="none"
-                display="flex"
-                alignItems="center"
-                justifyContent="center"
-                borderLeft="1px solid"
-                borderColor="gray.200"
-              >
-                <Box
-                  w="2px"
-                  h="30px"
-                  bg="gray.400"
-                  borderRadius="1px"
-                  opacity={0.7}
-                  transition="all 0.2s ease"
-                  _hover={{
-                    opacity: 1,
-                    bg: "blue.400",
-                  }}
-                />
-              </Box>
-            )}
+              />
+            </Box>
           </Box>
         )}
-        <Box flex="1" position="relative">
-          <VStack
-            h={"100%"}
-            bg={bgMain}
-            py={4}
-            px={2}
-            borderRadius={"1rem"}
-            justifyContent="space-between"
+        
+        {/* Chat container - centered and 75% width */}
+        <Box 
+          flex="1" 
+          display="flex" 
+          justifyContent="center" 
+          alignItems="stretch"
+          position="relative"
+        >
+          <Box 
+            w="75%" 
+            maxW="75vw"
+            position="relative"
           >
-            <ChatMessages
-              conversation={conversation}
-              waitingResponse={waitingResponse}
-              handleQueryUpdate={handleQueryUpdate}
-              handleDeleteMessage={handleDeleteMessage}
-              handleAssistantUpdate={handleAssistantUpdate}
-              handleResubmit={handleResubmit}
-              currentMsgId={currentMsgId}
-              initialAssistantMessage={initialAssistantMessage}
-              convHistory={convHistory}
-              setIsLibraryOpen={setIsLibraryOpen}
-              useColorModeValue={useColorModeValue}
-              model={model}
-            />
+            <VStack
+              h={"100%"}
+              bg={bgMain}
+              py={4}
+              px={2}
+              borderRadius={"1rem"}
+              justifyContent="space-between"
+            >
+              <ChatMessages
+                conversation={conversation}
+                waitingResponse={waitingResponse}
+                handleQueryUpdate={handleQueryUpdate}
+                handleDeleteMessage={handleDeleteMessage}
+                handleAssistantUpdate={handleAssistantUpdate}
+                handleResubmit={handleResubmit}
+                currentMsgId={currentMsgId}
+                initialAssistantMessage={initialAssistantMessage}
+                convHistory={convHistory}
+                setIsLibraryOpen={setIsLibraryOpen}
+                useColorModeValue={useColorModeValue}
+                model={model}
+              />
 
-            <ChatInput
-              query={query}
-              setQuery={setQuery}
-              waitingResponse={waitingResponse}
-              handleSubmit={handleSubmit}
-              handleKeyPress={handleKeyPress}
-              handleStopGeneration={handleStopGeneration}
-              useColorModeValue={useColorModeValue}
-            />
+              <ChatInput
+                query={query}
+                setQuery={setQuery}
+                waitingResponse={waitingResponse}
+                handleSubmit={handleSubmit}
+                handleKeyPress={handleKeyPress}
+                handleStopGeneration={handleStopGeneration}
+                useColorModeValue={useColorModeValue}
+              />
 
-            <ChatFooterControls
-              includeHistory={includeHistory}
-              setIncludeHistory={setIncludeHistory}
-              waitingResponse={waitingResponse}
-              isLibraryOpen={isLibraryOpen}
-              setIsLibraryOpen={setIsLibraryOpen}
-              conversation={conversation}
-              convHistory={convHistory}
-              handleClearChat={handleClearChat}
-              setConversation={setConversation}
-              setCurrentMsgId={setCurrentMsgId}
-              setConvHistory={setConvHistory}
-              model={model}
-              setModel={setModel}
-              isProviderOpen={isProviderOpen}
-              setIsProviderOpen={setIsProviderOpen}
-              isAddProviderOpen={isAddProviderOpen}
-              setIsAddProviderOpen={setIsAddProviderOpen}
-              onModelSelect={handleModelSelect}
-            />
-          </VStack>
+              <ChatFooterControls
+                includeHistory={includeHistory}
+                setIncludeHistory={setIncludeHistory}
+                waitingResponse={waitingResponse}
+                isLibraryOpen={isLibraryOpen}
+                setIsLibraryOpen={setIsLibraryOpen}
+                conversation={conversation}
+                convHistory={convHistory}
+                handleClearChat={handleClearChat}
+                setConversation={setConversation}
+                setCurrentMsgId={setCurrentMsgId}
+                setConvHistory={setConvHistory}
+                model={model}
+                setModel={setModel}
+                isProviderOpen={isProviderOpen}
+                setIsProviderOpen={setIsProviderOpen}
+                isAddProviderOpen={isAddProviderOpen}
+                setIsAddProviderOpen={setIsAddProviderOpen}
+                onModelSelect={handleModelSelect}
+              />
+            </VStack>
+          </Box>
         </Box>
       </HStack>
     </Box>

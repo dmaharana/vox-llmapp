@@ -18,7 +18,9 @@ export default function ChatHeader({
   return (
     <HStack
       w="100%"
-      p={2}
+      py={2}
+      pr={2}
+      pl={0}
       bg={bgHeader}
       justifyContent="space-between"
       alignItems="center"

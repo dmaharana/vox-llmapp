@@ -22,7 +22,7 @@ import {
 import { Tooltip } from "@chakra-ui/react";
 import { useSelector, useDispatch } from "react-redux";
 import { setChatSearchQuery } from "../store/chatSlice";
-import { useRef } from "react";
+import { useRef, useState } from "react";
 import ConfirmDialog from "./ConfirmDialog";
 import generateUUID from "./scripts/utils";
 import JSZip from "jszip";
@@ -44,11 +44,30 @@ function ChatSidebar({
   const fileInputRef = useRef();
 
   const { isOpen, onOpen, onClose } = useDisclosure();
+  const { 
+    isOpen: isDeleteChatOpen, 
+    onOpen: onDeleteChatOpen, 
+    onClose: onDeleteChatClose 
+  } = useDisclosure();
+  const [chatToDelete, setChatToDelete] = useState(null);
 
   const handleDeleteAllChats = () => {
     setAllChats([]);
     localStorage.setItem("voxChats", JSON.stringify([]));
     onClose();
+  };
+
+  const handleDeleteChatClick = (chatId) => {
+    setChatToDelete(chatId);
+    onDeleteChatOpen();
+  };
+
+  const confirmDeleteChat = () => {
+    if (chatToDelete) {
+      handleDeleteChat(chatToDelete);
+      setChatToDelete(null);
+    }
+    onDeleteChatClose();
   };
 
   const filteredChats = allChats.filter((chat) => {
@@ -190,7 +209,7 @@ function ChatSidebar({
                 size="sm"
                 colorScheme="red"
                 variant="ghost"
-                onClick={() => handleDeleteChat(chat.id)}
+                onClick={() => handleDeleteChatClick(chat.id)}
               />
             </HStack>
           ))}
@@ -251,6 +270,16 @@ function ChatSidebar({
         title="Delete All Chats"
         message="Are you sure you want to delete ALL chats? This action cannot be undone."
         confirmText="Delete All"
+        confirmColorScheme="red"
+      />
+
+      <ConfirmDialog
+        isOpen={isDeleteChatOpen}
+        onClose={onDeleteChatClose}
+        onConfirm={confirmDeleteChat}
+        title="Delete Conversation"
+        message="Are you sure you want to delete this conversation? This action cannot be undone."
+        confirmText="Delete"
         confirmColorScheme="red"
       />
     </>

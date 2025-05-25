@@ -6,6 +6,7 @@ import {
   AlertDialogBody,
   AlertDialogFooter,
   Button,
+  useColorModeValue,
 } from "@chakra-ui/react";
 import { useRef } from "react";
 
@@ -20,6 +21,12 @@ export default function ConfirmDialog({
   confirmColorScheme = "red",
 }) {
   const cancelRef = useRef();
+  
+  // Dark mode support
+  const dialogBg = useColorModeValue("white", "gray.800");
+  const overlayBg = useColorModeValue("blackAlpha.600", "blackAlpha.800");
+  const headerColor = useColorModeValue("gray.800", "white");
+  const bodyColor = useColorModeValue("gray.600", "gray.200");
 
   return (
     <AlertDialog
@@ -28,13 +35,13 @@ export default function ConfirmDialog({
       onClose={onClose}
       isCentered
     >
-      <AlertDialogOverlay>
-        <AlertDialogContent>
-          <AlertDialogHeader fontSize="lg" fontWeight="bold">
+      <AlertDialogOverlay bg={overlayBg}>
+        <AlertDialogContent bg={dialogBg} borderColor={useColorModeValue("gray.200", "gray.600")}>
+          <AlertDialogHeader fontSize="lg" fontWeight="bold" color={headerColor}>
             {title}
           </AlertDialogHeader>
 
-          <AlertDialogBody>{message}</AlertDialogBody>
+          <AlertDialogBody color={bodyColor}>{message}</AlertDialogBody>
 
           <AlertDialogFooter>
             <Button ref={cancelRef} onClick={onClose}>

@@ -51,6 +51,22 @@ function AddEditProvider({
   const toast = useToast();
   const [showApiKey, setShowApiKey] = useState(false);
 
+  const isFormIncomplete =
+    formData.name === "" ||
+    formData.endpoint === "" ||
+    formData.provider_name === "";
+  const canSaveProvider = !isFormIncomplete && selectedModels.length > 0;
+  const resetModels = () => {
+    setModels([]);
+    setSelectedModels([]);
+    setModelFilter("");
+    setIsLoadingModels(false);
+  };
+  const resetForm = () => {
+    setFormData({ provider_name: "", name: "", endpoint: "", api_key: "" });
+    resetModels();
+  };
+
   // Pre-populate form for editing
   useEffect(() => {
     if (isEditing && providerToEdit) {
@@ -64,10 +80,7 @@ function AddEditProvider({
       setModels(providerToEdit.models || []);
     } else {
       // Reset form for adding new provider
-      setFormData({ provider_name: "", name: "", endpoint: "", api_key: "" });
-      setSelectedModels([]);
-      setModels([]);
-      setModelFilter("");
+      resetForm();
     }
   }, [isEditing, providerToEdit]);
 
@@ -77,7 +90,7 @@ function AddEditProvider({
       (p) => p.name === e.target.value
     );
 
-    // if name is empty, set it to provider name
+    // Set name to provider name if name is empty
     if (isEditing) {
       setFormData({
         ...formData,
@@ -95,10 +108,7 @@ function AddEditProvider({
       });
     }
     // reset models
-    setModels([]);
-    setSelectedModels([]);
-    setModelFilter("");
-    setIsLoadingModels(false);
+    resetModels();
   };
 
   // Handle input changes
@@ -223,17 +233,13 @@ function AddEditProvider({
     onSave(providerData, isEditing);
 
     // Reset form and close drawer
-    setFormData({ provider_name: "", name: "", endpoint: "", api_key: "" });
-    setSelectedModels([]);
-    setModelFilter("");
+    resetForm();
     onClose();
   };
 
   // Handle cancel
   const handleCancel = () => {
-    setFormData({ provider_name: "", name: "", endpoint: "", api_key: "" });
-    setSelectedModels([]);
-    setModelFilter("");
+    resetForm();
     onClose();
   };
 
@@ -335,12 +341,7 @@ function AddEditProvider({
                   colorScheme="teal"
                   isLoading={isLoadingModels}
                   mb={4}
-                  isDisabled={
-                    formData.name === "" ||
-                    formData.endpoint === "" ||
-                    formData.provider_name === "" ||
-                    isLoadingModels
-                  }
+                  isDisabled={isFormIncomplete}
                 >
                   Fetch Models
                 </Button>
@@ -390,16 +391,10 @@ function AddEditProvider({
             <Button
               colorScheme="blue"
               width="48%"
-              isDisabled={
-                formData.name === "" ||
-                formData.endpoint === "" ||
-                formData.provider_name === "" ||
-                isLoadingModels ||
-                selectedModels.length === 0
-              }
+              isDisabled={!canSaveProvider}
               onClick={handleSubmit}
             >
-              {isEditing ? "Update Provider" : "Save Provider"}
+              {isEditing ? "Update" : "Save"}
             </Button>
             <Button
               type="button"

@@ -44,10 +44,10 @@ function ChatSidebar({
   const fileInputRef = useRef();
 
   const { isOpen, onOpen, onClose } = useDisclosure();
-  const { 
-    isOpen: isDeleteChatOpen, 
-    onOpen: onDeleteChatOpen, 
-    onClose: onDeleteChatClose 
+  const {
+    isOpen: isDeleteChatOpen,
+    onOpen: onDeleteChatOpen,
+    onClose: onDeleteChatClose,
   } = useDisclosure();
   const [chatToDelete, setChatToDelete] = useState(null);
 
@@ -78,7 +78,7 @@ function ChatSidebar({
         chat.conversation.some(
           (msg) =>
             (msg.user && msg.user.toLowerCase().includes(query)) ||
-            (msg.assistant && msg.assistant.toLowerCase().includes(query))
+            (msg.assistant && msg.assistant.toLowerCase().includes(query)),
         ))
     );
   });
@@ -200,6 +200,8 @@ function ChatSidebar({
                 textOverflow="ellipsis"
                 justifyContent="flex-start"
                 textAlign="left"
+                width="100%"
+                maxWidth={`${sidebarWidth}px`}
               >
                 {chat.title}
               </Button>

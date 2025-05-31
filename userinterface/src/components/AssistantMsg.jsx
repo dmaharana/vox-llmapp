@@ -12,6 +12,7 @@ import {
   Textarea,
   Card,
   CardBody,
+  Collapse,
 } from "@chakra-ui/react";
 import {
   CopyIcon,
@@ -92,8 +93,14 @@ const ThinkBlock = ({ content }) => {
   const thinkBg = useColorModeValue("blue.50", "blue.900");
   const thinkBorder = useColorModeValue("blue.200", "blue.700");
   const thinkText = useColorModeValue("blue.800", "blue.100");
+  const [isExpanded, setIsExpanded] = useState(false);
 
   return (
+    <>
+    <Button onClick={() => setIsExpanded(!isExpanded)} size="xs" variant="ghost">
+      {isExpanded ? "Collapse Thinking" : "Expand Thinking"}
+    </Button>
+    <Collapse in={isExpanded}>
     <Card
       bg={thinkBg}
       borderColor={thinkBorder}
@@ -114,6 +121,8 @@ const ThinkBlock = ({ content }) => {
         </HStack>
       </CardBody>
     </Card>
+      </Collapse>
+    </>
   );
 };
 

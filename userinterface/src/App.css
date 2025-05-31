@@ -7,3 +7,18 @@ body {
   margin: 0;
   padding: 0;
 }
+
+/* Sidebar styles */
+.sidebar {
+  max-width: clamp(200px, 25%, 300px); /* Min: 200px, Preferred: 25% of parent, Max: 300px */
+  width: 100%;
+  margin: 0 auto;
+}
+
+/* Chat title styles */
+.chat-title {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 90%; /* Adjusts to 90% of the parent container */
+}

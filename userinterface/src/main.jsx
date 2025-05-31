@@ -24,13 +24,16 @@ const colors = {
 const config = {
   initialColorMode: "light",
   useSystemColorMode: false,
+};
+
+const theme = extendTheme({ 
+  config,
+  colors,
   fonts: {
     heading: `'Open Sans', sans-serif`,
     body: `'Raleway', sans-serif`,
   },
-};
-
-const theme = extendTheme({ config, colors });
+});
 
 ReactDOM.createRoot(document.getElementById("root")).render(
   <React.StrictMode>

@@ -13,7 +13,6 @@ import {
   ModalFooter,
   ModalHeader,
   ModalOverlay,
-  useDisclosure,
   VStack,
   Box,
   Tab,
@@ -28,11 +27,18 @@ import PromptLibrary from "./PromptLibrary";
 import ProviderManagement from "./ProviderManagement";
 import AvatarUpload from "./AvatarUpload";
 import UserNameEdit from "./UserNameEdit";
+import { useColorModeValue } from "@chakra-ui/react";
+import MCPLibrary from "./MCP/MCPLibrary";
+import ToolLibrary from "./Tool/ToolLibrary";
+import AgentLibrary from "./Agent/AgentLibrary";
 
 function ChatSettings({
   includeHistory,
   setIncludeHistory,
   waitingResponse,
+  defaultTab,
+  isSettingsOpen,
+  setIsSettingsOpen,
 }) {
   const dispatch = useDispatch();
   const systemPrompt = useSelector((state) => state.prompt.systemPrompt);
@@ -41,12 +47,25 @@ function ChatSettings({
     dispatch(setSystemPrompt(e.target.value));
   }
 
-  const {
-    isOpen: isSettingsOpen,
-    onOpen: onSettingsOpen,
-    onClose: onSettingsClose,
-  } = useDisclosure();
+  console.log("defaultTab", defaultTab);
+
   const btnRef = useRef(null);
+  const tabList = [
+    "prompt",
+    "chat",
+    "provider",
+    "mcp",
+    "tool",
+    "agent",
+    "profile",
+  ];
+  const defaultTabName = defaultTab || tabList[0];
+  const defaultTabIndex = tabList.indexOf(defaultTabName);
+
+  // set border color constant for dark mode
+  const borderColor = useColorModeValue("green.200", "green.700");
+
+  console.log("defaultTabName", defaultTabName);
 
   return (
     <>
@@ -57,35 +76,73 @@ function ChatSettings({
         color="green.500"
         ref={btnRef}
         isDisabled={waitingResponse}
-        onClick={onSettingsOpen}
+        onClick={() => setIsSettingsOpen(true)}
       />
 
       <Modal
-        onClose={onSettingsClose}
+        onClose={() => setIsSettingsOpen(false)}
         finalFocusRef={btnRef}
         isOpen={isSettingsOpen}
         scrollBehavior="inside"
+        size="6xl"
+        isCentered
       >
         <ModalOverlay />
-        <ModalContent maxW="container.md">
+        <ModalContent maxW="60rem" w="90%" maxH="80vh" h="50rem" m={0}>
           <ModalHeader>Settings</ModalHeader>
           <ModalCloseButton />
-          <ModalBody>
-            <Tabs isFitted variant="enclosed">
-              <TabList mb="1em">
-                <Tab>Profile</Tab>
-                <Tab>Chat</Tab>
-                <Tab>Prompts</Tab>
-                <Tab>Provider</Tab>
+          <ModalBody overflow="hidden" p={0}>
+            <Tabs
+              orientation="vertical"
+              variant="line"
+              isLazy
+              defaultIndex={tabList.indexOf(defaultTab || tabList[0])}
+              h="100%"
+            >
+              {/* <Tabs isFitted variant="enclosed" isLazy defaultIndex={defaultTabIndex} > */}
+              <TabList
+                w="10rem"
+                minW="10rem"
+                borderRight="1px"
+                borderColor={borderColor}
+                h="100%"
+                pt={4}
+              >
+                <Box position="sticky" top={0}>
+                  {tabList.map((tab) => (
+                    <Tab key={tab} value={tab}>
+                      {tab === "mcp"
+                        ? "MCP"
+                        : tab.charAt(0).toUpperCase() + tab.slice(1)}
+                    </Tab>
+                  ))}
+                </Box>
               </TabList>
-              <TabPanels>
+              <TabPanels h="100%" overflowY="auto" p={6}>
                 <TabPanel>
                   <VStack spacing={6} align="stretch">
                     <Box>
-                      <Text fontSize="xl" fontWeight="bold" mb={4}>User Profile</Text>
-                      <UserNameEdit />
-                      <Box mt={4}>
-                        <AvatarUpload />
+                      <Text fontSize="xl" fontWeight="bold" mb={4}>
+                        System Prompt
+                      </Text>
+                      <Box mb={4}>
+                        <Text mb={2}>Current Prompt</Text>
+                        <Textarea
+                          size="sm"
+                          value={systemPrompt}
+                          onChange={(e) => handleChange(e)}
+                          mb={3}
+                        />
+                      </Box>
+                      <Box>
+                        <Text fontSize="xl" fontWeight="bold" mb={4}>
+                          Prompt Library
+                        </Text>
+                        <PromptLibrary
+                          isOpen={true}
+                          onClose={() => {}}
+                          isEmbedded={true}
+                        />
                       </Box>
                     </Box>
                   </VStack>
@@ -93,7 +150,9 @@ function ChatSettings({
                 <TabPanel>
                   <VStack spacing={6} align="stretch">
                     <Box>
-                      <Text fontSize="xl" fontWeight="bold" mb={4}>Chat Settings</Text>
+                      <Text fontSize="xl" fontWeight="bold" mb={4}>
+                        Chat Settings
+                      </Text>
                       <Box>
                         <IncludeHistorySwitch
                           includeHistory={includeHistory}
@@ -105,46 +164,38 @@ function ChatSettings({
                   </VStack>
                 </TabPanel>
                 <TabPanel>
+                  <ProviderManagement />
+                </TabPanel>
+                <TabPanel>
+                  <MCPLibrary />
+                </TabPanel>
+                <TabPanel>
+                  <ToolLibrary />
+                </TabPanel>
+                <TabPanel>
+                  <AgentLibrary />
+                </TabPanel>
+                <TabPanel>
                   <VStack spacing={6} align="stretch">
                     <Box>
-                      <Text fontSize="xl" fontWeight="bold" mb={4}>System Prompt</Text>
-                      <Box mb={4}>
-                        <Text mb={2}>Current Prompt</Text>
-                        <Textarea
-                          size="sm"
-                          value={systemPrompt}
-                          onChange={(e) => handleChange(e)}
-                          mb={3}
-                        />
-                      </Box>
-                      <Box>
-                        <Text fontSize="xl" fontWeight="bold" mb={4}>Prompt Library</Text>
-                        <PromptLibrary 
-                          isOpen={true} 
-                          onClose={() => {}} 
-                          isEmbedded={true}
-                        />
+                      <Text fontSize="xl" fontWeight="bold" mb={4}>
+                        User Profile
+                      </Text>
+                      <UserNameEdit />
+                      <Box mt={4}>
+                        <AvatarUpload />
                       </Box>
                     </Box>
                   </VStack>
-                </TabPanel>
-                <TabPanel>
-                  <ProviderManagement 
-                    isOpen={true} 
-                    onClose={() => {}}
-                    isEmbedded={true}
-                  />
                 </TabPanel>
               </TabPanels>
             </Tabs>
           </ModalBody>
           <ModalFooter>
-            <Button onClick={onSettingsClose}>Close</Button>
+            <Button onClick={() => setIsSettingsOpen(false)}>Close</Button>
           </ModalFooter>
         </ModalContent>
       </Modal>
-
-
     </>
   );
 }

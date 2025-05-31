@@ -56,26 +56,3 @@ export const DEFAULT_FILENAMES = {
   csv: "conversation.csv",
   json: "conversation.json",
 };
-
-export const Providers = [
-  {
-    name: "Ollama",
-    value: "ollama",
-    url: "http://localhost:11434",
-  },
-  {
-    name: "OpenRouter",
-    value: "openrouter",
-    url: "https://openrouter.ai/api/v1",
-  },
-  {
-    name: "Groq",
-    value: "groq",
-    url: "https://api.groq.com/openai/api/v1",
-  },
-  {
-    name: "Gemini",
-    value: "gemini",
-    url: "https://generativelanguage.googleapis.com/v1beta/openai",
-  },
-];

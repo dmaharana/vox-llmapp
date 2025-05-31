@@ -15,7 +15,15 @@ export const store = configureStore({
 });
 
 // Initialize user settings from localStorage
-initializeUserSettings(store);
+try {
+  initializeUserSettings(store);
+} catch (error) {
+  console.error("Failed to initialize user settings:", error);
+}
 
 // Setup auto-save for user settings
-setupUserSettingsAutoSave(store);
+try {
+  setupUserSettingsAutoSave(store);
+} catch (error) {
+  console.error("Failed to setup user settings auto-save:", error);
+}

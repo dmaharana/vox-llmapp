@@ -53,8 +53,8 @@ build: buildui buildserver
 
 createarchive:
 	@echo "Creating archive..."
-	cd $(SERVER_SUBDIR) && zip -r $(APP_NAME)-$(APP_VERSION).zip $(WINDOWS_BIN) $(ENV_FILE) $(SSL_DIR)
-	cd $(SERVER_SUBDIR) && tar -czvf $(APP_NAME)-$(APP_VERSION).tar.gz $(LINUX_BIN) $(ENV_FILE) $(SSL_DIR)
+	cd $(SERVER_SUBDIR) && zip -r $(APP_NAME)-$(APP_VERSION).zip $(BUILD_DIR)/$(LINUX_BIN) $(BUILD_DIR)/$(WINDOWS_BIN) $(ENV_FILE) $(SSL_DIR)
+	cd $(SERVER_SUBDIR) && tar -czvf $(APP_NAME)-$(APP_VERSION).tar.gz $(BUILD_DIR)/$(LINUX_BIN) $(BUILD_DIR)/$(WINDOWS_BIN) $(ENV_FILE) $(SSL_DIR)
 	@echo "Creating archive Done!"
 
 release:

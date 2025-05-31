@@ -30,6 +30,10 @@ function AssistantHistoryMessage({ msg, count, index }) {
   const { hasCopied, onCopy } = useClipboard(msg.content);
   const [isMsgExpanded, setIsMsgExpanded] = useState(false);
   const standardTextLen = 200;
+  const strippedContent = stripThinkTags(msg.content);
+
+  const thinkTags = msg.content.match(/<think>[\s\S]*?<\/think>/g);
+  const thinkTagsLength = thinkTags ? thinkTags.reduce((acc, cur) => acc + cur.length, 0) : 0;
 
   return (
     <>
@@ -54,12 +58,14 @@ function AssistantHistoryMessage({ msg, count, index }) {
             borderRadius: "10px",
           }}
         >
-          {msg.content.length >= standardTextLen && !isMsgExpanded
-            ? stripThinkTags(msg.content.substring(0, standardTextLen + 3) + "...")
-            : stripThinkTags(msg.content)}
+          {strippedContent.length + thinkTagsLength >= standardTextLen &&
+          !isMsgExpanded
+            ? strippedContent.substring(0, standardTextLen - thinkTagsLength + 3) +
+              "..."
+            : strippedContent}
         </ReactMarkdown>
 
-        {msg.content.length >= standardTextLen && (
+        {strippedContent.length + thinkTagsLength >= standardTextLen && (
           <Button
             size="xs"
             colorScheme="blue"

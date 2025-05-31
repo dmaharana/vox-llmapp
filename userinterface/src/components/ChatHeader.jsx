@@ -1,3 +1,4 @@
+import PropTypes from "prop-types";
 import { HStack, IconButton, Text } from "@chakra-ui/react";
 import { MoonIcon, SunIcon, HamburgerIcon } from "@chakra-ui/icons";
 import { useSelector } from "react-redux";
@@ -13,6 +14,18 @@ export default function ChatHeader({
   const systemPrompt = useSelector((state) => state.prompt.systemPrompt);
   const bgText = useColorModeValue("blue.900", "blue.100");
   const bgHeader = useColorModeValue("blue.100", "blue.600");
+  const bgHeaderButton = useColorModeValue("blue.200", "blue.700");
+
+  const getPromptSuffix = () => {
+    if (systemPrompt === DEFAULT_MESSAGES.SYSTEM_PROMPT) {
+      return "";
+    }
+    
+    const matchedPrompt = prompts?.find(p => p.content === systemPrompt);
+    return matchedPrompt 
+      ? ` as ${matchedPrompt.name}`
+      : ` as Custom Prompt`;
+  };
 
   return (
     <HStack
@@ -37,7 +50,7 @@ export default function ChatHeader({
         color={bgText}
         sx={{
           _hover: {
-            backgroundColor: bgHeader,
+            backgroundColor: bgHeaderButton,
           },
         }}
       />
@@ -51,19 +64,7 @@ export default function ChatHeader({
         flex="1"
       >
         {DEFAULT_MESSAGES.APP_TITLE}
-        {(() => {
-          if (systemPrompt !== DEFAULT_MESSAGES.SYSTEM_PROMPT) {
-            const matchedPrompt = prompts?.find(
-              (p) => p.content === systemPrompt,
-            );
-            if (matchedPrompt) {
-              return ` as ${matchedPrompt.name}`;
-            } else {
-              return ` as Custom Prompt`;
-            }
-          }
-          return "";
-        })()}
+        {getPromptSuffix()}
       </Text>
 
       <IconButton
@@ -75,10 +76,16 @@ export default function ChatHeader({
         color={bgText}
         sx={{
           _hover: {
-            backgroundColor: bgHeader,
+            backgroundColor: bgHeaderButton,
           },
         }}
       />
     </HStack>
   );
 }
+
+ChatHeader.propTypes = {
+  toggleColorMode: PropTypes.func.isRequired,
+  colorMode: PropTypes.oneOf(['light', 'dark']).isRequired,
+  toggleSidebar: PropTypes.func.isRequired,
+};

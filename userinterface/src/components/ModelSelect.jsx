@@ -41,9 +41,7 @@ export default function ModelSelect({ model, setModel, onModelSelect }) {
 
   const handleModelChange = (e) => {
     const model = e.target.value;
-    const modelObj = models.find(
-      (m) => m.name === model || m.providerName === model
-    );
+    const modelObj = models.find((m) => m.name === model);
     if (!modelObj) return;
     setModel(modelObj.name);
     handleModelSelect(modelObj);

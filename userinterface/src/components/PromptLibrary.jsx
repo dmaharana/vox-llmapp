@@ -7,13 +7,6 @@ import {
   VStack,
   HStack,
   useDisclosure,
-  Modal,
-  ModalOverlay,
-  ModalContent,
-  ModalHeader,
-  ModalFooter,
-  ModalBody,
-  ModalCloseButton,
   Button,
   AlertDialog,
   AlertDialogOverlay,
@@ -185,7 +178,8 @@ export default function PromptLibrary({ isOpen, onClose, isEmbedded = false }) {
   };
 
   const content = (
-    <Box maxH={isEmbedded ? "50vh" : "60vh"} overflowY="auto" pr={2}>
+    <Box maxH="30vh" overflowY="auto" pr={2}>
+    {/* <Box maxH={isEmbedded ? "50vh" : "60vh"} overflowY="auto" pr={2}> */}
       <PromptSearch
         searchQuery={searchQuery}
         setSearchQuery={setSearchQuery}

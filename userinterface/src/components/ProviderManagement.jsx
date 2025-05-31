@@ -10,13 +10,6 @@ import {
   Box,
   HStack,
   useDisclosure,
-  Modal,
-  ModalOverlay,
-  ModalContent,
-  ModalHeader,
-  ModalFooter,
-  ModalBody,
-  ModalCloseButton,
   Button,
   AlertDialog,
   AlertDialogOverlay,
@@ -33,6 +26,7 @@ import {
   Th,
   Td,
   Tooltip,
+  VStack,
 } from "@chakra-ui/react";
 import { ProviderSearch } from "./Provider/ProviderSearch";
 import { ImportExportButtons } from "./PromptLibrary/ImportExportButtons";
@@ -41,11 +35,7 @@ import generateUUID from "./scripts/utils";
 import { DEFAULT_MESSAGES } from "./Constants";
 import { EditIcon, DeleteIcon } from "@chakra-ui/icons";
 
-export default function ProviderManagement({
-  isOpen,
-  onClose,
-  isEmbedded = false,
-}) {
+export default function ProviderManagement() {
   const {
     isOpen: isDeleteDialogOpen,
     onOpen: onDeleteDialogOpen,
@@ -67,16 +57,28 @@ export default function ProviderManagement({
   const initialLoadComplete = useRef(false);
   const [importStatus, setImportStatus] = useState(null);
   const [importMessage, setImportMessage] = useState("");
-  const [showImportAlert, setShowImportAlert] = useState(false);
+  // const [showImportAlert, setShowImportAlert] = useState(false);
+  const [showAlert, setShowAlert] = useState(false);
+  const [alertStatus, setAlertStatus] = useState(null);
+  const [alertTitle, setAlertTitle] = useState("");
+  const [alertMessage, setAlertMessage] = useState("");
   const showProviders = providers.length > 0;
 
   useEffect(() => {
     const savedProviders = localStorage.getItem("providers");
     if (savedProviders) {
-      const parsedProviders = JSON.parse(savedProviders);
-      if (parsedProviders.length > 0) {
-        dispatch(setProviders(parsedProviders));
-        return;
+      try {
+        const parsedProviders = JSON.parse(savedProviders);
+        if (parsedProviders.length > 0) {
+          dispatch(setProviders(parsedProviders));
+          return;
+        }
+      } catch (error) {
+        localStorage.removeItem("providers");
+        setAlertStatus("error");
+        setAlertTitle("Failed to load providers");
+        setAlertMessage("Failed to parse saved providers");
+        setShowAlert(true);
       }
     }
 
@@ -110,13 +112,13 @@ export default function ProviderManagement({
   }, [providers]);
 
   useEffect(() => {
-    if (showImportAlert) {
+    if (showAlert) {
       const timer = setTimeout(() => {
-        setShowImportAlert(false);
+        setShowAlert(false);
       }, 3000);
       return () => clearTimeout(timer);
     }
-  }, [showImportAlert]);
+  }, [showAlert]);
 
   useEffect(() => {
     if (initialLoadComplete.current) {
@@ -137,7 +139,10 @@ export default function ProviderManagement({
 
   const handleExportProviders = () => {
     if (providers.length === 0) {
-      console.error("No providers to export");
+      setShowAlert(true);
+      setAlertMessage("No providers to export");
+      setAlertStatus("error");
+
       return;
     }
     const blob = new Blob([JSON.stringify(providers, null, 2)], {
@@ -153,6 +158,10 @@ export default function ProviderManagement({
     link.click();
     document.body.removeChild(link);
     URL.revokeObjectURL(url);
+    
+    setShowAlert(true);
+    setAlertMessage("Providers exported successfully");
+    setAlertStatus("success");
   };
 
   const handleImportProviders = (file) => {
@@ -175,14 +184,14 @@ export default function ProviderManagement({
         }));
 
         dispatch(setProviders(validatedProviders));
-        setImportStatus("success");
-        setImportMessage("Providers imported successfully!");
-        setShowImportAlert(true);
+        setAlertStatus("success");
+        setAlertMessage("Providers imported successfully!");
+        setShowAlert(true);
       } catch (error) {
         console.error("Import error:", error);
-        setImportStatus("error");
-        setImportMessage("Failed to import: Invalid file format");
-        setShowImportAlert(true);
+        setAlertStatus("error");
+        setAlertMessage("Failed to import: Invalid file format");
+        setShowAlert(true);
       }
     };
     reader.readAsText(file);
@@ -230,22 +239,23 @@ export default function ProviderManagement({
   };
 
   const content = (
-    <Box maxH={isEmbedded ? "50vh" : "80vh"} overflowY="auto" pr={2}>
+    <Box maxH={"50vh"} overflowY="auto" pr={2}>
       <ProviderSearch
         searchQuery={searchQuery}
         setSearchQuery={setSearchQuery}
         showAddProvider={showAddProvider}
         setShowAddProvider={setShowAddProvider}
+        editingProvider={editingProvider}
       />
 
       {showProviders ? (
-        <Table variant="simple">
+        <Table variant="simple" size="sm" layout="fixed" maxH="50vh" overflowY="auto" striped="dark">
           <Thead>
             <Tr>
-              <Th>Name</Th>
-              <Th>Provider</Th>
-              <Th>Endpoint</Th>
-              <Th>Actions</Th>
+              <Th width="20%">Name</Th>
+              <Th width="20%">Provider</Th>
+              <Th width="50%">Endpoint</Th>
+              <Th width="20%" textAlign="right">Actions</Th>
             </Tr>
           </Thead>
           <Tbody>
@@ -261,9 +271,15 @@ export default function ProviderManagement({
                 <Tr key={provider.id}>
                   <Td>{provider.name}</Td>
                   <Td>{provider.provider_name}</Td>
-                  <Td>{provider.endpoint}</Td>
+                  <Td
+                    overflowX="hidden"
+                    textOverflow="ellipsis"
+                    whiteSpace="nowrap"
+                  >
+                    {provider.endpoint}
+                  </Td>
                   <Td>
-                    <HStack spacing={2}>
+                    <HStack spacing={1} justify="flex-end">
                       <Tooltip label={DEFAULT_MESSAGES.editProviderMessage}>
                         <IconButton
                           size="sm"
@@ -296,23 +312,21 @@ export default function ProviderManagement({
     </Box>
   );
 
-  {
-    showImportAlert && (
-      <ShowAlert
-        status={importStatus}
-        title={
-          importStatus === "success" ? "Import Successful" : "Import Error"
+  
+  return (
+    <VStack spacing={6} align="stretch">
+      <Text fontSize="xl" fontWeight="bold" mb={4}>Provider Management</Text> 
+      {content}
+        {
+          showAlert && (
+            <ShowAlert
+              status={alertStatus}
+              title={alertTitle}
+              message={alertMessage}
+              resetStates={() => setShowAlert(false)}
+            />
+          )
         }
-        message={importMessage}
-        resetStates={() => setShowImportAlert(false)}
-      />
-    );
-  }
-
-  if (isEmbedded) {
-    return (
-      <>
-        {content}
         <Box mt={4}>
           <HStack spacing={3} justify="flex-end">
             <ImportExportButtons
@@ -365,7 +379,6 @@ export default function ProviderManagement({
           providerToEdit={editingProvider}
           existingNames={providers.map((p) => p.name)}
         />
-      </>
+      </VStack>
     );
-  }
 }

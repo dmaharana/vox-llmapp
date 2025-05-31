@@ -8,6 +8,7 @@ import {
   Button,
   HStack,
   VStack,
+  useDisclosure,
 } from "@chakra-ui/react";
 import { BeatLoader } from "react-spinners";
 import generateUUID from "./scripts/utils";
@@ -49,11 +50,13 @@ export default function ChatScreen() {
   const systemPrompt = useSelector((state) => state.prompt.systemPrompt);
   const providers = useSelector((state) => state.provider.providers);
   const [conversation, setConversation] = useState([]);
+  // const { isOpen: isSettingsOpen, onOpen: onSettingsOpen, onClose: onSettingsClose } = useDisclosure();
+  const [isSettingsOpen, setIsSettingsOpen] = useState(false);
   const [query, setQuery] = useState("");
   const [model, setModel] = useState("");
   const [includeHistory, setIncludeHistory] = useState(true);
   const [convHistory, setConvHistory] = useState([]);
-
+  
   const [allChats, setAllChats] = useState([]);
   const [activeChatId, setActiveChatId] = useState(null);
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
@@ -66,6 +69,10 @@ export default function ChatScreen() {
   const [selectedModel, setSelectedModel] = useState(null);
   const [selectedProviderId, setSelectedProviderId] = useState(null);
   const [selectedProvider, setSelectedProvider] = useState(null);
+  
+  const chatBodySettingsDefaultTab = "prompts";
+  const chatFooterSettingsDefaultTab = "profile";
+  const [settingsDefaultTab, setSettingsDefaultTab] = useState(chatBodySettingsDefaultTab);
 
   useEffect(() => {
     if (selectedProviderId) {
@@ -634,9 +641,14 @@ export default function ChatScreen() {
         model={model}
         setModel={setModel}
       />
-      
+
       {/* Main content area with sidebar and chat */}
-      <HStack align="stretch" h="calc(100vh - 64px)" position="relative" spacing={0}>
+      <HStack
+        align="stretch"
+        h="calc(100vh - 64px)"
+        position="relative"
+        spacing={0}
+      >
         {/* Hover trigger area for collapsed sidebar */}
         {!isSidebarOpen && (
           <Box
@@ -662,6 +674,12 @@ export default function ChatScreen() {
             h="100%"
             w={`${sidebarWidth}px`}
             transition={isResizing ? "none" : "all 0.3s ease"}
+            opacity={isSidebarOpen || isHovering ? 1 : 0}
+            transform={
+              isSidebarOpen || isHovering
+                ? "translateX(0)"
+                : "translateX(-20px)"
+            }
             onMouseEnter={() => !isSidebarOpen && setIsHovering(true)}
             onMouseLeave={() => {
               if (!isSidebarOpen && !isResizing) {
@@ -731,20 +749,16 @@ export default function ChatScreen() {
             </Box>
           </Box>
         )}
-        
+
         {/* Chat container - centered and 75% width */}
-        <Box 
-          flex="1" 
-          display="flex" 
-          justifyContent="center" 
+        <Box
+          flex="1"
+          display="flex"
+          justifyContent="center"
           alignItems="stretch"
           position="relative"
         >
-          <Box 
-            w="75%" 
-            maxW="75vw"
-            position="relative"
-          >
+          <Box w="75%" maxW="75vw" position="relative">
             <VStack
               h={"100%"}
               bg={bgMain}
@@ -763,9 +777,12 @@ export default function ChatScreen() {
                 currentMsgId={currentMsgId}
                 initialAssistantMessage={initialAssistantMessage}
                 convHistory={convHistory}
-
                 useColorModeValue={useColorModeValue}
                 model={model}
+                setIsSettingsOpen={setIsSettingsOpen}
+                isSettingsOpen={isSettingsOpen}
+                chatBodySettingsDefaultTab={chatBodySettingsDefaultTab}
+                setSettingsDefaultTab={setSettingsDefaultTab}
               />
 
               <ChatInput
@@ -775,7 +792,6 @@ export default function ChatScreen() {
                 handleSubmit={handleSubmit}
                 handleKeyPress={handleKeyPress}
                 handleStopGeneration={handleStopGeneration}
-                useColorModeValue={useColorModeValue}
               />
 
               <ChatFooterControls
@@ -791,6 +807,9 @@ export default function ChatScreen() {
                 model={model}
                 setModel={setModel}
                 onModelSelect={handleModelSelect}
+                isSettingsOpen={isSettingsOpen}
+                setIsSettingsOpen={setIsSettingsOpen}
+                defaultSettingsTab={chatFooterSettingsDefaultTab}
               />
             </VStack>
           </Box>

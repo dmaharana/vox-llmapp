@@ -12,6 +12,7 @@ import { useSelector } from "react-redux";
 import { DEFAULT_MESSAGES } from "./Constants";
 import { UserMsg } from "./UserMsg";
 import { AssistantMsg } from "./AssistantMsg";
+import { useEffect } from "react";
 
 export default function ChatMessages({
   conversation,
@@ -25,9 +26,37 @@ export default function ChatMessages({
   convHistory,
   useColorModeValue,
   model,
+  chatBodySettingsDefaultTab,
+  setSettingsDefaultTab,
+  setIsSettingsOpen,
+  isSettingsOpen,
 }) {
   const prompts = useSelector((state) => state.prompt.prompts);
   const systemPrompt = useSelector((state) => state.prompt.systemPrompt);
+
+  const getSystemPromptLabel = () => {
+    const matchedPrompt = prompts?.find((p) => p.content === systemPrompt);
+    if (matchedPrompt) {
+      return matchedPrompt.name;
+    } else if (systemPrompt === DEFAULT_MESSAGES.SYSTEM_PROMPT) {
+      return "Default System Prompt";
+    } else {
+      return "Custom System Prompt";
+    }
+  };
+
+  const handleSystemPromptClick = () => {
+    setIsSettingsOpen(true);
+  };
+
+  useEffect(() => {
+    console.log("isSettingsOpen", isSettingsOpen);
+    console.log("chatBodySettingsDefaultTab", chatBodySettingsDefaultTab);
+
+    if (chatBodySettingsDefaultTab === "prompts" && isSettingsOpen) {
+      setSettingsDefaultTab(chatBodySettingsDefaultTab);
+    }
+  }, [chatBodySettingsDefaultTab, isSettingsOpen]);
 
   const bgChat = useColorModeValue("blue.50", "gray.700");
   const bgText = useColorModeValue("gray.600", "gray.200");
@@ -92,18 +121,9 @@ export default function ChatMessages({
               <Tooltip label={DEFAULT_MESSAGES.UpdateSystemPrompt}>
                 <Button
                   size="sm"
-                  icon={
-                    <Icon
-                      as={MdModelTraining}
-                      color={bgText}
-                      boxSize={6}
-                      mr={3}
-                      filter="drop-shadow(0 2px 2px rgba(0, 0, 0, 0.1))"
-                    />
-                  }
                   colorScheme="blue"
                   variant="ghost"
-                  isDisabled={true}
+                  onClick={handleSystemPromptClick}
                 >
                   <Text
                     fontSize="md"
@@ -116,20 +136,7 @@ export default function ChatMessages({
                       textDecoration: "none",
                     }}
                   >
-                    {(() => {
-                      const matchedPrompt = prompts?.find(
-                        (p) => p.content === systemPrompt
-                      );
-                      if (matchedPrompt) {
-                        return matchedPrompt.name;
-                      } else if (
-                        systemPrompt === DEFAULT_MESSAGES.SYSTEM_PROMPT
-                      ) {
-                        return "Default System Prompt";
-                      } else {
-                        return "Custom System Prompt";
-                      }
-                    })()}
+                    {getSystemPromptLabel()}
                   </Text>
                 </Button>
               </Tooltip>

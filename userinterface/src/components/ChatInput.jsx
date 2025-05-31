@@ -1,4 +1,4 @@
-import { Box, HStack, Textarea, Button } from "@chakra-ui/react";
+import { Box, HStack, Textarea, Button, useColorModeValue } from "@chakra-ui/react";
 import { IoMdSend } from "react-icons/io";
 import StopGenerationButton from "./StopGenerationButton";
 import { DEFAULT_MESSAGES } from "./Constants";
@@ -10,7 +10,6 @@ export default function ChatInput({
   handleSubmit,
   handleKeyPress,
   handleStopGeneration,
-  useColorModeValue,
 }) {
   const bgInput = useColorModeValue("green.50", "gray.700");
   const bgText = useColorModeValue("gray.600", "gray.100");
@@ -25,8 +24,7 @@ export default function ChatInput({
           onChange={(e) => setQuery(e.target.value)}
           onKeyDown={(e) => handleKeyPress(e)}
           borderRadius={"1rem"}
-          autosize="true"
-          maxH="10lh"
+          maxH="10vh"
           paddingTop={"2rem"}
           color={bgText}
           variant="outline"

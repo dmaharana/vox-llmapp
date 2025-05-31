@@ -1,11 +1,12 @@
 import { InputGroup, InputLeftElement, Input, Button, HStack } from "@chakra-ui/react";
-import { AddIcon, SearchIcon } from "@chakra-ui/icons";
+import { AddIcon, SearchIcon, CloseIcon } from "@chakra-ui/icons";
 
 export function ProviderSearch({
   searchQuery,
   setSearchQuery,
   showAddProvider,
-  setShowAddProvider
+  setShowAddProvider,
+  editingProvider
 }) {
   return (
     <HStack mb={4} spacing={3}>
@@ -22,13 +23,13 @@ export function ProviderSearch({
       </InputGroup>
 
       <Button
-        leftIcon={<AddIcon />}
+        leftIcon={!editingProvider && showAddProvider ? <CloseIcon /> : <AddIcon />}
         colorScheme="blue"
         size="sm"
         onClick={() => setShowAddProvider(!showAddProvider)}
-        title={showAddProvider ? "Close" : "Add new provider"}
+        title={!editingProvider && showAddProvider ? "Close" : "Add new provider"}
       >
-        {showAddProvider ? "Close" : "New"}
+        {!editingProvider && showAddProvider ? "Close" : "New"}
       </Button>
     </HStack>
   );

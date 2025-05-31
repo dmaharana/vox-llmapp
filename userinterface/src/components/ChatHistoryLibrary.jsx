@@ -19,20 +19,22 @@ import {
 } from "@chakra-ui/react";
 import { AddIcon, SearchIcon } from "@chakra-ui/icons";
 import { setChatSearchQuery } from "../store/chatSlice";
+import { useColorModeValue } from "@chakra-ui/react";
 
 export default function ChatHistoryLibrary({ isOpen, onClose, allChats, onNewChat, onSelectChat }) {
   const dispatch = useDispatch();
   const chatSearchQuery = useSelector((state) => state.chat.chatSearchQuery);
+  const hoverBg = useColorModeValue("gray.100", "gray.700");
 
   const filteredChats = allChats.filter((chat) => {
     const query = chatSearchQuery.toLowerCase();
     return (
-      (chat.title && chat.title.toLowerCase().includes(query)) ||
+      chat.title?.toLowerCase().includes(query) ||
       (chat.conversation &&
         chat.conversation.some(
           (msg) =>
-            (msg.user && msg.user.toLowerCase().includes(query)) ||
-            (msg.assistant && msg.assistant.toLowerCase().includes(query))
+            msg.user?.toLowerCase().includes(query) ||
+            msg.assistant?.toLowerCase().includes(query)
         ))
     );
   });
@@ -75,7 +77,7 @@ export default function ChatHistoryLibrary({ isOpen, onClose, allChats, onNewCha
                 borderWidth="1px"
                 borderRadius="md"
                 cursor="pointer"
-                _hover={{ bg: "gray.100" }}
+                _hover={{ bg: hoverBg }}
                 onClick={() => onSelectChat(chat.id)}
               >
                 <strong>{chat.title || "Untitled Chat"}</strong>

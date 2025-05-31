@@ -11,7 +11,8 @@ const userSlice = createSlice({
   initialState,
   reducers: {
     setUserName: (state, action) => {
-      state.userName = action.payload;
+      const trimmedName = action.payload?.trim();
+      if (trimmedName) state.userName = trimmedName;
     },
     setAvatarImage: (state, action) => {
       state.avatarImage = action.payload;
@@ -23,7 +24,10 @@ const userSlice = createSlice({
     },
     setUserSettings: (state, action) => {
       const { userName, avatarImage } = action.payload;
-      if (userName !== undefined) state.userName = userName;
+      if (userName !== undefined) {
+        const trimmedName = userName?.trim();
+        if (trimmedName) state.userName = trimmedName;
+      }
       if (avatarImage !== undefined) {
         state.avatarImage = avatarImage;
         state.avatarType = avatarImage ? "custom" : "initials";

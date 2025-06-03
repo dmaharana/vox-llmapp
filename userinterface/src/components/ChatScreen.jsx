@@ -665,118 +665,122 @@ export default function ChatScreen() {
           />
         )}
 
-        {/* Sidebar - positioned outside chat container */}
-        {(isSidebarOpen || (!isSidebarOpen && isHovering)) && (
-          <Box
-            position={!isSidebarOpen && isHovering ? "absolute" : "relative"}
-            left={0}
-            top={0}
-            zIndex={!isSidebarOpen && isHovering ? 998 : "auto"}
-            h="100%"
-            w={`${sidebarWidth}px`}
-            transition={isResizing ? "none" : "all 0.3s ease"}
-            opacity={isSidebarOpen || isHovering ? 1 : 0}
-            transform={
-              isSidebarOpen || isHovering
-                ? "translateX(0)"
-                : "translateX(-20px)"
-            }
-            onMouseEnter={() => !isSidebarOpen && setIsHovering(true)}
-            onMouseLeave={() => {
-              if (!isSidebarOpen && !isResizing) {
-                // Add a small delay to prevent flickering
-                setTimeout(() => {
-                  if (!isResizing) {
-                    setIsHovering(false);
-                  }
-                }, 100);
-              }
-            }}
-            display="flex"
-            flexShrink={0}
-          >
-            <Box flex="1" display="flex" flexDirection="column">
-              <ChatSidebar
-                isSidebarOpen={isSidebarOpen}
-                isHoverMode={!isSidebarOpen && isHovering}
-                allChats={allChats}
-                setAllChats={setAllChats}
-                activeChatId={activeChatId}
-                handleNewChat={handleNewChat}
-                handleSelectChat={handleSelectChat}
-                handleDeleteChat={handleDeleteChat}
-                sidebarWidth={sidebarWidth}
-              />
-            </Box>
-            {/* Resize handle */}
+        {/* Sidebar container with fixed width to account for toggle button */}
+        <Box position="relative" h="100%" flexShrink={0} w={isSidebarOpen ? `${sidebarWidth + 48}px` : "48px"} transition="width 0.3s ease">
+          {/* Actual sidebar content */}
+          {(isSidebarOpen || (!isSidebarOpen && isHovering)) && (
             <Box
-              w="6px"
+              position={!isSidebarOpen && isHovering ? "absolute" : "relative"}
+              left={0}
+              top={0}
+              zIndex={!isSidebarOpen && isHovering ? 998 : "auto"}
               h="100%"
-              bg="transparent"
-              cursor="col-resize"
-              onMouseDown={handleMouseDown}
-              onMouseEnter={() => {
-                if (!isSidebarOpen) setIsHovering(true);
+              w={`${sidebarWidth}px`}
+              transition={isResizing ? "none" : "all 0.3s ease"}
+              opacity={isSidebarOpen || isHovering ? 1 : 0}
+              transform={
+                isSidebarOpen || isHovering
+                  ? "translateX(0)"
+                  : "translateX(-20px)"
+              }
+              onMouseEnter={() => !isSidebarOpen && setIsHovering(true)}
+              onMouseLeave={() => {
+                if (!isSidebarOpen && !isResizing) {
+                  setTimeout(() => {
+                    if (!isResizing) {
+                      setIsHovering(false);
+                    }
+                  }, 100);
+                }
               }}
-              _hover={{
-                bg: "blue.100",
-              }}
-              _active={{
-                bg: "blue.200",
-              }}
-              transition="background-color 0.2s ease"
-              flexShrink={0}
-              position="relative"
-              zIndex={1001}
-              userSelect="none"
               display="flex"
-              alignItems="center"
-              justifyContent="center"
-              borderLeft="1px solid"
-              borderColor="gray.200"
+              flexShrink={0}
             >
+              <Box flex="1" display="flex" flexDirection="column">
+                <ChatSidebar
+                  isSidebarOpen={isSidebarOpen}
+                  isHoverMode={!isSidebarOpen && isHovering}
+                  allChats={allChats}
+                  setAllChats={setAllChats}
+                  activeChatId={activeChatId}
+                  handleNewChat={handleNewChat}
+                  handleSelectChat={handleSelectChat}
+                  handleDeleteChat={handleDeleteChat}
+                  sidebarWidth={sidebarWidth}
+                />
+              </Box>
+              {/* Resize handle */}
               <Box
-                w="2px"
-                h="30px"
-                bg="gray.400"
-                borderRadius="1px"
-                opacity={0.7}
-                transition="all 0.2s ease"
+                w="6px"
+                h="100%"
+                bg="transparent"
+                cursor="col-resize"
+                onMouseDown={handleMouseDown}
+                onMouseEnter={() => {
+                  if (!isSidebarOpen) setIsHovering(true);
+                }}
                 _hover={{
-                  opacity: 1,
-                  bg: "blue.400",
+                  bg: "blue.100",
+                }}
+                _active={{
+                  bg: "blue.200",
+                }}
+                transition="background-color 0.2s ease"
+                flexShrink={0}
+                position="relative"
+                zIndex={1001}
+                userSelect="none"
+                display="flex"
+                alignItems="center"
+                justifyContent="center"
+                borderLeft="1px solid"
+                borderColor="gray.200"
+              >
+                <Box
+                  w="2px"
+                  h="30px"
+                  bg="gray.400"
+                  borderRadius="1px"
+                  opacity={0.7}
+                  transition="all 0.2s ease"
+                  _hover={{
+                    opacity: 1,
+                    bg: "blue.400",
+                  }}
+                />
+              </Box>
+            </Box>
+          )}
+
+          {/* Toggle button - positioned at the end of sidebar container */}
+          <Box
+            position="absolute"
+            right="-1px"
+            top="0"
+            h="auto"
+            zIndex={1002}
+            transform="translateX(100%)"
+          >
+            <Tooltip 
+              label={isSidebarOpen ? "Hide sidebar" : "Show sidebar"} 
+              placement="right"
+              hasArrow
+            >
+              <IconButton
+                aria-label="Toggle sidebar"
+                icon={isSidebarOpen ? <TbLayoutSidebarRightCollapse /> : <TbLayoutSidebarLeftCollapse />}
+                size="lg"
+                onClick={toggleSidebar}
+                variant="ghost"
+                color={useColorModeValue("blue.900", "blue.100")}
+                borderRadius="0 md md 0"
+                _hover={{
+                  bg: useColorModeValue("gray.100", "gray.600"),
                 }}
               />
-            </Box>
+            </Tooltip>
           </Box>
-        )}
-
-        {/* Sidebar toggle button */}
-        {(isSidebarOpen || (!isSidebarOpen && !isHovering)) && (
-          <Tooltip 
-            label={isSidebarOpen ? "Hide sidebar" : "Show sidebar"} 
-            placement="right"
-            hasArrow
-          >
-            <IconButton
-              aria-label="Toggle sidebar"
-              icon={isSidebarOpen ? <TbLayoutSidebarRightCollapse /> : <TbLayoutSidebarLeftCollapse />}
-              size="lg"
-              onClick={toggleSidebar}
-              variant="ghost"
-              position="absolute"
-              left={isSidebarOpen ? `${sidebarWidth}px` : "0"}
-              top="0"
-              zIndex={1000}
-              color={useColorModeValue("blue.900", "blue.100")}
-              borderRadius="0 0 md 0"
-              transition="left 0.3s ease"
-              _hover={{
-                bg: useColorModeValue("gray.100", "gray.600"),
-              }}
-            />
-          </Tooltip>
-        )}
+        </Box>
 
         {/* Chat container - centered and 75% width */}
         <Box

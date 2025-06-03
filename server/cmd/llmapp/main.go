@@ -66,7 +66,7 @@ func main() {
 	select {
 	case <-ctx.Done():
 		log.Println("Shutdown timed out")
-	case <-time.After(100 * time.Millisecond):
+	case <-c.ShutdownCompleteChan():
 		log.Println("Server stopped gracefully")
 	}
 }

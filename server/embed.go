@@ -1,9 +1,6 @@
 package ui
 
-import (
-	"embed"
-	_ "embed"
-)
+import "embed"
 
 //go:embed dist/*
 var BuildFS embed.FS

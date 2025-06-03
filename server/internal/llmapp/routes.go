@@ -54,6 +54,11 @@ func (c *Config) StopWorkers() {
 	}
 }
 
+// ShutdownCompleteChan returns a channel that's closed when shutdown finishes.
+func (c *Config) ShutdownCompleteChan() <-chan struct{} {
+	return c.shutdownChan
+}
+
 const (
 	certPath       = "./configs/sslcerts/nginx.crt"
 	keyPath        = "./configs/sslcerts/nginx.key"

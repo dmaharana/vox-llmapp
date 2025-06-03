@@ -12,6 +12,7 @@ import {
   CheckIcon,
   ChevronUpIcon,
   ChevronDownIcon,
+  StarIcon,
 } from "@chakra-ui/icons";
 import { useState } from "react";
 import PropTypes from "prop-types";
@@ -33,6 +34,7 @@ export function PromptItem({
   onEdit,
   onDelete,
   onUse,
+  onToggleStar,
 }) {
   const [isExpanded, setIsExpanded] = useState(false);
   const maxContentLength = 100;
@@ -42,6 +44,15 @@ export function PromptItem({
       <HStack justify="space-between">
         <Text fontWeight="bold">{prompt.name}</Text>
         <HStack>
+          <IconButton
+            icon={<StarIcon />}
+            size="sm"
+            colorScheme={prompt.starred ? "yellow" : "gray"}
+            variant={prompt.starred ? "solid" : "ghost"}
+            aria-label={prompt.starred ? "Unstar prompt" : "Star prompt"}
+            onClick={() => onToggleStar(prompt.id)}
+          />
+
           <IconButton
             icon={<CheckIcon />}
             size="sm"
@@ -111,9 +122,15 @@ export function PromptItem({
 }
 
 PromptItem.propTypes = {
-  prompt: PropTypes.object.isRequired,
+  prompt: PropTypes.shape({
+    id: PropTypes.string.isRequired,
+    name: PropTypes.string.isRequired,
+    content: PropTypes.string.isRequired,
+    starred: PropTypes.bool,
+  }).isRequired,
   searchQuery: PropTypes.string,
   onEdit: PropTypes.func.isRequired,
   onDelete: PropTypes.func.isRequired,
   onUse: PropTypes.func.isRequired,
+  onToggleStar: PropTypes.func.isRequired,
 };

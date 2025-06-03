@@ -160,50 +160,119 @@ function ChatSidebar({
     if (!files.length) return;
 
     Array.from(files).forEach((file) => {
-      const fileReader = new FileReader();
-      fileReader.onload = () => {
-        try {
-          let imported = JSON.parse(fileReader.result);
-          if (!Array.isArray(imported)) {
-            imported = [imported];
-          }
-
-          setAllChats((prev) => {
-            let updated = [...prev];
-            imported.forEach((chat) => {
-              if (!Array.isArray(chat.conversation)) return;
-              if (!chat.id) {
-                chat.id = generateUUID();
-              }
-              if (!chat.title) {
-                const firstUserMsg = chat.conversation.find((msg) => msg.user);
-                chat.title = firstUserMsg ? firstUserMsg.user : "Untitled Chat";
-              }
-              // Ensure imported chats have isStarred and isArchived properties
-              chat.isStarred = Boolean(chat.isStarred);
-              chat.isArchived = Boolean(chat.isArchived);
-              
-              if (!chat.id || !Array.isArray(chat.conversation)) return;
-              const existingChatIndex = updated.findIndex((c) => c.id === chat.id);
-              if (existingChatIndex !== -1) {
-                // Update existing chat while preserving starred/archived status
-                updated[existingChatIndex] = {
-                  ...chat,
-                  isStarred: chat.isStarred || updated[existingChatIndex].isStarred,
-                  isArchived: chat.isArchived || updated[existingChatIndex].isArchived
-                };
-              } else {
-                updated.push(chat);
+      if (file.type === 'application/zip' || file.name.endsWith('.zip')) {
+        // Handle zip file
+        const reader = new FileReader();
+        reader.onload = async (e) => {
+          try {
+            const zip = await JSZip.loadAsync(e.target.result);
+            
+            // Process all files in the zip
+            const promises = [];
+            zip.forEach((relativePath, zipEntry) => {
+              if (relativePath.endsWith('.json')) {
+                promises.push(
+                  zipEntry.async('string').then(content => {
+                    try {
+                      return JSON.parse(content);
+                    } catch (err) {
+                      console.error(`Invalid JSON in zip file ${relativePath}:`, err);
+                      return null;
+                    }
+                  })
+                );
               }
             });
-            localStorage.setItem("voxChats", JSON.stringify(updated));
-            return updated;
-          });
-        } catch (err) {
-          console.error("Invalid chat file", err);
-        }
-      };
-      fileReader.readAsText(file);
+
+            const results = await Promise.all(promises);
+            const validChats = results.filter(result => result !== null);
+
+            setAllChats((prev) => {
+              let updated = [...prev];
+              validChats.forEach((chat) => {
+                if (!Array.isArray(chat)) {
+                  chat = [chat];
+                }
+                
+                chat.forEach((singleChat) => {
+                  if (!Array.isArray(singleChat.conversation)) return;
+                  if (!singleChat.id) {
+                    singleChat.id = generateUUID();
+                  }
+                  if (!singleChat.title) {
+                    const firstUserMsg = singleChat.conversation.find((msg) => msg.user);
+                    singleChat.title = firstUserMsg ? firstUserMsg.user : "Untitled Chat";
+                  }
+                  
+                  singleChat.isStarred = Boolean(singleChat.isStarred);
+                  singleChat.isArchived = Boolean(singleChat.isArchived);
+                  
+                  if (!singleChat.id || !Array.isArray(singleChat.conversation)) return;
+                  const existingChatIndex = updated.findIndex((c) => c.id === singleChat.id);
+                  if (existingChatIndex !== -1) {
+                    updated[existingChatIndex] = {
+                      ...singleChat,
+                      isStarred: singleChat.isStarred || updated[existingChatIndex].isStarred,
+                      isArchived: singleChat.isArchived || updated[existingChatIndex].isArchived
+                    };
+                  } else {
+                    updated.push(singleChat);
+                  }
+                });
+              });
+              localStorage.setItem("voxChats", JSON.stringify(updated));
+              return updated;
+            });
+          } catch (err) {
+            console.error("Error processing zip file:", err);
+          }
+        };
+        reader.readAsArrayBuffer(file);
+      } else {
+        // Handle JSON file (existing code)
+        const fileReader = new FileReader();
+        fileReader.onload = () => {
+          try {
+            let imported = JSON.parse(fileReader.result);
+            if (!Array.isArray(imported)) {
+              imported = [imported];
+            }
+
+            setAllChats((prev) => {
+              let updated = [...prev];
+              imported.forEach((chat) => {
+                if (!Array.isArray(chat.conversation)) return;
+                if (!chat.id) {
+                  chat.id = generateUUID();
+                }
+                if (!chat.title) {
+                  const firstUserMsg = chat.conversation.find((msg) => msg.user);
+                  chat.title = firstUserMsg ? firstUserMsg.user : "Untitled Chat";
+                }
+                chat.isStarred = Boolean(chat.isStarred);
+                chat.isArchived = Boolean(chat.isArchived);
+                
+                if (!chat.id || !Array.isArray(chat.conversation)) return;
+                const existingChatIndex = updated.findIndex((c) => c.id === chat.id);
+                if (existingChatIndex !== -1) {
+                  updated[existingChatIndex] = {
+                    ...chat,
+                    isStarred: chat.isStarred || updated[existingChatIndex].isStarred,
+                    isArchived: chat.isArchived || updated[existingChatIndex].isArchived
+                  };
+                } else {
+                  updated.push(chat);
+                }
+              });
+              localStorage.setItem("voxChats", JSON.stringify(updated));
+              return updated;
+            });
+          } catch (err) {
+            console.error("Invalid chat file", err);
+          }
+        };
+        fileReader.readAsText(file);
+      }
     });
     e.target.value = null;
   };
@@ -412,7 +481,7 @@ function ChatSidebar({
             ref={fileInputRef}
             style={{ display: "none" }}
             multiple
-            accept=".json"
+            accept=".json,.zip"
             onChange={handleImportChats}
           />
         </VStack>

@@ -9,13 +9,15 @@ export default function ModelSelect({ model, setModel, onModelSelect }) {
   // models will be fetched from the providers
   useEffect(
     function () {
-      const models = providers.flatMap((p) =>
-        p.models.map((m) => ({
-          name: m,
-          providerId: p.id,
-          providerName: p.name,
-        }))
-      );
+      const models = providers
+        .filter(p => p.enabled !== false) // Only include enabled providers
+        .flatMap((p) =>
+          p.models.map((m) => ({
+            name: m,
+            providerId: p.id,
+            providerName: p.name,
+          }))
+        );
       setModels(models);
 
       // sort models by provider name

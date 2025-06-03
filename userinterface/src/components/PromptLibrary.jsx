@@ -53,9 +53,12 @@ export default function PromptLibrary({ isOpen, onClose, isEmbedded = false }) {
     if (savedPrompts) {
       const parsedPrompts = JSON.parse(savedPrompts);
       if (parsedPrompts.length > 0) {
-        // sort the prompts by name
-        parsedPrompts.sort((a, b) => a.name.localeCompare(b.name));
-        dispatch(setPrompts(parsedPrompts));
+        // Ensure all prompts have the starred property and sort them
+        const updatedPrompts = parsedPrompts.map(p => ({
+          ...p,
+          starred: p.starred || false
+        })).sort(sortPrompts);
+        dispatch(setPrompts(updatedPrompts));
         return;
       }
     }
@@ -72,7 +75,8 @@ export default function PromptLibrary({ isOpen, onClose, isEmbedded = false }) {
           id: prompt.id || generateUUID(),
           name: String(prompt.name || "Unnamed Prompt"),
           content: String(prompt.content || ""),
-        }));
+          starred: false,
+        })).sort(sortPrompts);
         localStorage.setItem("prompts", JSON.stringify(promptsWithIds));
         dispatch(setPrompts(promptsWithIds));
       })
@@ -141,7 +145,8 @@ export default function PromptLibrary({ isOpen, onClose, isEmbedded = false }) {
           id: prompt.id || generateUUID(),
           name: String(prompt.name || "Unnamed Prompt"),
           content: String(prompt.content || ""),
-        }));
+          starred: Boolean(prompt.starred || false),
+        })).sort(sortPrompts);
 
         dispatch(setPrompts(validatedPrompts));
         setImportStatus("success");
@@ -164,7 +169,7 @@ export default function PromptLibrary({ isOpen, onClose, isEmbedded = false }) {
         setPrompts(
           prompts.map((p) =>
             p.id === id ? { ...p, name, content } : p
-          ),
+          ).sort(sortPrompts),
         ),
       );
       setEditingPrompt(null);
@@ -174,15 +179,29 @@ export default function PromptLibrary({ isOpen, onClose, isEmbedded = false }) {
         id: generateUUID(),
         name,
         content,
+        starred: false,
       };
 
       // add the new prompt to the prompts array and sort
-      const updatedPrompts = [...prompts, newPrompt].sort((a, b) => 
-        a.name.localeCompare(b.name)
-      );
+      const updatedPrompts = [...prompts, newPrompt].sort(sortPrompts);
 
       dispatch(setPrompts(updatedPrompts));
     }
+  };
+
+  const handleToggleStar = (promptId) => {
+    const updatedPrompts = prompts.map((p) =>
+      p.id === promptId ? { ...p, starred: !p.starred } : p
+    ).sort(sortPrompts);
+    dispatch(setPrompts(updatedPrompts));
+  };
+
+  const sortPrompts = (a, b) => {
+    // First sort by starred status (starred prompts come first)
+    if (a.starred && !b.starred) return -1;
+    if (!a.starred && b.starred) return 1;
+    // Then sort by name
+    return a.name.localeCompare(b.name);
   };
 
   const handleEditPrompt = (prompt) => {
@@ -224,6 +243,7 @@ export default function PromptLibrary({ isOpen, onClose, isEmbedded = false }) {
               prompt.content.toLowerCase().includes(query)
             );
           })
+          .sort(sortPrompts)
           .map((prompt) => (
             <PromptItem
               key={prompt.id}
@@ -237,6 +257,7 @@ export default function PromptLibrary({ isOpen, onClose, isEmbedded = false }) {
                   onClose();
                 }
               }}
+              onToggleStar={handleToggleStar}
             />
           ))}
       </VStack>

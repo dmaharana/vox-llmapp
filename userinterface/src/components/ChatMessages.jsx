@@ -12,7 +12,7 @@ import { useSelector } from "react-redux";
 import { DEFAULT_MESSAGES } from "./Constants";
 import { UserMsg } from "./UserMsg";
 import { AssistantMsg } from "./AssistantMsg";
-import { useEffect } from "react";
+import { useEffect, useRef } from "react";
 
 export default function ChatMessages({
   conversation,
@@ -33,6 +33,15 @@ export default function ChatMessages({
 }) {
   const prompts = useSelector((state) => state.prompt.prompts);
   const systemPrompt = useSelector((state) => state.prompt.systemPrompt);
+  const messagesEndRef = useRef(null);
+
+  const scrollToBottom = () => {
+    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+  };
+
+  useEffect(() => {
+    scrollToBottom();
+  }, [conversation, waitingResponse]);
 
   const getSystemPromptLabel = () => {
     const matchedPrompt = prompts?.find((p) => p.content === systemPrompt);
@@ -76,6 +85,7 @@ export default function ChatMessages({
                 waitingResponse={waitingResponse}
                 handleQueryUpdate={handleQueryUpdate}
                 handleDeleteMessage={handleDeleteMessage}
+                timestamp={m.timestamp}
               />
             )}
             {m.assistant && (
@@ -92,6 +102,7 @@ export default function ChatMessages({
                 chatHistory={convHistory}
                 systemPrompt={systemPrompt}
                 handleAssistantUpdate={handleAssistantUpdate}
+                timestamp={m.timestamp}
               />
             )}
           </Box>
@@ -150,6 +161,7 @@ export default function ChatMessages({
           </VStack>
         </Box>
       )}
+      <div ref={messagesEndRef} />
     </VStack>
   );
 }

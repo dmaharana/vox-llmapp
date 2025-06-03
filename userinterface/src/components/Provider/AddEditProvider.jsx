@@ -20,6 +20,7 @@ import {
   Text,
   useToast,
   HStack,
+  Switch,
 } from "@chakra-ui/react";
 import { SearchIcon } from "@chakra-ui/icons";
 import { useSelector } from "react-redux";
@@ -43,6 +44,7 @@ function AddEditProvider({
     name: "",
     endpoint: "",
     api_key: "",
+    enabled: true,
   });
   const [models, setModels] = useState([]);
   const [selectedModels, setSelectedModels] = useState([]);
@@ -63,7 +65,7 @@ function AddEditProvider({
     setIsLoadingModels(false);
   };
   const resetForm = () => {
-    setFormData({ provider_name: "", name: "", endpoint: "", api_key: "" });
+    setFormData({ provider_name: "", name: "", endpoint: "", api_key: "", enabled: true });
     resetModels();
   };
 
@@ -75,6 +77,7 @@ function AddEditProvider({
         name: providerToEdit.name || "",
         endpoint: providerToEdit.endpoint || "",
         api_key: providerToEdit.api_key || "",
+        enabled: providerToEdit.enabled !== false,
       });
       setSelectedModels(providerToEdit.models || []);
       setModels(providerToEdit.models || []);
@@ -105,6 +108,7 @@ function AddEditProvider({
         provider_name: selectedProvider?.name,
         endpoint: selectedProvider?.endpoint,
         api_key: "",
+        enabled: true,
       });
     }
     // reset models
@@ -113,8 +117,11 @@ function AddEditProvider({
 
   // Handle input changes
   const handleInputChange = (e) => {
-    const { name, value } = e.target;
-    setFormData({ ...formData, [name]: value });
+    const { name, value, type, checked } = e.target;
+    setFormData({ 
+      ...formData, 
+      [name]: type === 'checkbox' ? checked : value 
+    });
   };
 
   // Simulate fetching models
@@ -331,6 +338,17 @@ function AddEditProvider({
                     </Button>
                   </InputRightElement>
                 </InputGroup>
+              </FormControl>
+
+              {/* Enabled Switch */}
+              <FormControl display="flex" alignItems="center">
+                <FormLabel mb="0">Enabled</FormLabel>
+                <Switch
+                  name="enabled"
+                  isChecked={formData.enabled}
+                  onChange={handleInputChange}
+                  colorScheme="green"
+                />
               </FormControl>
 
               {/* Models Section */}

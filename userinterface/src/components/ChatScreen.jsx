@@ -336,6 +336,7 @@ export default function ChatScreen() {
       systemPrompt: systemPrompt,
       assistant: "Thinking...",
       resTime: "",
+      timestamp: new Date().toISOString(),
     };
 
     setConversation((p) =>
@@ -412,10 +413,9 @@ export default function ChatScreen() {
       user: query,
       model: model,
       systemPrompt: systemPrompt,
-      // assistant: "",
       assistant: "Thinking...",
-      // assistant: initialAssistantMessage,
       resTime: 0,
+      timestamp: new Date().toISOString(),
     };
 
     if (conversation.length > 0) {
@@ -545,6 +545,7 @@ export default function ChatScreen() {
                       ...m,
                       assistant: text,
                       resTime: `${resTime.toFixed(2)}s`,
+                      timestamp: new Date().toISOString(),
                     }
                   : m,
               ),

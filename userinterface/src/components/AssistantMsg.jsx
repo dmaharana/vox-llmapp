@@ -26,6 +26,7 @@ import {
 } from "@chakra-ui/icons";
 import { SiDreamstime } from "react-icons/si";
 import { useSelector } from "react-redux";
+import { formatDate } from "./scripts/utils";
 
 import ReactMarkdown from "markdown-to-jsx";
 import ChakraUIRenderer from "chakra-ui-markdown-renderer";
@@ -180,6 +181,7 @@ export function AssistantMsg({
   systemPrompt,
   model,
   handleAssistantUpdate,
+  timestamp,
 }) {
   const { chatMode } = useSelector((state) => state.user);
   const { hasCopied, onCopy } = useClipboard(msg);
@@ -238,7 +240,7 @@ export function AssistantMsg({
             color={useColorModeValue("gray.600", "gray.300")}
             align={"start"}
           >
-            {name}
+            {name} • {formatDate(timestamp)}
           </Text>
           {isEditing ? (
             <Textarea

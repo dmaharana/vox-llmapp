@@ -27,6 +27,7 @@ import {
   Td,
   Tooltip,
   VStack,
+  Switch,
 } from "@chakra-ui/react";
 import { ProviderSearch } from "./Provider/ProviderSearch";
 import { ImportExportButtons } from "./PromptLibrary/ImportExportButtons";
@@ -211,6 +212,7 @@ export default function ProviderManagement() {
                   endpoint: providerData.endpoint,
                   api_key: providerData.api_key,
                   models: providerData.models,
+                  enabled: providerData.enabled !== false, // preserve enabled state when editing
                 }
               : p,
           ),
@@ -225,11 +227,22 @@ export default function ProviderManagement() {
         endpoint: providerData.endpoint,
         api_key: providerData.api_key,
         models: providerData.models,
+        enabled: true, // new providers are enabled by default
       };
       dispatch(setProviders([...providers, newProvider]));
     }
     setShowAddProvider(false); // Close the drawer
     setEditingProvider(null); // Clear editing state
+  };
+
+  const handleToggleProvider = (providerId) => {
+    dispatch(
+      setProviders(
+        providers.map((p) =>
+          p.id === providerId ? { ...p, enabled: !p.enabled } : p
+        )
+      )
+    );
   };
 
   const handleEditProvider = (providerId) => {
@@ -252,10 +265,11 @@ export default function ProviderManagement() {
         <Table variant="simple" size="sm" layout="fixed" maxH="50vh" overflowY="auto" striped="dark">
           <Thead>
             <Tr>
-              <Th width="20%">Name</Th>
-              <Th width="20%">Provider</Th>
-              <Th width="50%">Endpoint</Th>
-              <Th width="20%" textAlign="right">Actions</Th>
+              <Th width="15%">Name</Th>
+              <Th width="15%">Provider</Th>
+              <Th width="40%">Endpoint</Th>
+              <Th width="15%">Status</Th>
+              <Th width="15%" textAlign="right">Actions</Th>
             </Tr>
           </Thead>
           <Tbody>
@@ -269,14 +283,39 @@ export default function ProviderManagement() {
               })
               .map((provider) => (
                 <Tr key={provider.id}>
-                  <Td>{provider.name}</Td>
-                  <Td>{provider.provider_name}</Td>
+                  <Td
+                    overflowX="hidden"
+                    textOverflow="ellipsis"
+                    whiteSpace="nowrap"
+                  >{provider.name}</Td>
+                  <Td
+                    overflowX="hidden"
+                    textOverflow="ellipsis"
+                    whiteSpace="nowrap"
+                  >{provider.provider_name}</Td>
                   <Td
                     overflowX="hidden"
                     textOverflow="ellipsis"
                     whiteSpace="nowrap"
                   >
                     {provider.endpoint}
+                  </Td>
+                  <Td>
+                    <Tooltip 
+                      label={provider.enabled ? "Disable provider" : "Enable provider"}
+                      hasArrow
+                      placement="top"
+                      closeOnClick={true}
+                    >
+                      <Box>
+                        <Switch
+                          size="sm"
+                          isChecked={provider.enabled !== false}
+                          onChange={() => handleToggleProvider(provider.id)}
+                          colorScheme="green"
+                        />
+                      </Box>
+                    </Tooltip>
                   </Td>
                   <Td>
                     <HStack spacing={1} justify="flex-end">

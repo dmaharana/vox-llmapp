@@ -17,6 +17,7 @@ import {
   CloseIcon,
 } from "@chakra-ui/icons";
 import { useSelector } from "react-redux";
+import { formatDate } from "./scripts/utils";
 
 import { DEFAULT_MESSAGES } from "./Constants";
 
@@ -26,6 +27,7 @@ export function UserMsg({
   handleQueryUpdate,
   waitingResponse,
   handleDeleteMessage,
+  timestamp,
 }) {
   const [isEditing, setIsEditing] = useState(false);
   const { hasCopied, onCopy } = useClipboard(msg);
@@ -64,6 +66,15 @@ export function UserMsg({
           color={userAvatarText} 
         />
         <Box w={"100%"} align={"start"}>
+          <HStack w={"100%"} justifyContent={"space-between"} mb={1}>
+            <Text
+              fontWeight={"bold"}
+              fontSize={"xs"}
+              color={useColorModeValue("gray.600", "gray.300")}
+            >
+              You • {formatDate(timestamp)}
+            </Text>
+          </HStack>
           <Text
             fontWeight={"bold"}
             mb={1}

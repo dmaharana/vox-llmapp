@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import PropTypes from "prop-types";
-import { HStack, IconButton, Text, Avatar } from "@chakra-ui/react";
+import { HStack, IconButton, Text, Avatar, Box } from "@chakra-ui/react";
 import { MoonIcon, SunIcon, TimeIcon } from "@chakra-ui/icons";
 
 import { useSelector } from "react-redux";
@@ -17,6 +17,7 @@ export default function ChatHeader({
   const bgText = useColorModeValue("blue.900", "blue.100");
   const bgHeader = useColorModeValue("blue.100", "blue.600");
   const bgHeaderButton = useColorModeValue("blue.200", "blue.700");
+  const [isHovering, setIsHovering] = useState(false);
 
   const [now, setNow] = useState(new Date());
   const [timezone, setTimezone] = useState(Intl.DateTimeFormat().resolvedOptions().timeZone);
@@ -44,7 +45,7 @@ export default function ChatHeader({
     <>
       <HStack
         w="100%"
-        py={2}
+        py={1}
         pr={2}
         pl={2}
         bg={bgHeader}
@@ -54,32 +55,45 @@ export default function ChatHeader({
         top={0}
         zIndex={1000}
       >
-        <HStack flex="0 1 auto">
-          <Avatar
-            size={"sm"}
-            name="Assistant"
-            src={appIcon}
-            mb={2}
-            mr={3}
-            //bg={avatarBg}
-          />
-          <Text
-            fontFamily="Raleway, sans-serif"
-            fontSize="1.5rem"
-            fontWeight="bold"
-            color={bgText}
+        <HStack flex="0 1 auto" position="relative">
+          <Box
+            onMouseEnter={() => setIsHovering(true)}
+            onMouseLeave={() => setIsHovering(false)}
           >
-            {DEFAULT_MESSAGES.APP_TITLE}
-            <span style={{ fontSize: '1rem' }}>
-              {getPromptSuffix()}
-            </span>
-          </Text>
+            <Avatar
+              size={"xs"}
+              name="Assistant"
+              src={appIcon}
+              mb={1}
+              mr={2}
+            />
+            {isHovering && (
+              <Text
+                position="absolute"
+                left="100%"
+                top="50%"
+                transform="translateY(-50%)"
+                ml={2}
+                fontFamily="Raleway, sans-serif"
+                fontSize="1.2rem"
+                fontWeight="bold"
+                color={bgText}
+                whiteSpace="nowrap"
+                zIndex={1001}
+              >
+                {DEFAULT_MESSAGES.APP_TITLE}
+                <span style={{ fontSize: '0.8rem' }}>
+                  {getPromptSuffix()}
+                </span>
+              </Text>
+            )}
+          </Box>
         </HStack>
 
-        <HStack flex="1" justifyContent="center">
-          <TimeIcon />
-          <span className="font-semibold tracking-widest text-xs text-gray-700 dark:text-gray-200" style={{ letterSpacing: '0.08em' }}>{timeString}</span>
-          <span className="text-[8px] text-gray-500 dark:text-gray-400 font-normal">· {dateString} · {dayString}</span>
+        <HStack flex="1" justifyContent="center" spacing={1}>
+          <TimeIcon boxSize={3} />
+          <span className="font-semibold tracking-widest text-sm text-gray-700 dark:text-gray-200" style={{ letterSpacing: '0.08em' }}>{timeString}</span>
+          <span className="text-[4px] text-gray-500 dark:text-gray-400 font-normal">· {dateString} · {dayString}</span>
         </HStack>
 
         <IconButton
@@ -87,7 +101,7 @@ export default function ChatHeader({
           icon={colorMode === "light" ? <SunIcon /> : <MoonIcon />}
           onClick={toggleColorMode}
           variant="ghost"
-          size="lg"
+          size="sm"
           color={bgText}
           sx={{
             _hover: {

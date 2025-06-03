@@ -17,25 +17,48 @@ import {
 } from "@chakra-ui/react";
 import { DEFAULT_MESSAGES } from "../Constants";
 import { useToast } from "@chakra-ui/react";
+import { useState, useEffect } from "react";
 
-// export function AddPromptForm({ onAddPrompt, isOpen, onClose }) {
 export function AddPromptForm({
-  showAddPrompt,
-  newPromptName,
-  setNewPromptName,
-  newPromptContent,
-  setNewPromptContent,
+  isOpen,
+  onClose,
+  initialPrompt = null,
   onSave,
-  setShowAddPrompt,
   prompts,
 }) {
   const toast = useToast();
+  const isEditing = !!initialPrompt;
+  const [promptName, setPromptName] = useState(initialPrompt?.name || "");
+  const [promptContent, setPromptContent] = useState(initialPrompt?.content || "");
+
+  // Update form values when initialPrompt changes
+  useEffect(() => {
+    if (initialPrompt) {
+      setPromptName(initialPrompt.name);
+      setPromptContent(initialPrompt.content);
+    } else {
+      setPromptName("");
+      setPromptContent("");
+    }
+  }, [initialPrompt]);
+
+  // Reset form when drawer closes
+  useEffect(() => {
+    if (!isOpen) {
+      setPromptName("");
+      setPromptContent("");
+    }
+  }, [isOpen]);
+
   const handleSubmit = (e) => {
     e.preventDefault();
 
-    // check for unique name
-    const otherNames = prompts.map((prompt) => prompt.name);
-    if (otherNames.includes(newPromptName)) {
+    // check for unique name, but exclude current prompt if editing
+    const otherNames = prompts
+      .filter(p => !isEditing || p.id !== initialPrompt.id)
+      .map(p => p.name);
+
+    if (otherNames.includes(promptName)) {
       toast({
         title: "Error",
         description: "Name must be unique",
@@ -46,58 +69,47 @@ export function AddPromptForm({
       return;
     }
 
-    if (newPromptName && newPromptContent) {
-      onSave();
-    }
-    setShowAddPrompt(false);
-    setNewPromptName("");
-    setNewPromptContent("");
+    if (promptName && promptContent) {
+      onSave(promptName, promptContent, initialPrompt?.id);
+      onClose();
 
-    toast({
-      title: "Success",
-      description: "Prompt added successfully",
-      status: "success",
-      duration: 3000,
-      isClosable: true,
-    });
+      toast({
+        title: "Success",
+        description: `Prompt ${isEditing ? 'updated' : 'added'} successfully`,
+        status: "success",
+        duration: 3000,
+        isClosable: true,
+      });
+    }
   };
 
   const handleCancel = () => {
-    setShowAddPrompt(false);
-    setNewPromptName("");
-    setNewPromptContent("");
-    toast({
-      title: "Success",
-      description: "Prompt add cancelled",
-      status: "success",
-      duration: 3000,
-      isClosable: true,
-    });
+    onClose();
   };
 
   return (
     <Drawer
-      isOpen={showAddPrompt}
+      isOpen={isOpen}
       placement="right"
-      onClose={() => setShowAddPrompt(false)}
-      size="md"
+      onClose={onClose}
+      size="lg"
     >
       <DrawerOverlay />
-      <DrawerContent>
+      <DrawerContent maxW="800px">
         <DrawerCloseButton />
-        <DrawerHeader>Add Prompt</DrawerHeader>
+        <DrawerHeader>{isEditing ? 'Edit Prompt' : 'Add Prompt'}</DrawerHeader>
         <DrawerBody>
           <form onSubmit={handleSubmit}>
             <FormControl isRequired>
               <FormLabel>Prompt name</FormLabel>
               <Input
                 placeholder={DEFAULT_MESSAGES.addPromptNameMessage}
-                value={newPromptName}
-                onChange={(e) => setNewPromptName(e.target.value)}
+                value={promptName}
+                onChange={(e) => setPromptName(e.target.value)}
                 mb={3}
                 isRequired
               />
-              {prompts.some((prompt) => prompt.name === newPromptName) && (
+              {prompts.some((p) => p.name === promptName && (!isEditing || p.id !== initialPrompt.id)) && (
                 <Text color="red.500" fontSize="sm" mt={1}>
                   Name already exists
                 </Text>
@@ -107,10 +119,14 @@ export function AddPromptForm({
               <FormLabel>Prompt content</FormLabel>
               <Textarea
                 placeholder={DEFAULT_MESSAGES.addPromptContentMessage}
-                value={newPromptContent}
-                onChange={(e) => setNewPromptContent(e.target.value)}
+                value={promptContent}
+                onChange={(e) => setPromptContent(e.target.value)}
                 mb={3}
                 isRequired
+                minH="500px"
+                fontSize="md"
+                lineHeight="tall"
+                resize="vertical"
               />
             </FormControl>
           </form>
@@ -121,11 +137,11 @@ export function AddPromptForm({
             <Button
               colorScheme="blue"
               width="48%"
-              isDisabled={!newPromptName || !newPromptContent}
+              isDisabled={!promptName || !promptContent}
               mr={3}
               onClick={handleSubmit}
             >
-              Add Prompt
+              {isEditing ? 'Save Changes' : 'Add Prompt'}
             </Button>
             <Button variant="outline" onClick={handleCancel} width="48%">
               Cancel
@@ -138,10 +154,13 @@ export function AddPromptForm({
 }
 
 AddPromptForm.propTypes = {
-  showAddPrompt: PropTypes.bool.isRequired,
-  newPromptName: PropTypes.string.isRequired,
-  setNewPromptName: PropTypes.func.isRequired,
-  newPromptContent: PropTypes.string.isRequired,
-  setNewPromptContent: PropTypes.func.isRequired,
+  isOpen: PropTypes.bool.isRequired,
+  onClose: PropTypes.func.isRequired,
+  initialPrompt: PropTypes.shape({
+    id: PropTypes.string.isRequired,
+    name: PropTypes.string.isRequired,
+    content: PropTypes.string.isRequired,
+  }),
   onSave: PropTypes.func.isRequired,
+  prompts: PropTypes.array.isRequired,
 };

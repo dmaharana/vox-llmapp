@@ -765,10 +765,10 @@ export default function ChatScreen() {
               variant="ghost"
               position="absolute"
               left={isSidebarOpen ? `${sidebarWidth}px` : "0"}
-              top="4"
+              top="0"
               zIndex={1000}
               color={useColorModeValue("blue.900", "blue.100")}
-              borderRadius="0 md md 0"
+              borderRadius="0 0 md 0"
               transition="left 0.3s ease"
               _hover={{
                 bg: useColorModeValue("gray.100", "gray.600"),

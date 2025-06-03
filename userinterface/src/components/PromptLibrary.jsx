@@ -28,6 +28,11 @@ export default function PromptLibrary({ isOpen, onClose, isEmbedded = false }) {
     onOpen: onDeleteDialogOpen,
     onClose: onDeleteDialogClose,
   } = useDisclosure();
+  const {
+    isOpen: isPromptFormOpen,
+    onOpen: onPromptFormOpen,
+    onClose: onPromptFormClose,
+  } = useDisclosure();
   const dispatch = useDispatch();
   const prompts = useSelector((state) => state.prompt.prompts);
   const systemPrompt = useSelector((state) => state.prompt.systemPrompt);
@@ -35,13 +40,8 @@ export default function PromptLibrary({ isOpen, onClose, isEmbedded = false }) {
   const cancelRef = useRef(null);
   const fileInputRef = useRef();
   const [promptToDelete, setPromptToDelete] = useState(null);
-  const [newPromptName, setNewPromptName] = useState("");
-  const [newPromptContent, setNewPromptContent] = useState("");
   const [searchQuery, setSearchQuery] = useState("");
-  const [showAddPrompt, setShowAddPrompt] = useState(false);
   const [editingPrompt, setEditingPrompt] = useState(null);
-  const [editName, setEditName] = useState("");
-  const [editContent, setEditContent] = useState("");
   const initialLoadComplete = useRef(false);
   const [importStatus, setImportStatus] = useState(null);
   const [importMessage, setImportMessage] = useState("");
@@ -157,48 +157,63 @@ export default function PromptLibrary({ isOpen, onClose, isEmbedded = false }) {
     reader.readAsText(file);
   };
 
-  const handleAddPrompt = async () => {
-    if (newPromptName && newPromptContent) {
+  const handleSavePrompt = (name, content, id = null) => {
+    if (id) {
+      // Editing existing prompt
+      dispatch(
+        setPrompts(
+          prompts.map((p) =>
+            p.id === id ? { ...p, name, content } : p
+          ),
+        ),
+      );
+      setEditingPrompt(null);
+    } else {
+      // Adding new prompt
       const newPrompt = {
         id: generateUUID(),
-        name: newPromptName,
-        content: newPromptContent,
+        name,
+        content,
       };
 
-      // add the new prompt to the prompts array
-      const updatedPrompts = [...prompts, newPrompt];
-
-      // sort the prompts by name
-      updatedPrompts.sort((a, b) => a.name.localeCompare(b.name));
+      // add the new prompt to the prompts array and sort
+      const updatedPrompts = [...prompts, newPrompt].sort((a, b) => 
+        a.name.localeCompare(b.name)
+      );
 
       dispatch(setPrompts(updatedPrompts));
-      setNewPromptName("");
-      setNewPromptContent("");
     }
+  };
+
+  const handleEditPrompt = (prompt) => {
+    setEditingPrompt(prompt);
+    onPromptFormOpen();
+  };
+
+  const handleAddNewPrompt = () => {
+    setEditingPrompt(null);
+    onPromptFormOpen();
   };
 
   const content = (
     <Box maxH="30vh" overflowY="auto" pr={2}>
-    {/* <Box maxH={isEmbedded ? "50vh" : "60vh"} overflowY="auto" pr={2}> */}
       <PromptSearch
         searchQuery={searchQuery}
         setSearchQuery={setSearchQuery}
-        showAddPrompt={showAddPrompt}
-        setShowAddPrompt={setShowAddPrompt}
+        showAddPrompt={isPromptFormOpen}
+        setShowAddPrompt={handleAddNewPrompt}
       />
 
-      {showAddPrompt && (
-        <AddPromptForm
-          showAddPrompt={showAddPrompt}
-          newPromptName={newPromptName}
-          setNewPromptName={setNewPromptName}
-          newPromptContent={newPromptContent}
-          setNewPromptContent={setNewPromptContent}
-          onSave={handleAddPrompt}
-          setShowAddPrompt={setShowAddPrompt}
-          prompts={prompts}
-        />
-      )}
+      <AddPromptForm
+        isOpen={isPromptFormOpen}
+        onClose={() => {
+          onPromptFormClose();
+          setEditingPrompt(null);
+        }}
+        initialPrompt={editingPrompt}
+        onSave={handleSavePrompt}
+        prompts={prompts}
+      />
 
       <VStack spacing={4} align="stretch">
         {prompts
@@ -214,22 +229,7 @@ export default function PromptLibrary({ isOpen, onClose, isEmbedded = false }) {
               key={prompt.id}
               prompt={prompt}
               searchQuery={searchQuery}
-              isEditing={editingPrompt === prompt.id}
-              onEdit={(id) => {
-                setEditingPrompt(id);
-                setEditName(prompt.name);
-                setEditContent(prompt.content);
-              }}
-              onSaveEdit={(id, name, content) => {
-                dispatch(
-                  setPrompts(
-                    prompts.map((p) =>
-                      p.id === id ? { ...p, name, content } : p,
-                    ),
-                  ),
-                );
-                setEditingPrompt(null);
-              }}
+              onEdit={handleEditPrompt}
               onDelete={(id) => handleDeletePrompt(id)}
               onUse={(content) => {
                 dispatch(setSystemPrompt(content));

@@ -5,12 +5,14 @@ export const initializeUserSettings = (store) => {
   // Load saved user settings from localStorage
   const savedUserName = localStorage.getItem("userName");
   const savedAvatarImage = localStorage.getItem("userAvatarImage");
+  const savedChatMode = localStorage.getItem("chatMode") || "formal";
 
   // Initialize with saved values or defaults
   store.dispatch(
     setUserSettings({
       userName: savedUserName || "Me",
       avatarImage: savedAvatarImage || null,
+      chatMode: savedChatMode,
     })
   );
 };
@@ -34,6 +36,10 @@ export const setupUserSettingsAutoSave = (store) => {
         } else {
           localStorage.removeItem("userAvatarImage");
         }
+      }
+
+      if (currentState.chatMode !== previousState.chatMode) {
+        localStorage.setItem("chatMode", currentState.chatMode);
       }
       
       previousState = currentState;

@@ -50,9 +50,6 @@ export default function ChatMessages({
   };
 
   useEffect(() => {
-    console.log("isSettingsOpen", isSettingsOpen);
-    console.log("chatBodySettingsDefaultTab", chatBodySettingsDefaultTab);
-
     if (chatBodySettingsDefaultTab === "prompts" && isSettingsOpen) {
       setSettingsDefaultTab(chatBodySettingsDefaultTab);
     }

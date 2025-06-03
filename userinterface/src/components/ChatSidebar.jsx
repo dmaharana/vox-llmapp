@@ -1,5 +1,5 @@
 import {
-  VStack,
+  Avatar,
   Box,
   Button,
   HStack,
@@ -8,10 +8,19 @@ import {
   Input,
   InputGroup,
   InputLeftElement,
-  Button as ChakraButton,
   useDisclosure,
+  VStack,
+  Tabs,
+  TabList,
+  Tab,
+  TabPanels,
+  TabPanel,
+  Tooltip,
 } from "@chakra-ui/react";
 import { PiUploadLight } from "react-icons/pi";
+import { LuMessagesSquare } from "react-icons/lu";
+import { FiStar, FiArchive } from "react-icons/fi";
+import appIcon from "/vox.png";
 
 import {
   AddIcon,
@@ -19,9 +28,8 @@ import {
   DownloadIcon,
   DeleteIcon,
 } from "@chakra-ui/icons";
-import { Tooltip } from "@chakra-ui/react";
 import { useSelector, useDispatch } from "react-redux";
-import { setChatSearchQuery } from "../store/chatSlice";
+import { setChatSearchQuery, setSelectedTab } from "../store/chatSlice";
 import { useRef, useState } from "react";
 import ConfirmDialog from "./ConfirmDialog";
 import generateUUID from "./scripts/utils";
@@ -39,8 +47,10 @@ function ChatSidebar({
   handleDeleteChat,
 }) {
   const sidebarBg = useColorModeValue("blue.50", "gray.700");
+  const avatarBg = useColorModeValue("orange.700", "blue.700");
   const dispatch = useDispatch();
   const chatSearchQuery = useSelector((state) => state.chat.chatSearchQuery);
+  const selectedTab = useSelector((state) => state.chat.selectedTab);
   const fileInputRef = useRef();
 
   const { isOpen, onOpen, onClose } = useDisclosure();
@@ -50,6 +60,7 @@ function ChatSidebar({
     onClose: onDeleteChatClose,
   } = useDisclosure();
   const [chatToDelete, setChatToDelete] = useState(null);
+  const [hoveredChatId, setHoveredChatId] = useState(null);
 
   const handleDeleteAllChats = () => {
     setAllChats([]);
@@ -70,17 +81,50 @@ function ChatSidebar({
     onDeleteChatClose();
   };
 
+  const handleStarChat = (chatId) => {
+    setAllChats((prev) => {
+      const updated = prev.map((chat) => {
+        if (chat.id === chatId) {
+          return { ...chat, isStarred: !chat.isStarred };
+        }
+        return chat;
+      });
+      localStorage.setItem("voxChats", JSON.stringify(updated));
+      return updated;
+    });
+  };
+
+  const handleArchiveChat = (chatId) => {
+    setAllChats((prev) => {
+      const updated = prev.map((chat) => {
+        if (chat.id === chatId) {
+          return { ...chat, isArchived: !chat.isArchived };
+        }
+        return chat;
+      });
+      localStorage.setItem("voxChats", JSON.stringify(updated));
+      return updated;
+    });
+  };
+
   const filteredChats = allChats.filter((chat) => {
     const query = chatSearchQuery.toLowerCase();
-    return (
+    const matchesSearch = 
       (chat.title && chat.title.toLowerCase().includes(query)) ||
       (chat.conversation &&
         chat.conversation.some(
           (msg) =>
             (msg.user && msg.user.toLowerCase().includes(query)) ||
-            (msg.assistant && msg.assistant.toLowerCase().includes(query)),
-        ))
-    );
+            (msg.assistant && msg.assistant.toLowerCase().includes(query))
+        ));
+
+    // Filter based on selected tab
+    if (selectedTab === "starred") {
+      return matchesSearch && chat.isStarred;
+    } else if (selectedTab === "archived") {
+      return matchesSearch && chat.isArchived;
+    }
+    return matchesSearch && !chat.isArchived;
   });
 
   const handleExportAllChats = async () => {
@@ -90,7 +134,13 @@ function ChatSidebar({
       const safeTitle = chat.title
         ? chat.title.replace(/[^a-z0-9]/gi, "_").toLowerCase()
         : chat.id;
-      zip.file(`chat_${safeTitle}.json`, JSON.stringify(chat, null, 2));
+      // Ensure isStarred and isArchived are included in the exported data
+      const chatData = {
+        ...chat,
+        isStarred: chat.isStarred || false,
+        isArchived: chat.isArchived || false
+      };
+      zip.file(`chat_${safeTitle}.json`, JSON.stringify(chatData, null, 2));
     });
 
     zip.generateAsync({ type: "blob" }).then((content) => {
@@ -129,9 +179,20 @@ function ChatSidebar({
                 const firstUserMsg = chat.conversation.find((msg) => msg.user);
                 chat.title = firstUserMsg ? firstUserMsg.user : "Untitled Chat";
               }
+              // Ensure imported chats have isStarred and isArchived properties
+              chat.isStarred = Boolean(chat.isStarred);
+              chat.isArchived = Boolean(chat.isArchived);
+              
               if (!chat.id || !Array.isArray(chat.conversation)) return;
-              const exists = updated.some((c) => c.id === chat.id);
-              if (!exists) {
+              const existingChatIndex = updated.findIndex((c) => c.id === chat.id);
+              if (existingChatIndex !== -1) {
+                // Update existing chat while preserving starred/archived status
+                updated[existingChatIndex] = {
+                  ...chat,
+                  isStarred: chat.isStarred || updated[existingChatIndex].isStarred,
+                  isArchived: chat.isArchived || updated[existingChatIndex].isArchived
+                };
+              } else {
                 updated.push(chat);
               }
             });
@@ -146,6 +207,82 @@ function ChatSidebar({
     });
     e.target.value = null;
   };
+
+  const ChatItem = ({ chat }) => (
+    <HStack 
+      key={chat.id} 
+      w="100%" 
+      spacing={1}
+      onMouseEnter={() => setHoveredChatId(chat.id)}
+      onMouseLeave={() => setHoveredChatId(null)}
+      position="relative"
+      pr={hoveredChatId === chat.id ? "0" : "8"}
+    >
+      <LuMessagesSquare />
+      <Button
+        flex="1"
+        variant={chat.id === activeChatId ? "solid" : "ghost"}
+        colorScheme="teal"
+        size="sm"
+        onClick={() => handleSelectChat(chat.id)}
+        whiteSpace="nowrap"
+        overflow="hidden"
+        textOverflow="ellipsis"
+        justifyContent="flex-start"
+        textAlign="left"
+        width="100%"
+        maxWidth={`${sidebarWidth}px`}
+      >
+        {chat.title}
+      </Button>
+      <HStack 
+        spacing={1} 
+        position="absolute" 
+        right="0"
+        opacity={hoveredChatId === chat.id ? 1 : 0}
+        transition="opacity 0.2s"
+        bg={sidebarBg}
+      >
+        <Tooltip label={chat.isStarred ? "Unstar" : "Star"}>
+          <IconButton
+            icon={<FiStar />}
+            aria-label={chat.isStarred ? "Unstar" : "Star"}
+            size="sm"
+            colorScheme={chat.isStarred ? "yellow" : "gray"}
+            variant={chat.isStarred ? "solid" : "ghost"}
+            onClick={(e) => {
+              e.stopPropagation();
+              handleStarChat(chat.id);
+            }}
+          />
+        </Tooltip>
+        <Tooltip label={chat.isArchived ? "Unarchive" : "Archive"}>
+          <IconButton
+            icon={<FiArchive />}
+            aria-label={chat.isArchived ? "Unarchive" : "Archive"}
+            size="sm"
+            colorScheme={chat.isArchived ? "purple" : "gray"}
+            variant={chat.isArchived ? "solid" : "ghost"}
+            onClick={(e) => {
+              e.stopPropagation();
+              handleArchiveChat(chat.id);
+            }}
+          />
+        </Tooltip>
+        <IconButton
+          aria-label="Delete chat"
+          icon={<span>&times;</span>}
+          size="sm"
+          colorScheme="red"
+          variant="ghost"
+          onClick={(e) => {
+            e.stopPropagation();
+            handleDeleteChatClick(chat.id);
+          }}
+        />
+      </HStack>
+    </HStack>
+  );
 
   return (
     <>
@@ -186,36 +323,52 @@ function ChatSidebar({
             />
           </Tooltip>
         </HStack>
-        <Box w="100%" overflowY="auto">
-          {filteredChats.map((chat) => (
-            <HStack key={chat.id} w="100%" spacing={1}>
-              <Button
-                flex="1"
-                variant={chat.id === activeChatId ? "solid" : "ghost"}
-                colorScheme="teal"
-                size="sm"
-                onClick={() => handleSelectChat(chat.id)}
-                whiteSpace="nowrap"
-                overflow="hidden"
-                textOverflow="ellipsis"
-                justifyContent="flex-start"
-                textAlign="left"
-                width="100%"
-                maxWidth={`${sidebarWidth}px`}
-              >
-                {chat.title}
-              </Button>
-              <IconButton
-                aria-label="Delete chat"
-                icon={<span>&times;</span>}
-                size="sm"
-                colorScheme="red"
-                variant="ghost"
-                onClick={() => handleDeleteChatClick(chat.id)}
-              />
-            </HStack>
-          ))}
-        </Box>
+
+        <Tabs 
+          isFitted 
+          variant="enclosed" 
+          onChange={(index) => {
+            const tabs = ["all", "starred", "archived"];
+            dispatch(setSelectedTab(tabs[index]));
+          }}
+          index={["all", "starred", "archived"].indexOf(selectedTab)}
+          w="100%"
+          size="sm"
+          display="flex"
+          flexDirection="column"
+          flex="1"
+          minH="0"
+        >
+          <TabList mb="1em">
+            <Tab>All</Tab>
+            <Tab>Starred</Tab>
+            <Tab>Archived</Tab>
+          </TabList>
+
+          <TabPanels flex="1" minH="0">
+            <TabPanel p={0} h="100%">
+              <Box w="100%" h="100%" overflowY="auto">
+                {filteredChats.map((chat) => (
+                  <ChatItem key={chat.id} chat={chat} />
+                ))}
+              </Box>
+            </TabPanel>
+            <TabPanel p={0} h="100%">
+              <Box w="100%" h="100%" overflowY="auto">
+                {filteredChats.map((chat) => (
+                  <ChatItem key={chat.id} chat={chat} />
+                ))}
+              </Box>
+            </TabPanel>
+            <TabPanel p={0} h="100%">
+              <Box w="100%" h="100%" overflowY="auto">
+                {filteredChats.map((chat) => (
+                  <ChatItem key={chat.id} chat={chat} />
+                ))}
+              </Box>
+            </TabPanel>
+          </TabPanels>
+        </Tabs>
 
         <VStack mt="auto" spacing={2} position="sticky" bottom="0">
           <HStack>

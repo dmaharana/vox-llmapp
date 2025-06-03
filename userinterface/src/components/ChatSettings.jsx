@@ -26,7 +26,8 @@ import IncludeHistorySwitch from "./IncludeHistorySwitch";
 import PromptLibrary from "./PromptLibrary";
 import ProviderManagement from "./ProviderManagement";
 import AvatarUpload from "./AvatarUpload";
-import UserNameEdit from "./UserNameEdit";
+import UserNameEdit from "./UserProfile/UserNameEdit";
+import ChatModeSwitch from "./UserProfile/ChatModeSwitch";
 import { useColorModeValue } from "@chakra-ui/react";
 import MCPLibrary from "./MCP/MCPLibrary";
 import ToolLibrary from "./Tool/ToolLibrary";
@@ -47,8 +48,6 @@ function ChatSettings({
     dispatch(setSystemPrompt(e.target.value));
   }
 
-  console.log("defaultTab", defaultTab);
-
   const btnRef = useRef(null);
   const tabList = [
     "prompt",
@@ -59,13 +58,12 @@ function ChatSettings({
     "agent",
     "profile",
   ];
+  const disabledTabs = ["mcp", "tool", "agent"];
   const defaultTabName = defaultTab || tabList[0];
   const defaultTabIndex = tabList.indexOf(defaultTabName);
 
   // set border color constant for dark mode
   const borderColor = useColorModeValue("green.200", "green.700");
-
-  console.log("defaultTabName", defaultTabName);
 
   return (
     <>
@@ -96,7 +94,7 @@ function ChatSettings({
               orientation="vertical"
               variant="line"
               isLazy
-              defaultIndex={tabList.indexOf(defaultTab || tabList[0])}
+              defaultIndex={defaultTabIndex}
               h="100%"
             >
               {/* <Tabs isFitted variant="enclosed" isLazy defaultIndex={defaultTabIndex} > */}
@@ -110,7 +108,7 @@ function ChatSettings({
               >
                 <Box position="sticky" top={0}>
                   {tabList.map((tab) => (
-                    <Tab key={tab} value={tab}>
+                    <Tab key={tab} value={tab} isDisabled={disabledTabs.includes(tab)}>
                       {tab === "mcp"
                         ? "MCP"
                         : tab.charAt(0).toUpperCase() + tab.slice(1)}
@@ -184,6 +182,9 @@ function ChatSettings({
                       <UserNameEdit />
                       <Box mt={4}>
                         <AvatarUpload />
+                      </Box>
+                      <Box mt={4}>
+                        <ChatModeSwitch />
                       </Box>
                     </Box>
                   </VStack>

@@ -9,10 +9,13 @@ import {
   HStack,
   VStack,
   useDisclosure,
+  IconButton,
+  Tooltip,
 } from "@chakra-ui/react";
 import { BeatLoader } from "react-spinners";
 import generateUUID from "./scripts/utils";
 import { DEFAULT_MESSAGES } from "./Constants";
+import { TbLayoutSidebarLeftCollapse, TbLayoutSidebarRightCollapse } from "react-icons/tb";
 
 import ChatSidebar from "./ChatSidebar";
 import ChatHeader from "./ChatHeader";
@@ -637,9 +640,6 @@ export default function ChatScreen() {
       <ChatHeader
         toggleColorMode={toggleColorMode}
         colorMode={colorMode}
-        toggleSidebar={toggleSidebar}
-        model={model}
-        setModel={setModel}
       />
 
       {/* Main content area with sidebar and chat */}
@@ -748,6 +748,33 @@ export default function ChatScreen() {
               />
             </Box>
           </Box>
+        )}
+
+        {/* Sidebar toggle button */}
+        {(isSidebarOpen || (!isSidebarOpen && !isHovering)) && (
+          <Tooltip 
+            label={isSidebarOpen ? "Hide sidebar" : "Show sidebar"} 
+            placement="right"
+            hasArrow
+          >
+            <IconButton
+              aria-label="Toggle sidebar"
+              icon={isSidebarOpen ? <TbLayoutSidebarRightCollapse /> : <TbLayoutSidebarLeftCollapse />}
+              size="lg"
+              onClick={toggleSidebar}
+              variant="ghost"
+              position="absolute"
+              left={isSidebarOpen ? `${sidebarWidth}px` : "0"}
+              top="4"
+              zIndex={1000}
+              color={useColorModeValue("blue.900", "blue.100")}
+              borderRadius="0 md md 0"
+              transition="left 0.3s ease"
+              _hover={{
+                bg: useColorModeValue("gray.100", "gray.600"),
+              }}
+            />
+          </Tooltip>
         )}
 
         {/* Chat container - centered and 75% width */}

@@ -24,6 +24,9 @@ import {
   ViewOffIcon,
   EditIcon,
 } from "@chakra-ui/icons";
+import { SiDreamstime } from "react-icons/si";
+import { useSelector } from "react-redux";
+
 import ReactMarkdown from "markdown-to-jsx";
 import ChakraUIRenderer from "chakra-ui-markdown-renderer";
 import { DEFAULT_MESSAGES } from "./Constants";
@@ -112,7 +115,8 @@ const ThinkBlock = ({ content }) => {
     >
       <CardBody p={3}>
         <HStack align="flex-start" spacing={3}>
-          <Box color={thinkText}>💭</Box>
+          <SiDreamstime color={thinkText} size={20} />
+          {/* <Box color={thinkText}>💭</Box> */}
           <Box color={thinkText} fontSize="sm" fontStyle="italic" flex="1">
             <ReactMarkdown components={ChakraUIRenderer()}>
               {stripThinkTags(content)}
@@ -163,22 +167,6 @@ const avatarImagesFormal = [
   avatarImage13,
 ];
 
-const chatMode = "formal";
-let avatarImages = avatarImagesInformal;
-if (chatMode === "formal") {
-  avatarImages = avatarImagesFormal;
-}
-
-const getAvatarForModel = (modelName) => {
-  if (!modelName) return avatarImages[0]; // fallback
-  let hash = 0;
-  for (let i = 0; i < modelName.length; i++) {
-    hash = modelName.charCodeAt(i) + ((hash << 5) - hash);
-  }
-  const index = Math.abs(hash) % avatarImages.length;
-  return avatarImages[index];
-};
-
 export function AssistantMsg({
   msg,
   name,
@@ -193,10 +181,13 @@ export function AssistantMsg({
   model,
   handleAssistantUpdate,
 }) {
+  const { chatMode } = useSelector((state) => state.user);
   const { hasCopied, onCopy } = useClipboard(msg);
 
   const assistantBg = useColorModeValue("gray.50", "gray.700");
   const assistantTextColor = useColorModeValue("black", "white");
+
+  let avatarImages = chatMode === "formal" ? avatarImagesFormal : avatarImagesInformal;
 
   const conversation = chatHistory?.find(
     (conv) => conv.id === convId,
@@ -208,8 +199,19 @@ export function AssistantMsg({
   const [isMsgExpanded, setIsMsgExpanded] = useState(waitingResponse);
   const [isEditing, setIsEditing] = useState(false);
   const maxContentLength = 200;
+  
+  // Get the avatar for the model
+  const getAvatarForModel = (modelName) => {
+    if (!modelName) return avatarImages[0]; // fallback
+    let hash = 0;
+    for (let i = 0; i < modelName.length; i++) {
+      hash = modelName.charCodeAt(i) + ((hash << 5) - hash);
+    }
+    const index = Math.abs(hash) % avatarImages.length;
+    return avatarImages[index];
+  };
   const currentAvatar = getAvatarForModel(model);
-
+  
   return (
     <Box
       bg={assistantBg}

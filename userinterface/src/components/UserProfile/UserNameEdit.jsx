@@ -8,7 +8,7 @@ import {
   useColorModeValue,
 } from "@chakra-ui/react";
 import { useDispatch, useSelector } from "react-redux";
-import { setUserName } from "../store/userSlice";
+import { setUserName } from "../../store/userSlice";
 
 const UserNameEdit = () => {
   const dispatch = useDispatch();
@@ -49,7 +49,7 @@ const UserNameEdit = () => {
             onChange={(e) => setTempName(e.target.value)}
             placeholder="Enter your name"
             maxLength={50}
-            onKeyPress={(e) => {
+            onKeyDown={(e) => {
               if (e.key === "Enter") {
                 handleSave();
               } else if (e.key === "Escape") {

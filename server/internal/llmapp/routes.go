@@ -108,8 +108,10 @@ func (c *Config) routes() http.Handler {
 	mux.Get("/api/supported-providers", c.GetSupportedProviders)
 	mux.Get("/api/providers", c.GetDefaultProvider)
 	mux.Get("/api/worker-status", c.GetWorkerPoolStatus)
+	mux.Post("/api/test-chat", c.TestChatResponse)
 
 	mux.Post("/api/chat", c.ChatResponse)
+	
 
 	mux.Delete("/api/cancel", c.CancelRequest)
 

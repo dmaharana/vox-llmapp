@@ -29,7 +29,7 @@ func refineShortQuery(query string) string {
 	if len(query) >= minQueryLength {
 		return query
 	}
-	return fmt.Sprintf("Please provide a detailed response to: \"%s\". "+
+	return fmt.Sprintf("Please provide a detailed response to: \"%s\". " +
 		"Expand on the topic with relevant information and examples.", query)
 }
 
@@ -77,16 +77,19 @@ func (app *Config) ChatResponse(w http.ResponseWriter, r *http.Request) {
 	errorChan := make(chan error, 1)
 	cancelChan := make(chan bool, 1)
 
-	// Ensure channels are properly closed when handler exits
-	defer func() {
-		close(responseChan)
-		close(errorChan)
-		// cancelChan is closed by the worker
-	}()
+	
 
 	// Create request context with timeout
 	ctx, cancel := context.WithTimeout(r.Context(), 5*time.Minute)
 	defer cancel()
+
+	log.Printf("Request received: %+v", reqPayload)
+	log.Printf("API Key: %s", apiKey)
+	log.Printf("Token: %s", token)
+	log.Printf("Response Channel: %+v", responseChan)
+	log.Printf("Error Channel: %+v", errorChan)
+	log.Printf("Cancel Channel: %+v", cancelChan)
+	log.Printf("Cancel Token: %s", token)
 
 	// Create LLM request
 	llmRequest := LLMRequest{
@@ -139,24 +142,19 @@ func (app *Config) ChatResponse(w http.ResponseWriter, r *http.Request) {
 
 	// Handle response based on streaming mode
 	if reqPayload.Stream {
-		app.handleStreamResponse(w, responseChan, errorChan, ctx)
+		app.handleStreamResponse(w, r, responseChan, errorChan, ctx, token)
 	} else {
 		app.handleNonStreamResponse(w, responseChan, errorChan, ctx)
 	}
 }
 
 // handleStreamResponse processes streaming responses from worker
-func (app *Config) handleStreamResponse(w http.ResponseWriter, responseChan chan LLMResponse, errorChan chan error, ctx context.Context) {
+func (app *Config) handleStreamResponse(w http.ResponseWriter, r *http.Request, responseChan chan LLMResponse, errorChan chan error, ctx context.Context, token string) {
 	log.Printf("Handling stream response")
 
 	flusher, ok := w.(http.Flusher)
 	if !ok {
-		select {
-		case errorChan <- fmt.Errorf("streaming not supported"):
-		default:
-			log.Printf("Error channel closed or blocked while sending streaming error")
-		}
-		app.errorJSON(w, fmt.Errorf("streaming not supported"))
+		app.sendErrorResponse(w, http.StatusBadRequest, "server_error", "streaming_not_supported", "Streaming not supported")
 		return
 	}
 
@@ -165,79 +163,79 @@ func (app *Config) handleStreamResponse(w http.ResponseWriter, responseChan chan
 	w.Header().Set("Connection", "keep-alive")
 	w.Header().Set("X-Accel-Buffering", "no") // Disable buffering in Nginx
 
-	// Create error channel for goroutine communication
-	streamErrChan := make(chan error, 1)
-	defer close(streamErrChan)
-
 	// Start response processing in a goroutine
 	go func() {
+		// Send cancel token as the first event
+		cancelTokenData, _ := json.Marshal(map[string]string{"cancelToken": token})
+		fmt.Fprintf(w, "data: %s\n\n", string(cancelTokenData))
+		flusher.Flush()
+
 		for {
 			select {
 			case response, ok := <-responseChan:
 				if !ok {
-					log.Printf("Response channel closed")
-					select {
-					case streamErrChan <- fmt.Errorf("response channel closed unexpectedly"):
-					default:
-						log.Printf("Stream error channel closed or blocked")
-					}
+					log.Printf("Response channel closed unexpectedly")
+					app.sendErrorResponse(w, http.StatusBadRequest, "server_error", "channel_closed", "Response channel closed unexpectedly")
 					return
 				}
 
+				log.Printf("Response: %+v", response)
 				if response.Error != nil {
-					select {
-					case streamErrChan <- response.Error:
-					default:
-						log.Printf("Stream error channel closed or blocked")
-					}
+					log.Printf("Error: %+v", response.Error)
+					// Send error response with proper structure
+					app.sendErrorResponse(w, http.StatusBadRequest, response.Error.Type, response.Error.Code, response.Error.Message)
+					flusher.Flush()
 					return
 				}
 
-				// Send response chunk to client
-				err := app.writeJSON(w, http.StatusOK, response.Data)
+				// Send response chunk to client in SSE format
+				// Check if the client has disconnected
+				select {
+				case <-ctx.Done():
+					log.Printf("Client disconnected, stopping stream")
+					return
+				default:
+				}
+				jsonData, err := json.Marshal(response.Data)
 				if err != nil {
-					streamErrChan <- err
+					log.Printf("Error marshaling response: %v", err)
 					return
 				}
+				
+				// Write in SSE format
+				fmt.Fprintf(w, "data: %s\n\n", string(jsonData))
 				flusher.Flush()
+				
+				log.Printf("Sent SSE data: %s", string(jsonData))
 
 				if response.IsComplete {
 					log.Printf("Stream completed successfully")
-					select {
-					case streamErrChan <- err:
-					default:
-						log.Printf("Stream error channel closed or blocked")
-					}
+					// Send completion signal in SSE format
+					fmt.Fprintf(w, "data: [DONE]\n\n")
+					flusher.Flush()
 					return
 				}
 
 			case err := <-errorChan:
 				if err != nil {
-					select {
-					case streamErrChan <- err:
-					default:
-						log.Printf("Stream error channel closed or blocked")
-					}
+					log.Printf("Error from worker: %v", err)
+					app.sendErrorResponse(w, http.StatusBadRequest, "server_error", "worker_error", err.Error())
+					flusher.Flush()
 				}
 				return
 
 			case <-ctx.Done():
-				log.Printf("Stream cancelled by context")
-				streamErrChan <- ctx.Err()
+				log.Printf("Stream cancelled by context: %v", ctx.Err())
+				app.sendErrorResponse(w, http.StatusBadRequest, "server_error", "request_cancelled", "Request cancelled or timed out")
+				flusher.Flush()
 				return
 			}
 		}
 	}()
 
-	// Wait for completion or error
-	select {
-	case err := <-streamErrChan:
-		if err != nil && err != context.Canceled {
-			app.errorJSON(w, err)
-		}
-	case <-ctx.Done():
-		log.Printf("Stream context cancelled")
-	}
+	// Wait for context cancellation
+	<-ctx.Done()
+	log.Printf("Stream handler exiting")
 }
 
 // handleNonStreamResponse processes non-streaming responses from worker
@@ -248,45 +246,39 @@ func (app *Config) handleNonStreamResponse(w http.ResponseWriter, responseChan c
 	timeoutCtx, cancel := context.WithTimeout(ctx, 30*time.Second)
 	defer cancel()
 
-	// Create error channel for internal errors
-	internalErrChan := make(chan error, 1)
-	defer close(internalErrChan)
-
 	select {
 	case response, ok := <-responseChan:
 		if !ok {
-			err := fmt.Errorf("response channel closed unexpectedly")
-			log.Printf("Response error: %v", err)
-			app.errorJSON(w, err)
+			app.sendErrorResponse(w, http.StatusBadRequest, "server_error", "channel_closed", "Response channel closed unexpectedly")
 			return
 		}
 
 		if response.Error != nil {
-			log.Printf("Response error: %v", response.Error)
-			app.errorJSON(w, response.Error)
+			// Send error response with proper structure
+			app.sendErrorResponse(w, http.StatusBadRequest, response.Error.Type, response.Error.Code, response.Error.Message)
 			return
 		}
 
 		if err := app.writeJSON(w, http.StatusOK, response.Data); err != nil {
 			log.Printf("Error writing response: %v", err)
-			app.errorJSON(w, fmt.Errorf("error writing response: %v", err))
+			app.sendErrorResponse(w, http.StatusInternalServerError, "server_error", "write_error", fmt.Sprintf("Failed to write response: %v", err))
 			return
 		}
 
 	case err := <-errorChan:
 		if err != nil {
 			log.Printf("Error from worker: %v", err)
-			app.errorJSON(w, err)
+			app.sendErrorResponse(w, http.StatusBadRequest, "server_error", "worker_error", err.Error())
 			return
 		}
 
 	case <-timeoutCtx.Done():
 		log.Printf("Request timed out")
-		app.errorJSON(w, fmt.Errorf("request timed out after 30 seconds"))
+		app.sendErrorResponse(w, http.StatusGatewayTimeout, "server_error", "timeout", "Request timed out after 30 seconds")
 
 	case <-ctx.Done():
-		log.Printf("Request cancelled by client")
-		app.errorJSON(w, fmt.Errorf("request cancelled by client"))
+		log.Printf("Request cancelled by client: %v", ctx.Err())
+		app.sendErrorResponse(w, http.StatusBadRequest, "server_error", "request_cancelled", "Request cancelled by client")
 	}
 }
 
@@ -536,3 +528,95 @@ func (app *Config) GetWorkerPoolStatus(w http.ResponseWriter, r *http.Request) {
 
 	app.writeJSON(w, http.StatusOK, jsonresp)
 }
+
+// TestChatResponse is a simple test endpoint to verify worker functionality
+func (app *Config) TestChatResponse(w http.ResponseWriter, r *http.Request) {
+	log.Printf("Test chat endpoint called")
+	
+	// Simple test request
+	testRequest := RequestPayload{
+		Model:        "qwen3:0.6b",
+		Prompt:       "Hello, this is a test",
+		Stream:       true,
+		ProviderName: "ollama",
+		SystemPrompt: "You are a helpful assistant.",
+	}
+	
+	// Generate token
+	token := app.randomString(32)
+	
+	// Create channels
+	responseChan := make(chan LLMResponse, 100)
+	errorChan := make(chan error, 1)
+	cancelChan := make(chan bool, 1)
+	
+	// Create LLM request
+	llmRequest := LLMRequest{
+		ID:             token,
+		RequestPayload: testRequest,
+		APIKey:         "",
+		ResponseChan:   responseChan,
+		ErrorChan:      errorChan,
+		CancelChan:     cancelChan,
+		CancelToken:    token,
+	}
+	
+	log.Printf("Submitting test request to worker pool")
+	app.WorkerPool.SubmitRequest(llmRequest)
+	
+	// Set up streaming response
+	w.Header().Set("Content-Type", "text/event-stream")
+	w.Header().Set("Cache-Control", "no-cache")
+	w.Header().Set("Connection", "keep-alive")
+	
+	flusher, ok := w.(http.Flusher)
+	if !ok {
+		http.Error(w, "Streaming not supported", http.StatusInternalServerError)
+		return
+	}
+	
+	// Process responses
+	for {
+		select {
+		case response, ok := <-responseChan:
+			if !ok {
+				log.Printf("Response channel closed")
+				return
+			}
+			
+			log.Printf("Test response received: %+v", response)
+			
+			if response.Error != nil {
+				log.Printf("Test error: %+v", response.Error)
+				fmt.Fprintf(w, "data: {\"error\": \"%s\"}\n\n", response.Error.Message)
+				flusher.Flush()
+				return
+			}
+			
+			if response.Data.Response != "" {
+				fmt.Fprintf(w, "data: {\"response\": \"%s\"}\n\n", response.Data.Response)
+				flusher.Flush()
+			}
+			
+			if response.IsComplete {
+				log.Printf("Test stream completed")
+				fmt.Fprintf(w, "data: [DONE]\n\n")
+				flusher.Flush()
+				return
+			}
+			
+		case err := <-errorChan:
+			log.Printf("Test error from worker: %v", err)
+			fmt.Fprintf(w, "data: {\"error\": \"%s\"}\n\n", err.Error())
+			flusher.Flush()
+			return
+			
+		case <-time.After(30 * time.Second):
+			log.Printf("Test timeout")
+			fmt.Fprintf(w, "data: {\"error\": \"timeout\"}\n\n")
+			flusher.Flush()
+			return
+		}
+	}
+}
+

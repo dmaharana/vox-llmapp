@@ -1,13 +1,15 @@
 package llmapp
 
+import "sync"
+
 type (
 	StreamChatCompletionResponse struct {
-		ID       string             `json:"id"`
-		Object   string             `json:"object"`
-		Created  int64              `json:"created"`
-		Model    string             `json:"model"`
-		SystemFP string             `json:"system_fingerprint"`
-		Choices  []CompletionChoice `json:"choices"`
+		ID       string                   `json:"id"`
+		Object   string                   `json:"object"`
+		Created  int64                    `json:"created"`
+		Model    string                   `json:"model"`
+		SystemFP string                   `json:"system_fingerprint"`
+		Choices  []StreamCompletionChoice `json:"choices"`
 	}
 
 	StreamCompletionChoice struct {
@@ -16,18 +18,36 @@ type (
 		FinishReason *string         `json:"finish_reason"`
 	}
 
-	StreamCompletionDelta struct {
+	CompletionDelta struct {
 		Role    string `json:"role,omitempty"`
 		Content string `json:"content,omitempty"`
 	}
 
-	StreamChatCompletionError struct {
+	ChatCompletionResponse struct {
+		ID      string   `json:"id"`
+		Object  string   `json:"object"`
+		Created int64    `json:"created"`
+		Model   string   `json:"model"`
+		SystemFP string   `json:"system_fingerprint"`
+		Choices []Choice `json:"choices"`
+		Usage   Usage    `json:"usage"`
+	}
+
+	ChatCompletionError struct {
 		Error struct {
 			Message string `json:"message"`
 			Type    string `json:"type"`
 			Code    string `json:"code"`
 		} `json:"error"`
 	}
+
+	CompletionChoice struct {
+		Index        int                  `json:"index"`
+		Delta        CompletionDelta      `json:"delta"`
+		FinishReason *string             `json:"finish_reason"`
+	}
+
+
 
 	// openai complaint models
 	OpenAIModels struct {
@@ -67,12 +87,14 @@ type (
 	}
 
 	RequestData struct {
-		Model    string         `json:"model"`
-		Prompt   string         `json:"prompt,omitempty"`
-		Raw      bool           `json:"raw" default:"true"`
-		Messages []Message      `json:"messages,omitempty"`
-		Stream   bool           `json:"stream" default:"true"`
-		Options  RequestOptions `json:"options,omitempty"`
+		Model  string `json:"model"`
+		Prompt string `json:"prompt,omitempty"`
+		// Raw      bool      `json:"raw" default:"true"`
+		Messages []Message `json:"messages,omitempty"`
+		Stream   bool      `json:"stream" default:"true"`
+		// Options     RequestOptions `json:"options,omitempty"`
+		Temperature float32 `json:"temperature,omitempty"`
+		Seed        int     `json:"seed,omitempty"`
 	}
 
 	RequestOptions struct {
@@ -95,6 +117,7 @@ type (
 		Stream         bool           `json:"stream,omitempty"`
 		Temperature    float32        `json:"temperature,omitempty"`
 		NumContext     int            `json:"num_ctx,omitempty"`
+		CancelToken    string         `json:"cancelToken,omitempty"`
 	}
 
 	Conversation struct {
@@ -137,6 +160,22 @@ type (
 		Endpoint     string `json:"endpoint"`
 		APIKey       string `json:"api_key"`
 	}
+
+	// LLMResponse represents a response sent back through the channel
+	LLMResponse struct {
+		ID         string
+		Data       ResponseData
+		IsStream   bool
+		IsComplete bool
+		Error      *LLMError
+	}
+
+	// LLMError represents a structured error response
+	LLMError struct {
+		Message string `json:"message"`
+		Type    string `json:"type"`
+		Code    string `json:"code"`
+	}
 )
 
 // model setting defaults
@@ -165,8 +204,8 @@ var (
 	}
 
 	ProviderChatURLs = map[string]string{
-		"openrouter": "%s/api/v1/chat",
-		"groq":       "%s/openai/v1/chat",
+		"openrouter": "%s/api/v1/chat/completions",
+		"groq":       "%s/openai/v1/chat/completions",
 		"gemini":     "%s/v1beta/openai/chat/completions",
 		"ollama":     "%s/v1/chat/completions",
 	}
@@ -204,13 +243,12 @@ type (
 		CancelToken    string `json:"cancel_token"`
 	}
 
-	// LLMResponse represents a response sent back through the channel
-	LLMResponse struct {
-		ID         string
-		Data       ResponseData
-		IsStream   bool
-		IsComplete bool
-		Error      error
+	// LLMWorker represents a single worker
+	LLMWorker struct {
+		ID       int
+		requests chan LLMRequest
+		quit     chan bool
+		wg       *sync.WaitGroup
 	}
 
 	// LLMWorkerPool manages the worker goroutines
@@ -218,5 +256,7 @@ type (
 		RequestChan chan LLMRequest
 		Workers     int
 		QuitChan    chan bool
+		workers     []*LLMWorker
+		wg          *sync.WaitGroup
 	}
 )

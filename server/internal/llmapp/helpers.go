@@ -6,6 +6,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"log"
 	"net/http"
 	"net/url"
 )
@@ -94,11 +95,32 @@ func (app *Config) randomString(n int) string {
 }
 
 func getBaseURL(rawurl string) (string, error) {
-    u, err := url.Parse(rawurl)
-    if err != nil {
-        return "", err
-    }
-    // Combine scheme and host to get the base URL
-    baseURL := fmt.Sprintf("%s://%s", u.Scheme, u.Host)
-    return baseURL, nil
+	u, err := url.Parse(rawurl)
+	if err != nil {
+		return "", err
+	}
+	// Combine scheme and host to get the base URL
+	baseURL := fmt.Sprintf("%s://%s", u.Scheme, u.Host)
+	return baseURL, nil
+}
+
+// sendErrorResponse standardizes error response handling and logging
+func (app *Config) sendErrorResponse(w http.ResponseWriter, statusCode int, errType string, errCode string, message string) {
+	// Log the error with all details
+	log.Printf("Error Response - Status: %d, Type: %s, Code: %s, Message: %s",
+		statusCode, errType, errCode, message)
+
+	// Create and send the error response
+	response := jsonResponse{
+		Error:   true,
+		Message: message,
+		Data: map[string]string{
+			"type": errType,
+			"code": errCode,
+		},
+	}
+
+	if err := app.writeJSON(w, statusCode, response); err != nil {
+		log.Printf("Failed to write error response: %v", err)
+	}
 }

@@ -16,4 +16,7 @@ const (
 	ProviderOpenRouter = "openrouter"
 	ProviderGroq       = "groq"
 	ProviderGemini     = "gemini"
+
+	// ACK message
+	ACKMessage = "REQUEST_RECEIVED"
 )

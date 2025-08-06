@@ -24,6 +24,11 @@ export default function ChatFooterControls({
   setIsSettingsOpen,
 }) {
 
+  // if chatFooterDefaultSettingsTab is undefined, set it to "settings"
+  if (chatFooterDefaultSettingsTab === undefined) {
+    chatFooterDefaultSettingsTab = "prompt";
+  }
+
   return (
     <HStack justifyContent="space-between" w="100%">
       <HStack>

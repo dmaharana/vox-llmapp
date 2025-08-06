@@ -59,7 +59,7 @@ export default function ChatScreen() {
   const [model, setModel] = useState("");
   const [includeHistory, setIncludeHistory] = useState(true);
   const [convHistory, setConvHistory] = useState([]);
-  
+
   const [allChats, setAllChats] = useState([]);
   const [activeChatId, setActiveChatId] = useState(null);
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
@@ -72,7 +72,7 @@ export default function ChatScreen() {
   const [selectedModel, setSelectedModel] = useState(null);
   const [selectedProviderId, setSelectedProviderId] = useState(null);
   const [selectedProvider, setSelectedProvider] = useState(null);
-  
+
   const chatBodySettingsDefaultTab = "prompts";
   const chatFooterSettingsDefaultTab = "profile";
   const [settingsDefaultTab, setSettingsDefaultTab] = useState(chatBodySettingsDefaultTab);
@@ -83,6 +83,27 @@ export default function ChatScreen() {
       setSelectedProvider(provider);
     }
   }, [selectedProviderId]);
+
+  // Auto-select first provider if none selected and providers are available
+  useEffect(() => {
+    if (!selectedProviderId && providers.length > 0) {
+      const firstProvider = providers[0];
+      setSelectedProviderId(firstProvider.id);
+      console.log("Auto-selected first provider:", firstProvider);
+    }
+  }, [providers, selectedProviderId]);
+
+  // Auto-select first model when provider is selected but no model is set
+  useEffect(() => {
+    if (selectedProvider && (!model || model === "")) {
+      // For Ollama, let's set a default model
+      if (selectedProvider.provider_name?.toLowerCase() === "ollama") {
+        const defaultModel = "qwen3:0.6b"; // Use the smaller, faster model
+        setModel(defaultModel);
+        console.log("Auto-selected default model for Ollama:", defaultModel);
+      }
+    }
+  }, [selectedProvider, model]);
 
   const toggleSidebar = () => setIsSidebarOpen((prev) => !prev);
 
@@ -199,9 +220,9 @@ export default function ChatScreen() {
       const updated = prev.map((chat) =>
         chat.id === activeChatId
           ? {
-              ...chat,
-              model,
-            }
+            ...chat,
+            model,
+          }
           : chat,
       );
       localStorage.setItem("voxChats", JSON.stringify(updated));
@@ -247,10 +268,10 @@ export default function ChatScreen() {
           updated = prev.map((chat) =>
             chat.id === activeChatId
               ? {
-                  ...chat,
-                  conversation,
-                  title: generateChatTitle(conversation),
-                }
+                ...chat,
+                conversation,
+                title: generateChatTitle(conversation),
+              }
               : chat,
           );
         } else {
@@ -298,17 +319,17 @@ export default function ChatScreen() {
           p.map((item) =>
             item.id === id
               ? {
-                  ...item,
-                  messages: [
-                    ...item.messages,
-                    {
-                      role: "assistant",
-                      model: message.model,
-                      content: assistantMessage,
-                      resTime: message.resTime,
-                    },
-                  ],
-                }
+                ...item,
+                messages: [
+                  ...item.messages,
+                  {
+                    role: "assistant",
+                    model: message.model,
+                    content: assistantMessage,
+                    resTime: message.resTime,
+                  },
+                ],
+              }
               : item,
           ),
         );
@@ -343,12 +364,12 @@ export default function ChatScreen() {
       p.map((m) =>
         m.id === id
           ? {
-              ...m,
-              user: newMessage.user,
-              model: newMessage.model,
-              assistant: newMessage.assistant,
-              resTime: newMessage.resTime,
-            }
+            ...m,
+            user: newMessage.user,
+            model: newMessage.model,
+            assistant: newMessage.assistant,
+            resTime: newMessage.resTime,
+          }
           : m,
       ),
     );
@@ -454,16 +475,33 @@ export default function ChatScreen() {
   }
 
   const callLlmService = async (message) => {
-    // console.log(conversation);
-    // get user query for the message id
     const query = message.user;
     const msgId = message.id;
     const startTime = new Date().getTime();
 
+    // Check if provider is selected
+    if (!selectedProvider) {
+      console.error("No provider selected");
+      setConversation((p) =>
+        p.map((m) =>
+          m.id === msgId
+            ? {
+                ...m,
+                assistant: "Error: No provider selected. Please select a provider in settings.",
+                model,
+                resTime: "0s",
+              }
+            : m,
+        ),
+      );
+      setWaitingResponse(false);
+      setCurrentMsgId(-1);
+      return;
+    }
+
     let reqBody = {
       model: model,
       prompt: query,
-      // raw: true,
       stream: true,
       includeHistory: includeHistory,
       systemPrompt: systemPrompt,
@@ -472,6 +510,11 @@ export default function ChatScreen() {
       providerApiKey: selectedProvider.api_key,
     };
 
+    console.log("reqBody", reqBody);
+    console.log("selectedProvider", selectedProvider);
+    console.log("model", model);
+    console.log("providers", providers);
+
     if (conversation.length > 0 && includeHistory) {
       reqBody = {
         ...reqBody,
@@ -479,7 +522,6 @@ export default function ChatScreen() {
       };
     }
 
-    // console.log(JSON.stringify(reqBody));
     try {
       setWaitingResponse(true);
       const response = await fetch("/api/chat", {
@@ -491,6 +533,7 @@ export default function ChatScreen() {
         body: JSON.stringify(reqBody),
       });
 
+
       if (!response.ok) {
         const errBody = await response.json();
         console.error(errBody);
@@ -498,11 +541,11 @@ export default function ChatScreen() {
           p.map((m) =>
             m.id === msgId
               ? {
-                  ...m,
-                  assistant: errBody.message,
-                  model,
-                  resTime: "0s",
-                }
+                ...m,
+                assistant: errBody.message,
+                model,
+                resTime: "0s",
+              }
               : m,
           ),
         );
@@ -512,10 +555,13 @@ export default function ChatScreen() {
         return;
       }
 
+      // Process the streaming response
       const reader = response.body.getReader();
       const decoder = new TextDecoder();
       let done = false;
       let text = "";
+      let cancelTokenReceived = false;
+
       while (!done) {
         const { value, done: doneReading } = await reader.read();
 
@@ -525,63 +571,102 @@ export default function ChatScreen() {
         }
 
         const chunkValue = decoder.decode(value, { stream: true });
-        const chunkParts = parseMultipleJson(chunkValue);
-
-        chunkParts.forEach((cJson) => {
-          // console.log(cJson);
-          try {
-            if (cJson["cancelToken"]) {
-              setCancelToken(cJson["cancelToken"]);
-            }
-            if (cJson["response"]) {
-              text += cJson["response"];
-            }
-            const endTime = new Date().getTime();
-            const resTime = (endTime - startTime) / 1000;
-            setConversation((p) =>
-              p.map((m) =>
-                m.id === msgId
-                  ? {
-                      ...m,
-                      assistant: text,
-                      resTime: `${resTime.toFixed(2)}s`,
-                      timestamp: new Date().toISOString(),
-                    }
-                  : m,
-              ),
-            );
-          } catch (error) {
-            console.error(error);
-            console.log(part);
+        console.log("Raw chunk received:", chunkValue);
+        
+        // Split by lines and process each SSE line
+        const lines = chunkValue.split('\n');
+        
+        for (const line of lines) {
+          const trimmedLine = line.trim();
+          console.log("Processing line:", trimmedLine);
+          
+          // Handle completion signal
+          if (trimmedLine === 'data: [DONE]') {
+            console.log("Stream completed");
+            done = true;
+            break;
           }
-        });
+          
+          // Process data lines
+          if (trimmedLine.startsWith('data: ')) {
+            const jsonStr = trimmedLine.substring(6); // Remove 'data: ' prefix
+            if (jsonStr && jsonStr !== '[DONE]') {
+              try {
+                const jsonData = JSON.parse(jsonStr);
+                console.log("Parsed JSON:", jsonData);
+
+                if (jsonData.cancelToken && !cancelTokenReceived) {
+                  setCancelToken(jsonData.cancelToken);
+                  console.log("Cancel token set:", jsonData.cancelToken);
+                  cancelTokenReceived = true;
+                }
+                
+                if (jsonData.response) {
+                  text += jsonData.response;
+                  console.log("Updated text:", text);
+                  const endTime = new Date().getTime();
+                  const resTime = (endTime - startTime) / 1000;
+                  setConversation((p) =>
+                    p.map((m) =>
+                      m.id === msgId
+                        ? {
+                          ...m,
+                          assistant: text,
+                          resTime: `${resTime.toFixed(2)}s`,
+                          timestamp: new Date().toISOString(),
+                        }
+                        : m,
+                    ),
+                  );
+                }
+              } catch (error) {
+                console.error("Error parsing JSON:", error, "Data:", jsonStr);
+              }
+            }
+          }
+        }
       }
+    if (text === "") {
+        setConversation((p) =>
+          p.map((m) =>
+            m.id === msgId
+              ? {
+                ...m,
+                assistant: DEFAULT_MESSAGES.noResponseMessage,
+                model,
+                resTime: "0s",
+              }
+              : m,
+          ),
+        );
+      }
+
+      setWaitingResponse(false);
+      setCancelToken(null);
+      setCurrentMsgId(-1);
     } catch (error) {
       console.error(error);
     } finally {
       setWaitingResponse(false);
       setCancelToken(null);
-      // if assistant message is empty, set the assistant message to "Something went wrong. Please try again."
 
       const currentConv = conversation.find((m) => m.id === message.id);
-      // console.log("msg id", message.id, "currentConv", currentConv);
 
       if (currentConv?.assistant === "") {
         setConversation((p) =>
           p.map((m) =>
             m.id === message.id
               ? {
-                  ...m,
-                  assistant: DEFAULT_MESSAGES.noResponseMessage,
-                  model,
-                  resTime: "0s",
-                }
+                ...m,
+                assistant: DEFAULT_MESSAGES.noResponseMessage,
+                model,
+                resTime: "0s",
+              }
               : m,
           ),
         );
       }
 
-      // reset current message id
       setCurrentMsgId(-1);
     }
   };
@@ -761,8 +846,8 @@ export default function ChatScreen() {
             zIndex={1002}
             transform="translateX(100%)"
           >
-            <Tooltip 
-              label={isSidebarOpen ? "Hide sidebar" : "Show sidebar"} 
+            <Tooltip
+              label={isSidebarOpen ? "Hide sidebar" : "Show sidebar"}
               placement="right"
               hasArrow
             >
@@ -841,7 +926,7 @@ export default function ChatScreen() {
                 onModelSelect={handleModelSelect}
                 isSettingsOpen={isSettingsOpen}
                 setIsSettingsOpen={setIsSettingsOpen}
-                defaultSettingsTab={chatFooterSettingsDefaultTab}
+                chatFooterDefaultSettingsTab={chatFooterSettingsDefaultTab}
               />
             </VStack>
           </Box>

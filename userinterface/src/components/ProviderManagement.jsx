@@ -58,53 +58,11 @@ export default function ProviderManagement() {
   const initialLoadComplete = useRef(false);
   const [importStatus, setImportStatus] = useState(null);
   const [importMessage, setImportMessage] = useState("");
-  // const [showImportAlert, setShowImportAlert] = useState(false);
   const [showAlert, setShowAlert] = useState(false);
   const [alertStatus, setAlertStatus] = useState(null);
   const [alertTitle, setAlertTitle] = useState("");
   const [alertMessage, setAlertMessage] = useState("");
   const showProviders = providers.length > 0;
-
-  useEffect(() => {
-    const savedProviders = localStorage.getItem("providers");
-    if (savedProviders) {
-      try {
-        const parsedProviders = JSON.parse(savedProviders);
-        if (parsedProviders.length > 0) {
-          dispatch(setProviders(parsedProviders));
-          return;
-        }
-      } catch (error) {
-        localStorage.removeItem("providers");
-        setAlertStatus("error");
-        setAlertTitle("Failed to load providers");
-        setAlertMessage("Failed to parse saved providers");
-        setShowAlert(true);
-      }
-    }
-
-    dispatch(getProviders())
-      .unwrap()
-      .then(({ providers, defaultProvider }) => {
-        let providersToStore = providers;
-
-        if (defaultProvider && (!providers || providers.length === 0)) {
-          providersToStore = [defaultProvider];
-        }
-
-        const providersWithIds = providersToStore.map((provider) => ({
-          id: provider.id || generateUUID(),
-          name: String(provider.name || "Unnamed Provider"),
-          provider_name: String(provider.provider_name || ""),
-          endpoint: String(provider.endpoint || ""),
-          api_key: String(provider.api_key || ""),
-          models: provider.models || [],
-        }));
-        localStorage.setItem("providers", JSON.stringify(providersWithIds));
-        dispatch(setProviders(providersWithIds));
-      })
-      .catch((error) => console.error("Provider fetch error:", error));
-  }, [dispatch]);
 
   useEffect(() => {
     if (providers.length > 0 && !initialLoadComplete.current) {

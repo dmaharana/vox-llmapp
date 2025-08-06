@@ -4,6 +4,7 @@ import chatReducer from "./chatSlice";
 import providerReducer from "./providerSlice";
 import userReducer from "./userSlice";
 import { initializeUserSettings, setupUserSettingsAutoSave } from "./userInit";
+import { initializeProviders } from "./providerInit";
 
 export const store = configureStore({
   reducer: {
@@ -19,6 +20,13 @@ try {
   initializeUserSettings(store);
 } catch (error) {
   console.error("Failed to initialize user settings:", error);
+}
+
+// Initialize providers
+try {
+  initializeProviders(store);
+} catch (error) {
+  console.error("Failed to initialize providers:", error);
 }
 
 // Setup auto-save for user settings

@@ -25,8 +25,14 @@ export const addMCPServer = createAsyncThunk(
   'mcp/addServer',
   async (config, { rejectWithValue }) => {
     try {
-      return await registerMCPServer(config);
+      console.log('addMCPServer thunk - calling registerMCPServer with:', config);
+      const result = await registerMCPServer(config);
+      console.log('addMCPServer thunk - received result:', result);
+      console.log('addMCPServer thunk - result type:', typeof result);
+      console.log('addMCPServer thunk - result.connections:', result?.connections);
+      return result;
     } catch (error) {
+      console.error('addMCPServer thunk - error:', error);
       return rejectWithValue(error.response?.data?.message || error.message);
     }
   }

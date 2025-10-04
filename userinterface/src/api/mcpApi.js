@@ -3,7 +3,12 @@ import axios from 'axios';
 // Get all MCP server configurations and status
 export const fetchMCPConfigs = async () => {
   try {
-    const response = await axios.get('/run/mcp-configs');
+    console.log('Fetching MCP configs, current cookies:', document.cookie);
+    const response = await axios.get('/run/mcp-configs', {
+      withCredentials: true // Ensure cookies are sent
+    });
+    console.log('fetchMCPConfigs response.data:', response.data);
+    console.log('fetchMCPConfigs connections:', response.data?.connections);
     return response.data;
   } catch (error) {
     console.error('Error fetching MCP configs:', error);
@@ -15,11 +20,20 @@ export const fetchMCPConfigs = async () => {
 export const registerMCPServer = async (config) => {
   try {
     console.log('Registering MCP server with config:', config);
-    const response = await axios.post('/run/mcp-config', { config });
+    console.log('Request will be sent to: /run/mcp-config');
+    console.log('Current cookies:', document.cookie);
+    
+    const response = await axios.post('/run/mcp-config', { config }, {
+      withCredentials: true // Ensure cookies are sent and received
+    });
+    
     console.log('MCP server registration response:', response);
     console.log('MCP server registration response.data:', response.data);
     console.log('MCP server registration response.data type:', typeof response.data);
     console.log('MCP server registration response.data.connections:', response.data?.connections);
+    console.log('Response headers:', response.headers);
+    console.log('Cookies after response:', document.cookie);
+    
     return response.data;
   } catch (error) {
     console.error('Error registering MCP server:', error);

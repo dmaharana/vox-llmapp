@@ -8,6 +8,10 @@ import { ChakraProvider, ColorModeScript, extendTheme } from "@chakra-ui/react";
 
 import { Provider } from "react-redux";
 import { store } from "./store";
+import axios from "axios";
+
+// Configure axios to always send credentials (cookies)
+axios.defaults.withCredentials = true;
 
 const colors = {
   primaryFontColor: {

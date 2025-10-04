@@ -1,6 +1,8 @@
 import { useState, useEffect } from "react";
 import { useSelector, useDispatch } from "react-redux";
 import { setPrompts, setSystemPrompt } from "../store/promptSlice";
+import { setActiveProvider } from "../store/providerSlice";
+import { initializeMCP } from "../store/mcpInit";
 import {
   Box,
   useColorMode,
@@ -15,7 +17,10 @@ import {
 import { BeatLoader } from "react-spinners";
 import generateUUID from "./scripts/utils";
 import { DEFAULT_MESSAGES } from "./Constants";
-import { TbLayoutSidebarLeftCollapse, TbLayoutSidebarRightCollapse } from "react-icons/tb";
+import {
+  TbLayoutSidebarLeftCollapse,
+  TbLayoutSidebarRightCollapse,
+} from "react-icons/tb";
 
 import ChatSidebar from "./ChatSidebar";
 import ChatHeader from "./ChatHeader";
@@ -37,7 +42,8 @@ function generateChatTitle(conversation) {
   const sentenceEnd = text.indexOf(".");
   if (sentenceEnd !== -1 && sentenceEnd < 50) {
     text = text.slice(0, sentenceEnd + 1);
-  } else {
+  }
+  else {
     const words = text.split(/\s+/).slice(0, 8);
     text = words.join(" ");
     if (words.length >= 8) text += "...";
@@ -51,7 +57,7 @@ export default function ChatScreen() {
   const dispatch = useDispatch();
   const prompts = useSelector((state) => state.prompt.prompts);
   const systemPrompt = useSelector((state) => state.prompt.systemPrompt);
-  const providers = useSelector((state) => state.provider.providers);
+  const { providers, activeProvider } = useSelector((state) => state.provider);
   const [conversation, setConversation] = useState([]);
   // const { isOpen: isSettingsOpen, onOpen: onSettingsOpen, onClose: onSettingsClose } = useDisclosure();
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
@@ -69,41 +75,41 @@ export default function ChatScreen() {
     return savedWidth ? parseInt(savedWidth) : 300;
   });
   const [isResizing, setIsResizing] = useState(false);
-  const [selectedModel, setSelectedModel] = useState(null);
-  const [selectedProviderId, setSelectedProviderId] = useState(null);
-  const [selectedProvider, setSelectedProvider] = useState(null);
 
   const chatBodySettingsDefaultTab = "prompts";
   const chatFooterSettingsDefaultTab = "profile";
-  const [settingsDefaultTab, setSettingsDefaultTab] = useState(chatBodySettingsDefaultTab);
+  const [settingsDefaultTab, setSettingsDefaultTab] = useState(
+    chatBodySettingsDefaultTab
+  );
 
+  // Initialize MCP on component mount
   useEffect(() => {
-    if (selectedProviderId) {
-      const provider = providers.find((p) => p.id === selectedProviderId);
-      setSelectedProvider(provider);
-    }
-  }, [selectedProviderId]);
+    const cleanup = initializeMCP(dispatch);
+    return cleanup; // Cleanup function for periodic refresh
+  }, [dispatch]);
 
   // Auto-select first provider if none selected and providers are available
   useEffect(() => {
-    if (!selectedProviderId && providers.length > 0) {
-      const firstProvider = providers[0];
-      setSelectedProviderId(firstProvider.id);
-      console.log("Auto-selected first provider:", firstProvider);
-    }
-  }, [providers, selectedProviderId]);
-
-  // Auto-select first model when provider is selected but no model is set
-  useEffect(() => {
-    if (selectedProvider && (!model || model === "")) {
-      // For Ollama, let's set a default model
-      if (selectedProvider.provider_name?.toLowerCase() === "ollama") {
-        const defaultModel = "qwen3:0.6b"; // Use the smaller, faster model
-        setModel(defaultModel);
-        console.log("Auto-selected default model for Ollama:", defaultModel);
+    if (!activeProvider && providers.length > 0) {
+      const enabledProviders = providers.filter((p) => p.enabled);
+      if (enabledProviders.length > 0) {
+        dispatch(setActiveProvider(enabledProviders[0]));
       }
     }
-  }, [selectedProvider, model]);
+  }, [providers, activeProvider, dispatch]);
+
+  // Auto-select first model when provider is selected or changes
+  useEffect(() => {
+    if (activeProvider) {
+      if (activeProvider.models && activeProvider.models.length > 0) {
+        setModel(activeProvider.models[0]);
+      } else {
+        setModel(""); // No models available for this provider
+      }
+    } else {
+      setModel(""); // No active provider selected
+    }
+  }, [activeProvider]);
 
   const toggleSidebar = () => setIsSidebarOpen((prev) => !prev);
 
@@ -139,7 +145,8 @@ export default function ChatScreen() {
       document.addEventListener("mouseup", handleMouseUp);
       document.body.style.cursor = "col-resize";
       document.body.style.userSelect = "none";
-    } else {
+    }
+    else {
       document.removeEventListener("mousemove", handleMouseMove);
       document.removeEventListener("mouseup", handleMouseUp);
       document.body.style.cursor = "";
@@ -162,14 +169,17 @@ export default function ChatScreen() {
         const parsedPrompt = JSON.parse(savedSystemPrompt);
         if (parsedPrompt && parsedPrompt.trim() !== "") {
           dispatch(setSystemPrompt(parsedPrompt));
-        } else {
+        }
+        else {
           dispatch(setSystemPrompt(DEFAULT_MESSAGES.SYSTEM_PROMPT));
         }
-      } catch (e) {
+      }
+      catch (e) {
         console.error("Failed to parse saved system prompt", e);
         dispatch(setSystemPrompt(DEFAULT_MESSAGES.SYSTEM_PROMPT));
       }
-    } else {
+    }
+    else {
       dispatch(setSystemPrompt(DEFAULT_MESSAGES.SYSTEM_PROMPT));
     }
   }, [dispatch]);
@@ -220,10 +230,10 @@ export default function ChatScreen() {
       const updated = prev.map((chat) =>
         chat.id === activeChatId
           ? {
-            ...chat,
-            model,
-          }
-          : chat,
+              ...chat,
+              model,
+            }
+          : chat
       );
       localStorage.setItem("voxChats", JSON.stringify(updated));
       return updated;
@@ -239,7 +249,8 @@ export default function ChatScreen() {
         setActiveChatId(chats[0].id);
         setConversation(chats[0].conversation);
       }
-    } else {
+    }
+    else {
       const newId = generateUUID();
       const initialChat = {
         id: newId,
@@ -268,13 +279,14 @@ export default function ChatScreen() {
           updated = prev.map((chat) =>
             chat.id === activeChatId
               ? {
-                ...chat,
-                conversation,
-                title: generateChatTitle(conversation),
-              }
-              : chat,
+                  ...chat,
+                  conversation,
+                  title: generateChatTitle(conversation),
+                }
+              : chat
           );
-        } else {
+        }
+        else {
           const newChat = {
             id: activeChatId,
             title: generateChatTitle(conversation),
@@ -283,7 +295,8 @@ export default function ChatScreen() {
           };
           updated = [newChat, ...prev];
         }
-      } else {
+      }
+      else {
         updated = prev;
       }
 
@@ -319,21 +332,22 @@ export default function ChatScreen() {
           p.map((item) =>
             item.id === id
               ? {
-                ...item,
-                messages: [
-                  ...item.messages,
-                  {
-                    role: "assistant",
-                    model: message.model,
-                    content: assistantMessage,
-                    resTime: message.resTime,
-                  },
-                ],
-              }
-              : item,
-          ),
+                  ...item,
+                  messages: [
+                    ...item.messages,
+                    {
+                      role: "assistant",
+                      model: message.model,
+                      content: assistantMessage,
+                      resTime: message.resTime,
+                    },
+                  ],
+                }
+              : item
+          )
         );
-      } else {
+      }
+      else {
         setConvHistory([
           {
             id: id,
@@ -364,14 +378,14 @@ export default function ChatScreen() {
       p.map((m) =>
         m.id === id
           ? {
-            ...m,
-            user: newMessage.user,
-            model: newMessage.model,
-            assistant: newMessage.assistant,
-            resTime: newMessage.resTime,
-          }
-          : m,
-      ),
+              ...m,
+              user: newMessage.user,
+              model: newMessage.model,
+              assistant: newMessage.assistant,
+              resTime: newMessage.resTime,
+            }
+          : m
+      )
     );
 
     callLlmService(newMessage);
@@ -384,8 +398,8 @@ export default function ChatScreen() {
     if (message) {
       setConversation((conversation) =>
         conversation.map((msg) =>
-          msg.id === id ? { ...msg, user: newQuery } : msg,
-        ),
+          msg.id === id ? { ...msg, user: newQuery } : msg
+        )
       );
     }
   };
@@ -397,8 +411,8 @@ export default function ChatScreen() {
     if (message) {
       setConversation((conversation) =>
         conversation.map((msg) =>
-          msg.id === id ? { ...msg, assistant: editedAssistantMsg } : msg,
-        ),
+          msg.id === id ? { ...msg, assistant: editedAssistantMsg } : msg
+        )
       );
     }
   };
@@ -441,7 +455,8 @@ export default function ChatScreen() {
 
     if (conversation.length > 0) {
       setConversation([...conversation, newMessage]);
-    } else {
+    }
+    else {
       setConversation([newMessage]);
     }
     setQuery("");
@@ -457,14 +472,16 @@ export default function ChatScreen() {
     for (let i = start; i < data.length; i++) {
       if (data[i] === "{") {
         open++;
-      } else if (data[i] === "}") {
+      }
+      else if (data[i] === "}") {
         open--;
         if (open === 0) {
           try {
             const jsonObject = JSON.parse(data.substring(start, i + 1));
             result.push(jsonObject);
             start = i + 1;
-          } catch (error) {
+          }
+          catch (error) {
             console.error("Error parsing JSON:", error);
           }
         }
@@ -480,19 +497,20 @@ export default function ChatScreen() {
     const startTime = new Date().getTime();
 
     // Check if provider is selected
-    if (!selectedProvider) {
+    if (!activeProvider) {
       console.error("No provider selected");
       setConversation((p) =>
         p.map((m) =>
           m.id === msgId
             ? {
                 ...m,
-                assistant: "Error: No provider selected. Please select a provider in settings.",
+                assistant:
+                  "Error: No provider selected. Please select a provider in settings.",
                 model,
                 resTime: "0s",
               }
-            : m,
-        ),
+            : m
+        )
       );
       setWaitingResponse(false);
       setCurrentMsgId(-1);
@@ -505,15 +523,10 @@ export default function ChatScreen() {
       stream: true,
       includeHistory: includeHistory,
       systemPrompt: systemPrompt,
-      providerUrl: selectedProvider.endpoint,
-      providerName: selectedProvider.provider_name,
-      providerApiKey: selectedProvider.api_key,
+      providerUrl: activeProvider.endpoint,
+      providerName: activeProvider.provider_name,
+      providerApiKey: activeProvider.api_key,
     };
-
-    console.log("reqBody", reqBody);
-    console.log("selectedProvider", selectedProvider);
-    console.log("model", model);
-    console.log("providers", providers);
 
     if (conversation.length > 0 && includeHistory) {
       reqBody = {
@@ -528,11 +541,10 @@ export default function ChatScreen() {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
-          "X-Api-Key": selectedProvider.api_key,
+          "X-Api-Key": activeProvider.api_key,
         },
         body: JSON.stringify(reqBody),
       });
-
 
       if (!response.ok) {
         const errBody = await response.json();
@@ -541,13 +553,13 @@ export default function ChatScreen() {
           p.map((m) =>
             m.id === msgId
               ? {
-                ...m,
-                assistant: errBody.message,
-                model,
-                resTime: "0s",
-              }
-              : m,
-          ),
+                  ...m,
+                  assistant: errBody.message,
+                  model,
+                  resTime: "0s",
+                }
+              : m
+          )
         );
 
         setWaitingResponse(false);
@@ -571,82 +583,79 @@ export default function ChatScreen() {
         }
 
         const chunkValue = decoder.decode(value, { stream: true });
-        console.log("Raw chunk received:", chunkValue);
-        
+
         // Split by lines and process each SSE line
-        const lines = chunkValue.split('\n');
-        
+        const lines = chunkValue.split("\n");
+
         for (const line of lines) {
           const trimmedLine = line.trim();
-          console.log("Processing line:", trimmedLine);
-          
+
           // Handle completion signal
-          if (trimmedLine === 'data: [DONE]') {
-            console.log("Stream completed");
+          if (trimmedLine === "data: [DONE]") {
             done = true;
             break;
           }
-          
+
           // Process data lines
-          if (trimmedLine.startsWith('data: ')) {
+          if (trimmedLine.startsWith("data: ")) {
             const jsonStr = trimmedLine.substring(6); // Remove 'data: ' prefix
-            if (jsonStr && jsonStr !== '[DONE]') {
+            if (jsonStr && jsonStr !== "[DONE]") {
               try {
                 const jsonData = JSON.parse(jsonStr);
-                console.log("Parsed JSON:", jsonData);
 
                 if (jsonData.cancelToken && !cancelTokenReceived) {
                   setCancelToken(jsonData.cancelToken);
-                  console.log("Cancel token set:", jsonData.cancelToken);
                   cancelTokenReceived = true;
                 }
-                
+
                 if (jsonData.response) {
                   text += jsonData.response;
-                  console.log("Updated text:", text);
                   const endTime = new Date().getTime();
                   const resTime = (endTime - startTime) / 1000;
                   setConversation((p) =>
                     p.map((m) =>
                       m.id === msgId
                         ? {
-                          ...m,
-                          assistant: text,
-                          resTime: `${resTime.toFixed(2)}s`,
-                          timestamp: new Date().toISOString(),
-                        }
-                        : m,
-                    ),
+                            ...m,
+                            assistant: text,
+                            resTime: `${resTime.toFixed(2)}s`,
+                            timestamp: new Date().toISOString(),
+                          }
+                        : m
+                    )
                   );
                 }
-              } catch (error) {
+              }
+              catch (error) {
                 console.error("Error parsing JSON:", error, "Data:", jsonStr);
               }
             }
           }
         }
       }
-    if (text === "") {
+      if (text === "") {
         setConversation((p) =>
           p.map((m) =>
             m.id === msgId
               ? {
-                ...m,
-                assistant: DEFAULT_MESSAGES.noResponseMessage,
-                model,
-                resTime: "0s",
-              }
-              : m,
-          ),
+                  ...m,
+                  assistant: DEFAULT_MESSAGES.noResponseMessage,
+                  model,
+                  resTime: "0s",
+                }
+              : m
+          )
         );
       }
 
       setWaitingResponse(false);
       setCancelToken(null);
       setCurrentMsgId(-1);
-    } catch (error) {
+    }
+    catch (error) {
       console.error(error);
-    } finally {
+    }
+    finally {
       setWaitingResponse(false);
       setCancelToken(null);
 
@@ -657,13 +666,13 @@ export default function ChatScreen() {
           p.map((m) =>
             m.id === message.id
               ? {
-                ...m,
-                assistant: DEFAULT_MESSAGES.noResponseMessage,
-                model,
-                resTime: "0s",
-              }
-              : m,
-          ),
+                  ...m,
+                  assistant: DEFAULT_MESSAGES.noResponseMessage,
+                  model,
+                  resTime: "0s",
+                }
+              : m
+          )
         );
       }
 
@@ -687,8 +696,8 @@ export default function ChatScreen() {
     setConvHistory([]);
     setAllChats((prev) =>
       prev.map((chat) =>
-        chat.id === activeChatId ? { ...chat, conversation: [] } : chat,
-      ),
+        chat.id === activeChatId ? { ...chat, conversation: [] } : chat
+      )
     );
     localStorage.setItem("voxChats", JSON.stringify(allChats));
   };
@@ -707,7 +716,8 @@ export default function ChatScreen() {
       if (updated.length > 0) {
         setActiveChatId(updated[0].id);
         setConversation(updated[0].conversation);
-      } else {
+      }
+      else {
         setActiveChatId(null);
         setConversation([]);
       }
@@ -715,18 +725,17 @@ export default function ChatScreen() {
   };
 
   const handleModelSelect = (model) => {
-    setSelectedModel(model.modelName);
     setModel(model.modelName);
-    setSelectedProviderId(model.providerId);
+    const provider = providers.find(p => p.id === model.providerId);
+    if(provider) {
+      dispatch(setActiveProvider(provider));
+    }
   };
 
   return (
     <Box position="relative" h="100vh" w="100vw">
       {/* Full-width header */}
-      <ChatHeader
-        toggleColorMode={toggleColorMode}
-        colorMode={colorMode}
-      />
+      <ChatHeader toggleColorMode={toggleColorMode} colorMode={colorMode} />
 
       {/* Main content area with sidebar and chat */}
       <HStack
@@ -751,7 +760,13 @@ export default function ChatScreen() {
         )}
 
         {/* Sidebar container with fixed width to account for toggle button */}
-        <Box position="relative" h="100%" flexShrink={0} w={isSidebarOpen ? `${sidebarWidth + 48}px` : "48px"} transition="width 0.3s ease">
+        <Box
+          position="relative"
+          h="100%"
+          flexShrink={0}
+          w={isSidebarOpen ? `${sidebarWidth + 48}px` : "48px"}
+          transition="width 0.3s ease"
+        >
           {/* Actual sidebar content */}
           {(isSidebarOpen || (!isSidebarOpen && isHovering)) && (
             <Box
@@ -853,7 +868,13 @@ export default function ChatScreen() {
             >
               <IconButton
                 aria-label="Toggle sidebar"
-                icon={isSidebarOpen ? <TbLayoutSidebarRightCollapse /> : <TbLayoutSidebarLeftCollapse />}
+                icon={
+                  isSidebarOpen ? (
+                    <TbLayoutSidebarRightCollapse />
+                  ) : (
+                    <TbLayoutSidebarLeftCollapse />
+                  )
+                }
                 size="lg"
                 onClick={toggleSidebar}
                 variant="ghost"

@@ -58,7 +58,7 @@ function ChatSettings({
     "agent",
     "profile",
   ];
-  const disabledTabs = ["mcp", "tool", "agent"];
+  const disabledTabs = ["tool", "agent"];
   const defaultTabName = defaultTab || tabList[0];
   const defaultTabIndex = tabList.indexOf(defaultTabName);
 

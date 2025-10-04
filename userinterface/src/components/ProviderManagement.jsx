@@ -4,6 +4,9 @@ import {
   setProviders,
   getSupportedProviders,
   getProviders,
+  editProvider,
+  addProvider,
+  setActiveProvider,
 } from "../store/providerSlice";
 import ShowAlert from "./ShowAlert";
 import {
@@ -43,7 +46,7 @@ export default function ProviderManagement() {
     onClose: onDeleteDialogClose,
   } = useDisclosure();
   const dispatch = useDispatch();
-  const providers = useSelector((state) => state.provider.providers);
+  const { providers, activeProvider } = useSelector((state) => state.provider);
 
   useEffect(() => {
     dispatch(getSupportedProviders());
@@ -159,48 +162,32 @@ export default function ProviderManagement() {
   const handleAddProvider = (providerData, isEditing) => {
     if (isEditing) {
       // Update existing provider
-      dispatch(
-        setProviders(
-          providers.map((p) =>
-            p.id === providerData.id
-              ? {
-                  id: p.id,
-                  name: providerData.name,
-                  provider_name: providerData.provider_name,
-                  endpoint: providerData.endpoint,
-                  api_key: providerData.api_key,
-                  models: providerData.models,
-                  enabled: providerData.enabled !== false, // preserve enabled state when editing
-                }
-              : p,
-          ),
-        ),
-      );
+      dispatch(editProvider(providerData));
     } else {
       // Add new provider
       const newProvider = {
+        ...providerData,
         id: generateUUID(),
-        name: providerData.name,
-        provider_name: providerData.provider_name,
-        endpoint: providerData.endpoint,
-        api_key: providerData.api_key,
-        models: providerData.models,
         enabled: true, // new providers are enabled by default
       };
-      dispatch(setProviders([...providers, newProvider]));
+      dispatch(addProvider(newProvider));
     }
     setShowAddProvider(false); // Close the drawer
     setEditingProvider(null); // Clear editing state
   };
 
   const handleToggleProvider = (providerId) => {
-    dispatch(
-      setProviders(
-        providers.map((p) =>
-          p.id === providerId ? { ...p, enabled: !p.enabled } : p
-        )
-      )
+    const updatedProviders = providers.map((p) =>
+      p.id === providerId ? { ...p, enabled: !p.enabled } : p
     );
+    dispatch(setProviders(updatedProviders));
+
+    const toggledProvider = providers.find((p) => p.id === providerId);
+    if (toggledProvider && toggledProvider.enabled && activeProvider && activeProvider.id === providerId) {
+      // If the currently active provider is being disabled
+      const firstEnabledProvider = updatedProviders.find(p => p.enabled);
+      dispatch(setActiveProvider(firstEnabledProvider || null));
+    }
   };
 
   const handleEditProvider = (providerId) => {

@@ -33,12 +33,13 @@ export default function ModelSelect({ model, setModel, onModelSelect }) {
   const handleModelSelect = (selectedModel) => {
     setModel(selectedModel.name);
     // Pass both model and provider information to parent
-    onModelSelect &&
+    if (onModelSelect) {
       onModelSelect({
         modelName: selectedModel.name,
         providerId: selectedModel.providerId,
         providerName: selectedModel.providerName,
       });
+    }
   };
 
   const handleModelChange = (e) => {

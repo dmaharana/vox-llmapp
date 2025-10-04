@@ -9,6 +9,7 @@ const initialState = {
   providersLoading: false,
   providersError: null,
   defaultProvider: null,
+  activeProvider: null,
 };
 
 const providerSlice = createSlice({
@@ -17,24 +18,34 @@ const providerSlice = createSlice({
   reducers: {
     setProviders: (state, action) => {
       state.providers = action.payload;
+      if (state.activeProvider) {
+        const updatedActiveProvider = action.payload.find(p => p.id === state.activeProvider.id);
+        if (updatedActiveProvider) {
+          state.activeProvider = updatedActiveProvider;
+        }
+      }
     },
     addProvider: (state, action) => {
       state.providers.push(action.payload);
     },
     editProvider: (state, action) => {
-      const { id, name, config } = action.payload;
-      const providerIndex = state.providers.findIndex((p) => p.id === id);
-      if (providerIndex !== -1) {
-        state.providers[providerIndex] = {
-          ...state.providers[providerIndex],
-          name,
-          config,
-        };
+      const index = state.providers.findIndex(p => p.id === action.payload.id);
+      if (index !== -1) {
+        state.providers[index] = action.payload;
+        if (state.activeProvider && state.activeProvider.id === action.payload.id) {
+          state.activeProvider = action.payload;
+        }
       }
     },
     deleteProvider: (state, action) => {
       state.providers = state.providers.filter((p) => p.id !== action.payload);
+      if (state.activeProvider && state.activeProvider.id === action.payload) {
+        state.activeProvider = null;
+      }
     },
+    setActiveProvider: (state, action) => {
+      state.activeProvider = action.payload;
+    }
   },
   extraReducers: (builder) => {
     builder
@@ -89,7 +100,15 @@ export const getProviders = createAsyncThunk(
   }
 );
 
-export const { setProviders, addProvider, editProvider, deleteProvider } =
+export const { setProviders, addProvider, editProvider, deleteProvider, setActiveProvider } =
   providerSlice.actions;
 
 export default providerSlice.reducer;
+
+
+function generateUUID() {
+  return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function(c) {
+    var r = Math.random() * 16 | 0, v = c == 'x' ? r : (r & 0x3 | 0x8);
+    return v.toString(16);
+  });
+}

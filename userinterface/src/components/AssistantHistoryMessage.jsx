@@ -27,13 +27,12 @@ function stripThinkTags(markdown) {
 }
 
 function AssistantHistoryMessage({ msg, count, index }) {
-  const { hasCopied, onCopy } = useClipboard(msg.content);
+  const strippedContent = stripThinkTags(msg.content);
+  const { hasCopied, onCopy } = useClipboard(strippedContent);
   const [isMsgExpanded, setIsMsgExpanded] = useState(false);
   const standardTextLen = 200;
-  const strippedContent = stripThinkTags(msg.content);
 
-  const thinkTags = msg.content.match(/<think>[\s\S]*?<\/think>/g);
-  const thinkTagsLength = thinkTags ? thinkTags.reduce((acc, cur) => acc + cur.length, 0) : 0;
+  const isTruncated = msg.content.length > standardTextLen;
 
   return (
     <>
@@ -58,14 +57,12 @@ function AssistantHistoryMessage({ msg, count, index }) {
             borderRadius: "10px",
           }}
         >
-          {strippedContent.length + thinkTagsLength >= standardTextLen &&
-          !isMsgExpanded
-            ? strippedContent.substring(0, standardTextLen - thinkTagsLength + 3) +
-              "..."
+          {isTruncated && !isMsgExpanded
+            ? `${strippedContent.substring(0, standardTextLen)}...`
             : strippedContent}
         </ReactMarkdown>
 
-        {strippedContent.length + thinkTagsLength >= standardTextLen && (
+        {isTruncated && (
           <Button
             size="xs"
             colorScheme="blue"
@@ -93,7 +90,7 @@ function AssistantHistoryMessage({ msg, count, index }) {
         <Button
           size="xs"
           colorScheme="blue"
-          onClick={() => onCopy(msg.content)}
+          onClick={onCopy}
           ml={2}
           isDisabled={hasCopied}
           // align={"end"}

@@ -8,10 +8,7 @@ import { DEFAULT_MESSAGES } from "./Constants";
 import { useColorModeValue } from "@chakra-ui/react";
 import appIcon from "/vox.png";
 
-export default function ChatHeader({
-  toggleColorMode,
-  colorMode,
-}) {
+export default function ChatHeader({ toggleColorMode, colorMode }) {
   const prompts = useSelector((state) => state.prompt.prompts);
   const systemPrompt = useSelector((state) => state.prompt.systemPrompt);
   const bgText = useColorModeValue("blue.900", "blue.100");
@@ -20,10 +17,21 @@ export default function ChatHeader({
   const [isHovering, setIsHovering] = useState(false);
 
   const [now, setNow] = useState(new Date());
-  const [timezone, setTimezone] = useState(Intl.DateTimeFormat().resolvedOptions().timeZone);
-  const timeString = now.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: true, timeZone: timezone });
-  const dateString = now.toLocaleDateString('en-CA', { year: 'numeric', month: '2-digit', day: '2-digit', timeZone: timezone });
-  const dayString = now.toLocaleDateString('en-US', { weekday: 'long', timeZone: timezone });
+  // const [timezone, setTimezone] = useState(Intl.DateTimeFormat().resolvedOptions().timeZone);
+  // const timeString = now.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: true, timeZone: timezone });
+  // const dateString = now.toLocaleDateString('en-CA', { year: 'numeric', month: '2-digit', day: '2-digit', timeZone: timezone });
+  // const dayString = now.toLocaleDateString('en-US', { weekday: 'long', timeZone: timezone });
+  const timeString = now.toLocaleTimeString("en-US", {
+    hour: "2-digit",
+    minute: "2-digit",
+    hour12: true,
+  });
+  const dateString = now.toLocaleDateString("en-CA", {
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+  });
+  const dayString = now.toLocaleDateString("en-US", { weekday: "long" });
 
   useEffect(() => {
     let timer = setInterval(() => setNow(new Date()), 1000);
@@ -35,10 +43,8 @@ export default function ChatHeader({
       return "";
     }
 
-    const matchedPrompt = prompts?.find(p => p.content === systemPrompt);
-    return matchedPrompt
-      ? ` as ${matchedPrompt.name}`
-      : ` as Custom Prompt`;
+    const matchedPrompt = prompts?.find((p) => p.content === systemPrompt);
+    return matchedPrompt ? ` as ${matchedPrompt.name}` : ` as Custom Prompt`;
   };
 
   return (
@@ -60,13 +66,7 @@ export default function ChatHeader({
             onMouseEnter={() => setIsHovering(true)}
             onMouseLeave={() => setIsHovering(false)}
           >
-            <Avatar
-              size={"xs"}
-              name="Assistant"
-              src={appIcon}
-              mb={1}
-              mr={2}
-            />
+            <Avatar size={"xs"} name="Assistant" src={appIcon} mb={1} mr={2} />
             {isHovering && (
               <Text
                 position="absolute"
@@ -82,9 +82,7 @@ export default function ChatHeader({
                 zIndex={1001}
               >
                 {DEFAULT_MESSAGES.APP_TITLE}
-                <span style={{ fontSize: '0.8rem' }}>
-                  {getPromptSuffix()}
-                </span>
+                <span style={{ fontSize: "0.8rem" }}>{getPromptSuffix()}</span>
               </Text>
             )}
           </Box>
@@ -92,8 +90,15 @@ export default function ChatHeader({
 
         <HStack flex="1" justifyContent="center" spacing={1}>
           <TimeIcon boxSize={3} />
-          <span className="font-semibold tracking-widest text-sm text-gray-700 dark:text-gray-200" style={{ letterSpacing: '0.08em' }}>{timeString}</span>
-          <span className="text-[4px] text-gray-500 dark:text-gray-400 font-normal">· {dateString} · {dayString}</span>
+          <span
+            className="font-semibold tracking-widest text-sm text-gray-700 dark:text-gray-200"
+            style={{ letterSpacing: "0.08em" }}
+          >
+            {timeString}
+          </span>
+          <span className="text-[4px] text-gray-500 dark:text-gray-400 font-normal">
+            · {dateString} · {dayString}
+          </span>
         </HStack>
 
         <IconButton
@@ -116,5 +121,5 @@ export default function ChatHeader({
 
 ChatHeader.propTypes = {
   toggleColorMode: PropTypes.func.isRequired,
-  colorMode: PropTypes.oneOf(['light', 'dark']).isRequired,
+  colorMode: PropTypes.oneOf(["light", "dark"]).isRequired,
 };

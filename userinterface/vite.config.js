@@ -10,6 +10,7 @@ export default defineConfig({
     },
     proxy: {
       "/api": "http://localhost:8011",
+      "/run": "http://localhost:8011",
     },
   },
 });

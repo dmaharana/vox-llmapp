@@ -1,0 +1,418 @@
+import React, { useState } from 'react';
+import {
+  Box,
+  Button,
+  VStack,
+  HStack,
+  Text,
+  Textarea,
+  useToast,
+  Alert,
+  AlertIcon,
+  AlertTitle,
+  AlertDescription,
+  Spinner,
+  IconButton,
+  Tooltip,
+  Tabs,
+  TabList,
+  TabPanels,
+  Tab,
+  TabPanel
+} from '@chakra-ui/react';
+import { AddIcon, RepeatIcon } from '@chakra-ui/icons';
+import { useSelector, useDispatch } from 'react-redux';
+import {
+  loadMCPConfigs,
+  addMCPServer,
+  editMCPServer,
+  removeMCPServer,
+  refreshConnections,
+  clearError
+} from '../../store/mcpSlice';
+import MCPServerConfig from './MCPServerConfig';
+import MCPToolsList from './MCPToolsList';
+import MCPPromptsList from './MCPPromptsList';
+
+const MCPConfiguration = () => {
+  const dispatch = useDispatch();
+  const { connections, loading, error, lastUpdated } = useSelector(state => {
+    console.log('MCPConfiguration - Full Redux state:', state);
+    console.log('MCPConfiguration - MCP state:', state.mcp);
+    return state.mcp || {
+      connections: [],
+      loading: false,
+      error: null,
+      lastUpdated: null
+    };
+  });
+  const [showAddForm, setShowAddForm] = useState(false);
+  const [jsonConfig, setJsonConfig] = useState('');
+  const [showJsonInput, setShowJsonInput] = useState(false);
+  const toast = useToast();
+
+  React.useEffect(() => {
+    console.log('MCPConfiguration - connections:', connections);
+    console.log('MCPConfiguration - connections.length:', connections?.length);
+  }, [connections]);
+
+  React.useEffect(() => {
+    dispatch(loadMCPConfigs());
+  }, [dispatch]);
+
+  const handleAddServer = async (config) => {
+    console.log('Adding server:', config);
+    if (!config.name) {
+      toast({
+        title: 'Error',
+        description: 'Server name is required',
+        status: 'error',
+        duration: 5000,
+        isClosable: true,
+      });
+      return;
+    }
+    
+    // Validate based on server type
+    if (config.type === 'stdio' && !config.command) {
+      toast({
+        title: 'Error',
+        description: 'Command is required for stdio servers',
+        status: 'error',
+        duration: 5000,
+        isClosable: true,
+      });
+      return;
+    }
+    
+    if (config.type === 'http' && !config.url) {
+      toast({
+        title: 'Error',
+        description: 'URL is required for HTTP servers',
+        status: 'error',
+        duration: 5000,
+        isClosable: true,
+      });
+      return;
+    }
+    try {
+      console.log('Dispatching addMCPServer action...');
+      const result = await dispatch(addMCPServer(config)).unwrap();
+      console.log('addMCPServer action completed successfully:', result);
+      setShowAddForm(false);
+      toast({
+        title: 'Success',
+        description: `MCP server "${config.name}" added successfully`,
+        status: 'success',
+        duration: 3000,
+        isClosable: true,
+      });
+    } catch (error) {
+      console.error('addMCPServer action failed:', error);
+      toast({
+        title: 'Error',
+        description: error,
+        status: 'error',
+        duration: 5000,
+        isClosable: true,
+      });
+    }
+  };
+
+  const handleEditServer = async (config) => {
+    try {
+      await dispatch(editMCPServer(config)).unwrap();
+      toast({
+        title: 'Success',
+        description: `MCP server "${config.name}" updated successfully`,
+        status: 'success',
+        duration: 3000,
+        isClosable: true,
+      });
+    } catch (error) {
+      toast({
+        title: 'Error',
+        description: error,
+        status: 'error',
+        duration: 5000,
+        isClosable: true,
+      });
+    }
+  };
+
+  const handleDeleteServer = async (name) => {
+    try {
+      await dispatch(removeMCPServer(name)).unwrap();
+      toast({
+        title: 'Success',
+        description: `MCP server "${name}" removed successfully`,
+        status: 'success',
+        duration: 3000,
+        isClosable: true,
+      });
+    } catch (error) {
+      toast({
+        title: 'Error',
+        description: error,
+        status: 'error',
+        duration: 5000,
+        isClosable: true,
+      });
+    }
+  };
+
+  const handleRefresh = async () => {
+    try {
+      await dispatch(refreshConnections()).unwrap();
+      toast({
+        title: 'Success',
+        description: 'MCP connections refreshed successfully',
+        status: 'success',
+        duration: 3000,
+        isClosable: true,
+      });
+    } catch (error) {
+      toast({
+        title: 'Error',
+        description: error,
+        status: 'error',
+        duration: 5000,
+        isClosable: true,
+      });
+    }
+  };
+
+  const handleJsonImport = () => {
+    try {
+      const config = JSON.parse(jsonConfig);
+      if (config.mcpServers) {
+        // Import multiple servers
+        Object.entries(config.mcpServers).forEach(([name, serverConfig]) => {
+          dispatch(addMCPServer({ ...serverConfig, name }));
+        });
+        toast({
+          title: 'Success',
+          description: 'MCP configuration imported successfully',
+          status: 'success',
+          duration: 3000,
+          isClosable: true,
+        });
+      } else {
+        toast({
+          title: 'Error',
+          description: 'Invalid configuration format. Expected "mcpServers" object.',
+          status: 'error',
+          duration: 5000,
+          isClosable: true,
+        });
+      }
+      setJsonConfig('');
+      setShowJsonInput(false);
+    } catch (error) {
+      toast({
+        title: 'Error',
+        description: 'Invalid JSON format',
+        status: 'error',
+        duration: 5000,
+        isClosable: true,
+      });
+    }
+  };
+
+  const exampleConfig = `{
+  "mcpServers": {
+    "filesystem": {
+      "name": "filesystem",
+      "type": "stdio",
+      "command": "uvx",
+      "args": ["mcp-server-filesystem", "/tmp"],
+      "env": {},
+      "disabled": false
+    },
+    "web-api": {
+      "name": "web-api",
+      "type": "http",
+      "url": "https://api.example.com/mcp",
+      "headers": {
+        "Authorization": "Bearer your-token-here",
+        "X-API-Key": "your-api-key"
+      },
+      "env": {},
+      "disabled": false
+    }
+  }
+}`;
+
+  return (
+    <VStack spacing={6} align="stretch">
+      <Box>
+        <HStack justify="space-between" align="center" mb={4}>
+          <Text fontSize="xl" fontWeight="bold">
+            MCP Configuration
+          </Text>
+          <HStack>
+            <Tooltip label="Refresh connections">
+              <IconButton
+                icon={<RepeatIcon />}
+                size="sm"
+                variant="ghost"
+                onClick={handleRefresh}
+                isLoading={loading}
+              />
+            </Tooltip>
+            <Button
+              leftIcon={<AddIcon />}
+              size="sm"
+              colorScheme="blue"
+              onClick={() => setShowAddForm(true)}
+              isDisabled={showAddForm}
+            >
+              Add Server
+            </Button>
+          </HStack>
+        </HStack>
+
+        {error && (
+          <Alert status="error" mb={4}>
+            <AlertIcon />
+            <Box>
+              <AlertTitle>Error!</AlertTitle>
+              <AlertDescription>{error}</AlertDescription>
+            </Box>
+            <Button
+              size="sm"
+              variant="ghost"
+              ml="auto"
+              onClick={() => dispatch(clearError())}
+            >
+              Dismiss
+            </Button>
+          </Alert>
+        )}
+
+        {loading && (
+          <HStack justify="center" py={4}>
+            <Spinner size="sm" />
+            <Text>Loading MCP configurations...</Text>
+          </HStack>
+        )}
+
+        {lastUpdated && (
+          <Text fontSize="xs" color="gray.500" mb={4}>
+            Last updated: {new Date(lastUpdated).toLocaleString()}
+          </Text>
+        )}
+
+        <Tabs>
+          <TabList>
+            <Tab>Servers</Tab>
+            <Tab>Tools</Tab>
+            <Tab>Prompts</Tab>
+          </TabList>
+
+          <TabPanels>
+            <TabPanel px={0}>
+              <VStack spacing={4} align="stretch">
+                {showAddForm && (
+                  <MCPServerConfig
+                    isNew={true}
+                    onSave={handleAddServer}
+                    onCancel={() => setShowAddForm(false)}
+                  />
+                )}
+
+                {connections.length === 0 && !loading && !showAddForm && (
+                  <Box textAlign="center" py={8} bg="gray.50" borderRadius="md">
+                    <Text color="gray.500" mb={4}>
+                      No MCP servers configured
+                    </Text>
+                    <VStack spacing={2}>
+                      <Button
+                        leftIcon={<AddIcon />}
+                        colorScheme="blue"
+                        onClick={() => setShowAddForm(true)}
+                      >
+                        Add Your First Server
+                      </Button>
+                      <Button
+                        size="sm"
+                        variant="ghost"
+                        onClick={() => setShowJsonInput(!showJsonInput)}
+                      >
+                        Or import from JSON
+                      </Button>
+                    </VStack>
+                  </Box>
+                )}
+
+                {connections.map((connection) => (
+                  <MCPServerConfig
+                    key={connection.name}
+                    server={connection}
+                    onSave={handleEditServer}
+                    onDelete={handleDeleteServer}
+                  />
+                ))}
+
+                {showJsonInput && (
+                  <Box mt={4} p={4} border="1px" borderColor="gray.200" borderRadius="md">
+                    <Text fontWeight="semibold" mb={2}>Import Configuration from JSON</Text>
+                    <Textarea
+                      value={jsonConfig}
+                      onChange={(e) => setJsonConfig(e.target.value)}
+                      placeholder={exampleConfig}
+                      rows={8}
+                      mb={3}
+                    />
+                    <HStack>
+                      <Button
+                        size="sm"
+                        colorScheme="blue"
+                        onClick={handleJsonImport}
+                        isDisabled={!jsonConfig.trim()}
+                      >
+                        Import
+                      </Button>
+                      <Button
+                        size="sm"
+                        variant="ghost"
+                        onClick={() => {
+                          setShowJsonInput(false);
+                          setJsonConfig('');
+                        }}
+                      >
+                        Cancel
+                      </Button>
+                    </HStack>
+                  </Box>
+                )}
+
+                {connections.length > 0 && !showJsonInput && (
+                  <HStack justify="center" mt={4}>
+                    <Button
+                      size="sm"
+                      variant="ghost"
+                      onClick={() => setShowJsonInput(true)}
+                    >
+                      Import Additional Servers from JSON
+                    </Button>
+                  </HStack>
+                )}
+              </VStack>
+            </TabPanel>
+
+            <TabPanel px={0}>
+              <MCPToolsList />
+            </TabPanel>
+
+            <TabPanel px={0}>
+              <MCPPromptsList />
+            </TabPanel>
+          </TabPanels>
+        </Tabs>
+      </Box>
+    </VStack>
+  );
+};
+
+export default MCPConfiguration;

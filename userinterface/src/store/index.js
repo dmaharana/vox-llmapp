@@ -3,6 +3,7 @@ import promptReducer from "./promptSlice";
 import chatReducer from "./chatSlice";
 import providerReducer from "./providerSlice";
 import userReducer from "./userSlice";
+import mcpReducer from "./mcpSlice";
 import { initializeUserSettings, setupUserSettingsAutoSave } from "./userInit";
 import { initializeProviders } from "./providerInit";
 
@@ -12,6 +13,7 @@ export const store = configureStore({
     chat: chatReducer,
     provider: providerReducer,
     user: userReducer,
+    mcp: mcpReducer,
   },
 });
 

@@ -16,13 +16,15 @@ import {
   CheckboxGroup,
   Checkbox,
   InputGroup,
+  InputLeftElement,
   InputRightElement,
   Text,
   useToast,
   HStack,
   Switch,
+  IconButton,
 } from "@chakra-ui/react";
-import { SearchIcon } from "@chakra-ui/icons";
+import { SearchIcon, ViewIcon, ViewOffIcon } from "@chakra-ui/icons";
 import { useSelector } from "react-redux";
 import { fetchModels } from "../../api/providerApi";
 
@@ -321,22 +323,22 @@ function AddEditProvider({
               <FormControl>
                 <FormLabel>API Key</FormLabel>
                 <InputGroup size="md">
+                  <InputLeftElement>
+                    <IconButton
+                      icon={showApiKey ? <ViewOffIcon /> : <ViewIcon />}
+                      size="sm"
+                      variant="ghost"
+                      onClick={() => setShowApiKey(!showApiKey)}
+                    />
+                  </InputLeftElement>
                   <Input
                     type={showApiKey ? "text" : "password"}
                     name="api_key"
                     value={formData.api_key}
                     onChange={handleInputChange}
                     placeholder="Enter API key"
+                    pl="2.5rem"
                   />
-                  <InputRightElement width="4.5rem">
-                    <Button
-                      h="1.75rem"
-                      size="sm"
-                      onClick={() => setShowApiKey(!showApiKey)}
-                    >
-                      {showApiKey ? "Hide" : "Show"}
-                    </Button>
-                  </InputRightElement>
                 </InputGroup>
               </FormControl>
 

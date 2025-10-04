@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import {
   Box,
   Input,
@@ -18,11 +18,15 @@ const UserNameEdit = () => {
 
   const borderColor = useColorModeValue("gray.200", "gray.600");
 
+  useEffect(() => {
+    setTempName(userName);
+  }, [userName]);
+
   const handleSave = () => {
     const trimmedName = tempName.trim();
     if (trimmedName && trimmedName !== userName) {
       dispatch(setUserName(trimmedName));
-      localStorage.setItem("userName", trimmedName);
+      // localStorage.setItem("userName", trimmedName);
     }
     setIsEditing(false);
   };
@@ -41,7 +45,7 @@ const UserNameEdit = () => {
       <Text fontWeight="bold" fontSize="lg" mb={3}>
         Display Name
       </Text>
-      
+
       {isEditing ? (
         <HStack spacing={2}>
           <Input

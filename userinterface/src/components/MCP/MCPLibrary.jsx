@@ -16,6 +16,7 @@ import {
 import { ExternalLinkIcon } from '@chakra-ui/icons';
 import MCPConfiguration from './MCPConfiguration';
 import MCPToolsPrompts from './MCPToolsPrompts';
+import MCPPromptsList from './MCPPromptsList';
 import MCPDemo from './MCPDemo';
 
 export default function MCPLibrary() {
@@ -46,7 +47,8 @@ export default function MCPLibrary() {
         <Tabs index={activeTab} onChange={setActiveTab} variant="enclosed">
           <TabList>
             <Tab>Configuration</Tab>
-            <Tab>Tools & Prompts</Tab>
+            <Tab>Tools</Tab>
+            <Tab>Prompts</Tab>
             <Tab>Demo</Tab>
           </TabList>
           
@@ -56,6 +58,9 @@ export default function MCPLibrary() {
             </TabPanel>
             <TabPanel px={0}>
               <MCPToolsPrompts />
+            </TabPanel>
+            <TabPanel px={0}>
+              <MCPPromptsList />
             </TabPanel>
             <TabPanel px={0}>
               <MCPDemo />

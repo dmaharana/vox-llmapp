@@ -12,7 +12,8 @@ import {
   AlertIcon,
   Code,
   Divider,
-  useToast
+  useToast,
+  useColorModeValue
 } from '@chakra-ui/react';
 import { useSelector } from 'react-redux';
 import { callMCPTool, getMCPPrompt } from '../../api/mcpApi';
@@ -24,6 +25,11 @@ const MCPDemo = () => {
     enabledTools: {},
     enabledPrompts: {}
   });
+  const bgColor = useColorModeValue('gray.50', 'gray.700');
+  const resultBgColor = useColorModeValue('green.50', 'green.900');
+  const promptBgColor = useColorModeValue('purple.50', 'purple.900');
+  const borderColor = useColorModeValue('green.200', 'green.600');
+  const promptBorderColor = useColorModeValue('purple.200', 'purple.600');
   const [selectedTool, setSelectedTool] = useState('');
   const [selectedPrompt, setSelectedPrompt] = useState('');
   const [toolArgs, setToolArgs] = useState('{}');
@@ -180,7 +186,7 @@ const MCPDemo = () => {
                   rows={4}
                 />
                 {getToolSchema(selectedTool) && (
-                  <Box mt={2} p={2} bg="gray.50" borderRadius="md">
+                  <Box mt={2} p={2} bg={bgColor} borderRadius="md">
                     <Text fontSize="xs" fontWeight="semibold" mb={1}>Expected Parameters:</Text>
                     <Code fontSize="xs" display="block" whiteSpace="pre-wrap">
                       {JSON.stringify(getToolSchema(selectedTool), null, 2)}
@@ -204,7 +210,7 @@ const MCPDemo = () => {
                 <Text fontSize="sm" fontWeight="semibold" mb={2}>
                   Tool Result:
                 </Text>
-                <Box p={3} bg="green.50" borderRadius="md" border="1px" borderColor="green.200">
+                <Box p={3} bg={resultBgColor} borderRadius="md" border="1px" borderColor={borderColor}>
                   <Code fontSize="sm" display="block" whiteSpace="pre-wrap">
                     {JSON.stringify(toolResult, null, 2)}
                   </Code>
@@ -262,7 +268,7 @@ const MCPDemo = () => {
                   rows={4}
                 />
                 {getPromptArgs(selectedPrompt) && getPromptArgs(selectedPrompt).length > 0 && (
-                  <Box mt={2} p={2} bg="gray.50" borderRadius="md">
+                  <Box mt={2} p={2} bg={bgColor} borderRadius="md">
                     <Text fontSize="xs" fontWeight="semibold" mb={1}>Expected Arguments:</Text>
                     {getPromptArgs(selectedPrompt).map(arg => (
                       <Text key={arg.name} fontSize="xs">
@@ -288,7 +294,7 @@ const MCPDemo = () => {
                 <Text fontSize="sm" fontWeight="semibold" mb={2}>
                   Prompt Result:
                 </Text>
-                <Box p={3} bg="purple.50" borderRadius="md" border="1px" borderColor="purple.200">
+                <Box p={3} bg={promptBgColor} borderRadius="md" border="1px" borderColor={promptBorderColor}>
                   <Code fontSize="sm" display="block" whiteSpace="pre-wrap">
                     {JSON.stringify(promptResult, null, 2)}
                   </Code>

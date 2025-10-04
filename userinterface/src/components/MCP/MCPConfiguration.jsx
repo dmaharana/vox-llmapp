@@ -18,7 +18,8 @@ import {
   TabList,
   TabPanels,
   Tab,
-  TabPanel
+  TabPanel,
+  useColorModeValue
 } from '@chakra-ui/react';
 import { AddIcon, RepeatIcon } from '@chakra-ui/icons';
 import { useSelector, useDispatch } from 'react-redux';
@@ -28,7 +29,9 @@ import {
   editMCPServer,
   removeMCPServer,
   refreshConnections,
-  clearError
+  clearError,
+  loadMCPTools,
+  loadMCPPrompts
 } from '../../store/mcpSlice';
 import MCPServerConfig from './MCPServerConfig';
 import MCPToolsList from './MCPToolsList';
@@ -36,16 +39,19 @@ import MCPPromptsList from './MCPPromptsList';
 
 const MCPConfiguration = () => {
   const dispatch = useDispatch();
-  const { connections, loading, error, lastUpdated } = useSelector(state => {
+  const { connections, loading, error, lastUpdated, tools, prompts } = useSelector(state => {
     console.log('MCPConfiguration - Full Redux state:', state);
     console.log('MCPConfiguration - MCP state:', state.mcp);
     return state.mcp || {
       connections: [],
       loading: false,
       error: null,
-      lastUpdated: null
+      lastUpdated: null,
+      tools: [],
+      prompts: []
     };
   });
+  const bgColor = useColorModeValue('gray.50', 'gray.700');
   const [showAddForm, setShowAddForm] = useState(false);
   const [jsonConfig, setJsonConfig] = useState('');
   const [showJsonInput, setShowJsonInput] = useState(false);
@@ -54,10 +60,14 @@ const MCPConfiguration = () => {
   React.useEffect(() => {
     console.log('MCPConfiguration - connections:', connections);
     console.log('MCPConfiguration - connections.length:', connections?.length);
-  }, [connections]);
+    console.log('MCPConfiguration - tools:', tools);
+    console.log('MCPConfiguration - prompts:', prompts);
+  }, [connections, tools, prompts]);
 
   React.useEffect(() => {
     dispatch(loadMCPConfigs());
+    dispatch(loadMCPTools());
+    dispatch(loadMCPPrompts());
   }, [dispatch]);
 
   const handleAddServer = async (config) => {
@@ -303,113 +313,93 @@ const MCPConfiguration = () => {
           </Text>
         )}
 
-        <Tabs>
-          <TabList>
-            <Tab>Servers</Tab>
-            <Tab>Tools</Tab>
-            <Tab>Prompts</Tab>
-          </TabList>
+        <VStack spacing={4} align="stretch">
+          {showAddForm && (
+            <MCPServerConfig
+              isNew={true}
+              onSave={handleAddServer}
+              onCancel={() => setShowAddForm(false)}
+            />
+          )}
 
-          <TabPanels>
-            <TabPanel px={0}>
-              <VStack spacing={4} align="stretch">
-                {showAddForm && (
-                  <MCPServerConfig
-                    isNew={true}
-                    onSave={handleAddServer}
-                    onCancel={() => setShowAddForm(false)}
-                  />
-                )}
-
-                {connections.length === 0 && !loading && !showAddForm && (
-                  <Box textAlign="center" py={8} bg="gray.50" borderRadius="md">
-                    <Text color="gray.500" mb={4}>
-                      No MCP servers configured
-                    </Text>
-                    <VStack spacing={2}>
-                      <Button
-                        leftIcon={<AddIcon />}
-                        colorScheme="blue"
-                        onClick={() => setShowAddForm(true)}
-                      >
-                        Add Your First Server
-                      </Button>
-                      <Button
-                        size="sm"
-                        variant="ghost"
-                        onClick={() => setShowJsonInput(!showJsonInput)}
-                      >
-                        Or import from JSON
-                      </Button>
-                    </VStack>
-                  </Box>
-                )}
-
-                {connections.map((connection) => (
-                  <MCPServerConfig
-                    key={connection.name}
-                    server={connection}
-                    onSave={handleEditServer}
-                    onDelete={handleDeleteServer}
-                  />
-                ))}
-
-                {showJsonInput && (
-                  <Box mt={4} p={4} border="1px" borderColor="gray.200" borderRadius="md">
-                    <Text fontWeight="semibold" mb={2}>Import Configuration from JSON</Text>
-                    <Textarea
-                      value={jsonConfig}
-                      onChange={(e) => setJsonConfig(e.target.value)}
-                      placeholder={exampleConfig}
-                      rows={8}
-                      mb={3}
-                    />
-                    <HStack>
-                      <Button
-                        size="sm"
-                        colorScheme="blue"
-                        onClick={handleJsonImport}
-                        isDisabled={!jsonConfig.trim()}
-                      >
-                        Import
-                      </Button>
-                      <Button
-                        size="sm"
-                        variant="ghost"
-                        onClick={() => {
-                          setShowJsonInput(false);
-                          setJsonConfig('');
-                        }}
-                      >
-                        Cancel
-                      </Button>
-                    </HStack>
-                  </Box>
-                )}
-
-                {connections.length > 0 && !showJsonInput && (
-                  <HStack justify="center" mt={4}>
-                    <Button
-                      size="sm"
-                      variant="ghost"
-                      onClick={() => setShowJsonInput(true)}
-                    >
-                      Import Additional Servers from JSON
-                    </Button>
-                  </HStack>
-                )}
+          {connections.length === 0 && !loading && !showAddForm && (
+            <Box textAlign="center" py={8} bg={bgColor} borderRadius="md">
+              <Text color="gray.500" mb={4}>
+                No MCP servers configured
+              </Text>
+              <VStack spacing={2}>
+                <Button
+                  leftIcon={<AddIcon />}
+                  colorScheme="blue"
+                  onClick={() => setShowAddForm(true)}
+                >
+                  Add Your First Server
+                </Button>
+                <Button
+                  size="sm"
+                  variant="ghost"
+                  onClick={() => setShowJsonInput(!showJsonInput)}
+                >
+                  Or import from JSON
+                </Button>
               </VStack>
-            </TabPanel>
+            </Box>
+          )}
 
-            <TabPanel px={0}>
-              <MCPToolsList />
-            </TabPanel>
+          {connections.map((connection) => (
+            <MCPServerConfig
+              key={connection.name}
+              server={connection}
+              onSave={handleEditServer}
+              onDelete={handleDeleteServer}
+            />
+          ))}
 
-            <TabPanel px={0}>
-              <MCPPromptsList />
-            </TabPanel>
-          </TabPanels>
-        </Tabs>
+          {showJsonInput && (
+            <Box mt={4} p={4} border="1px" borderColor="gray.200" borderRadius="md">
+              <Text fontWeight="semibold" mb={2}>Import Configuration from JSON</Text>
+              <Textarea
+                value={jsonConfig}
+                onChange={(e) => setJsonConfig(e.target.value)}
+                placeholder={exampleConfig}
+                rows={8}
+                mb={3}
+              />
+              <HStack>
+                <Button
+                  size="sm"
+                  colorScheme="blue"
+                  onClick={handleJsonImport}
+                  isDisabled={!jsonConfig.trim()}
+                >
+                  Import
+                </Button>
+                <Button
+                  size="sm"
+                  variant="ghost"
+                  onClick={() => {
+                    setShowJsonInput(false);
+                    setJsonConfig('');
+                  }}
+                >
+                  Cancel
+                </Button>
+              </HStack>
+            </Box>
+          )}
+
+          {connections.length > 0 && !showJsonInput && (
+            <HStack justify="center" mt={4}>
+              <Button
+                size="sm"
+                variant="ghost"
+                onClick={() => setShowJsonInput(true)}
+              >
+                Import Additional Servers from JSON
+              </Button>
+            </HStack>
+          )}
+        </VStack>
       </Box>
     </VStack>
   );

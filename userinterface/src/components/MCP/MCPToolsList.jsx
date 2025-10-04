@@ -20,7 +20,8 @@ import {
   Alert,
   AlertIcon,
   Code,
-  Divider
+  Divider,
+  useColorModeValue
 } from '@chakra-ui/react';
 import { fetchMCPTools, callMCPTool } from '../../api/mcpApi';
 
@@ -32,6 +33,7 @@ const MCPToolsList = () => {
   const [toolInputs, setToolInputs] = useState({});
   const [callingTool, setCallingTool] = useState(null);
   const toast = useToast();
+  const bgColor = useColorModeValue('gray.50', 'gray.700');
 
   useEffect(() => {
     loadTools();
@@ -143,7 +145,7 @@ const MCPToolsList = () => {
     if (!result) return null;
 
     return (
-      <Box mt={4} p={3} bg="gray.50" borderRadius="md">
+      <Box mt={4} p={3} bg={bgColor} borderRadius="md">
         <Text fontWeight="semibold" mb={2}>Result:</Text>
         {result.isError ? (
           <Alert status="error" size="sm">
@@ -195,7 +197,7 @@ const MCPToolsList = () => {
 
   if (tools.length === 0) {
     return (
-      <Box textAlign="center" py={8} bg="gray.50" borderRadius="md">
+      <Box textAlign="center" py={8} bg={bgColor} borderRadius="md">
         <Text color="gray.500" mb={2}>No MCP tools available</Text>
         <Text fontSize="sm" color="gray.400">
           Connect to MCP servers to see available tools

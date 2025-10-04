@@ -19,7 +19,8 @@ import {
   Alert,
   AlertIcon,
   Code,
-  Divider
+  Divider,
+  useColorModeValue
 } from '@chakra-ui/react';
 import { fetchMCPPrompts, getMCPPrompt } from '../../api/mcpApi';
 
@@ -31,6 +32,9 @@ const MCPPromptsList = () => {
   const [promptInputs, setPromptInputs] = useState({});
   const [callingPrompt, setCallingPrompt] = useState(null);
   const toast = useToast();
+  const bgColor = useColorModeValue('gray.50', 'gray.700');
+  const messageBgColor = useColorModeValue('white', 'gray.800');
+  const borderColor = useColorModeValue('gray.200', 'gray.600');
 
   useEffect(() => {
     loadPrompts();
@@ -131,7 +135,7 @@ const MCPPromptsList = () => {
     if (!result) return null;
 
     return (
-      <Box mt={4} p={3} bg="gray.50" borderRadius="md">
+      <Box mt={4} p={3} bg={bgColor} borderRadius="md">
         <Text fontWeight="semibold" mb={2}>Result:</Text>
         {result.description && (
           <Text fontSize="sm" mb={3} color="gray.600">
@@ -139,7 +143,7 @@ const MCPPromptsList = () => {
           </Text>
         )}
         {result.messages?.map((message, index) => (
-          <Box key={index} mb={3} p={2} bg="white" borderRadius="md" border="1px" borderColor="gray.200">
+          <Box key={index} mb={3} p={2} bg={messageBgColor} borderRadius="md" border="1px" borderColor={borderColor}>
             <HStack mb={2}>
               <Badge colorScheme={message.role === 'user' ? 'blue' : 'green'} size="sm">
                 {message.role}
@@ -180,7 +184,7 @@ const MCPPromptsList = () => {
 
   if (prompts.length === 0) {
     return (
-      <Box textAlign="center" py={8} bg="gray.50" borderRadius="md">
+      <Box textAlign="center" py={8} bg={bgColor} borderRadius="md">
         <Text color="gray.500" mb={2}>No MCP prompts available</Text>
         <Text fontSize="sm" color="gray.400">
           Connect to MCP servers to see available prompts

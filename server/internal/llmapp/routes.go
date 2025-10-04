@@ -12,6 +12,7 @@ import (
 	"time"
 
 	ui "llmserver"
+	"llmserver/internal/mcp"
 
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/chi/v5/middleware"
@@ -26,6 +27,7 @@ type Config struct {
 	ContextMap      map[string]context.CancelFunc
 	TokenToCtxMutex *sync.Mutex
 	WorkerPool      *LLMWorkerPool
+	MCPManager      *mcp.MCPManager
 	shutdownChan    chan struct{}
 }
 
@@ -38,6 +40,7 @@ func NewConfig(webPort, llmUrl, promptsFile string) *Config {
 		ContextMap:      make(map[string]context.CancelFunc),
 		TokenToCtxMutex: &sync.Mutex{},
 		WorkerPool:      NewLLMWorkerPool(5), // Initialize with 5 workers
+		MCPManager:      mcp.NewMCPManagerWithConfig("mcp-config.json"),
 		shutdownChan:    make(chan struct{}),
 	}
 }
@@ -115,6 +118,18 @@ func (c *Config) routes() http.Handler {
 
 	mux.Delete("/api/cancel", c.CancelRequest)
 
+	// MCP routes
+	mcpHandlers := mcp.NewMCPHandlers(c.MCPManager)
+	mux.Post("/run/mcp-config", mcpHandlers.RegisterMCPHandler)
+	mux.Put("/run/mcp-config", mcpHandlers.UpdateMCPHandler)
+	mux.Delete("/run/mcp-config/{name}", mcpHandlers.DeleteMCPHandler)
+	mux.Get("/run/mcp-configs", mcpHandlers.GetAllMCPHandler)
+	mux.Post("/run/mcp-tool", mcpHandlers.CallToolHandler)
+	mux.Post("/run/mcp-prompt", mcpHandlers.GetPromptHandler)
+	mux.Post("/run/mcp-refresh", mcpHandlers.RefreshConnectionsHandler)
+	mux.Get("/run/mcp-tools", mcpHandlers.GetToolsHandler)
+	mux.Get("/run/mcp-prompts", mcpHandlers.GetPromptsHandler)
+
 	c.Mux = mux
 	return mux
 }
@@ -133,6 +148,9 @@ func (c *Config) sessionMiddleware(next http.Handler) http.Handler {
 }
 
 func (c *Config) StartServer() error {
+	// Load MCP configurations on startup
+	c.LoadMCPConfig("mcp-config.json")
+	
 	// Start worker pool before server
 	c.StartWorkers()
 	log.Println("Worker pool started successfully")
@@ -197,6 +215,10 @@ func (c *Config) startHTTPSServer(cert *tls.Certificate) error {
 	c.StopWorkers()
 	log.Println("Worker pool stopped")
 
+	// Shutdown MCP connections
+	c.MCPManager.Shutdown()
+	log.Println("MCP connections shut down")
+
 	// Shutdown server
 	if err := server.Shutdown(ctx); err != nil {
 		log.Printf("Server forced to shutdown: %v", err)
@@ -233,6 +255,10 @@ func (c *Config) startHTTPServer() error {
 	c.StopWorkers()
 	log.Println("Worker pool stopped")
 
+	// Shutdown MCP connections
+	c.MCPManager.Shutdown()
+	log.Println("MCP connections shut down")
+
 	// Shutdown server
 	if err := server.Shutdown(ctx); err != nil {
 		log.Printf("Server forced to shutdown: %v", err)
@@ -246,4 +272,16 @@ func (c *Config) startHTTPServer() error {
 // GetShutdownChan returns the shutdown channel for graceful server termination
 func (c *Config) GetShutdownChan() chan struct{} {
 	return c.shutdownChan
+}
+// LoadMCPConfig loads MCP configuration from file if it exists
+func (c *Config) LoadMCPConfig(configPath string) {
+	if configPath == "" {
+		return
+	}
+
+	if err := c.MCPManager.LoadFromFile(configPath); err != nil {
+		log.Printf("Warning: Failed to load MCP config from %s: %v", configPath, err)
+	} else {
+		log.Printf("Successfully loaded MCP configuration from %s", configPath)
+	}
 }

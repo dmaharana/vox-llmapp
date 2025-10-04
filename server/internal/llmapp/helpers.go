@@ -99,6 +99,9 @@ func getBaseURL(rawurl string) (string, error) {
 	if err != nil {
 		return "", err
 	}
+	if u.Scheme == "" || u.Host == "" {
+		return "", fmt.Errorf("invalid URL: missing scheme or host in %s", rawurl)
+	}
 	// Combine scheme and host to get the base URL
 	baseURL := fmt.Sprintf("%s://%s", u.Scheme, u.Host)
 	return baseURL, nil

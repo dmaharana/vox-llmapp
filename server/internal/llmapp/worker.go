@@ -35,6 +35,7 @@ func (pool *LLMWorkerPool) Start() {
 			requests: make(chan LLMRequest, 10),
 			quit:     make(chan bool),
 			wg:       pool.wg,
+			pool:     pool,
 		}
 		pool.workers[i] = worker
 		pool.wg.Add(1)
@@ -48,15 +49,15 @@ func (pool *LLMWorkerPool) Start() {
 // Stop gracefully shuts down the worker pool
 func (pool *LLMWorkerPool) Stop() {
 	log.Println("Stopping LLM worker pool")
-	
+
 	// Signal dispatcher to stop
 	close(pool.QuitChan)
-	
+
 	// Stop all workers
 	for _, worker := range pool.workers {
 		close(worker.quit)
 	}
-	
+
 	// Wait for all workers to finish
 	pool.wg.Wait()
 	log.Println("All workers stopped")
@@ -80,20 +81,35 @@ func (pool *LLMWorkerPool) dispatch() {
 // assignToWorker assigns a request to an available worker
 func (pool *LLMWorkerPool) assignToWorker(request LLMRequest) {
 	// Try to assign to any available worker
-	for _, worker := range pool.workers {
-		select {
-		case worker.requests <- request:
-			log.Printf("Request %s assigned to worker %d", request.ID, worker.ID)
-			return
-		default:
-			// Worker is busy, try next one
-			continue
+	// for _, worker := range pool.workers {
+	// 	select {
+	// 	case worker.requests <- request:
+	// 		log.Printf("Request %s assigned to worker %d", request.ID, worker.ID)
+	// 		return
+	// 	default:
+	// 		// Worker is busy, try next one
+	// 		continue
+	// 	}
+	// }
+
+	// // If no worker is available, handle the request directly
+	// log.Printf("All workers busy, handling request %s directly", request.ID)
+	// go pool.processRequest(request)
+	// Use round-robin or least-loaded worker selection
+	workerIdx := 0
+	minLoad := len(pool.workers[0].requests)
+
+	for i, worker := range pool.workers {
+		load := len(worker.requests)
+		if load < minLoad {
+			minLoad = load
+			workerIdx = i
 		}
 	}
-	
-	// If no worker is available, handle the request directly
-	log.Printf("All workers busy, handling request %s directly", request.ID)
-	go pool.processRequest(request)
+
+	// Block until the worker can accept the request
+	pool.workers[workerIdx].requests <- request
+	log.Printf("Request %s assigned to worker %d", request.ID, pool.workers[workerIdx].ID)
 }
 
 // start begins the worker's processing loop
@@ -105,8 +121,9 @@ func (worker *LLMWorker) start() {
 		select {
 		case request := <-worker.requests:
 			log.Printf("Worker %d processing request %s", worker.ID, request.ID)
-			pool := &LLMWorkerPool{} // Create a temporary pool instance for method access
-			pool.processRequest(request)
+			// pool := &LLMWorkerPool{} // Create a temporary pool instance for method access
+			// pool.processRequest(request)
+			worker.pool.processRequest(request)
 		case <-worker.quit:
 			log.Printf("Worker %d stopping", worker.ID)
 			return
@@ -126,7 +143,7 @@ func (pool *LLMWorkerPool) processRequest(request LLMRequest) {
 		close(request.ResponseChan)
 		close(request.ErrorChan)
 	}()
-	
+
 	// Create context with cancellation
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Minute)
 	defer cancel()
@@ -143,7 +160,7 @@ func (pool *LLMWorkerPool) processRequest(request LLMRequest) {
 	}()
 
 	reqPayload := request.RequestPayload
-	
+
 	// Validate request
 	if reqPayload.Prompt == "" {
 		pool.sendError(request, "prompt cannot be empty", "validation_error", "empty_prompt")
@@ -158,15 +175,19 @@ func (pool *LLMWorkerPool) processRequest(request LLMRequest) {
 	providerId := strings.ToLower(reqPayload.ProviderName)
 	log.Printf("Using provider: %s, model: %s", providerId, reqPayload.Model)
 
-	// Get provider URL
-	providerBaseUrl, exists := ProviderURLs[providerId]
-	if !exists {
-		pool.sendError(request, fmt.Sprintf("provider %s not supported", providerId), "validation_error", "unsupported_provider")
-		return
+	// Get provider URL from the request payload
+	providerUrl := reqPayload.ProviderURL
+	if providerUrl == "" {
+		var exists bool
+		providerUrl, exists = ProviderURLs[providerId]
+		if !exists {
+			pool.sendError(request, fmt.Sprintf("provider %s not supported", providerId), "validation_error", "unsupported_provider")
+			return
+		}
 	}
 
 	// Build API endpoint
-	apiEndpoint := fmt.Sprintf(ProviderChatURLs[providerId], providerBaseUrl)
+	apiEndpoint := fmt.Sprintf(ProviderChatURLs[providerId], providerUrl)
 	log.Printf("API endpoint: %s", apiEndpoint)
 
 	// Build request payload
@@ -220,9 +241,9 @@ func (pool *LLMWorkerPool) processRequest(request LLMRequest) {
 // handleStreamResponse processes streaming responses
 func (pool *LLMWorkerPool) handleStreamResponse(ctx context.Context, resp *http.Response, request LLMRequest) {
 	log.Printf("Processing stream response for request %s", request.ID)
-	
+
 	scanner := bufio.NewScanner(resp.Body)
-	
+
 	for scanner.Scan() {
 		select {
 		case <-ctx.Done():
@@ -230,7 +251,7 @@ func (pool *LLMWorkerPool) handleStreamResponse(ctx context.Context, resp *http.
 			return
 		default:
 		}
-		
+
 		line := strings.TrimSpace(scanner.Text())
 		if line == "" {
 			continue
@@ -246,10 +267,10 @@ func (pool *LLMWorkerPool) handleStreamResponse(ctx context.Context, resp *http.
 		}
 
 		// Process data lines
-		if strings.HasPrefix(line, "data: ") {
-			jsonStr := strings.TrimPrefix(line, "data: ")
+		if after, ok := strings.CutPrefix(line, "data: "); ok {
+			jsonStr := after
 			jsonStr = strings.TrimSpace(jsonStr)
-			
+
 			if jsonStr == "" || jsonStr == "[DONE]" {
 				continue
 			}
@@ -286,7 +307,7 @@ func (pool *LLMWorkerPool) handleStreamResponse(ctx context.Context, resp *http.
 // handleNonStreamResponse processes non-streaming responses
 func (pool *LLMWorkerPool) handleNonStreamResponse(resp *http.Response, request LLMRequest) {
 	log.Printf("Processing non-stream response for request %s", request.ID)
-	
+
 	body, err := io.ReadAll(resp.Body)
 	if err != nil {
 		pool.sendError(request, fmt.Sprintf("failed to read response: %v", err), "server_error", "read_error")
@@ -310,14 +331,14 @@ func (pool *LLMWorkerPool) handleNonStreamResponse(resp *http.Response, request 
 	if content != "" {
 		pool.sendContent(request, content, chatResp.Model)
 	}
-	
+
 	pool.sendCompletion(request)
 }
 
 // buildRequest creates the LLM request payload
 func (pool *LLMWorkerPool) buildRequest(payload RequestPayload) RequestData {
 	messages := []Message{}
-	
+
 	// Add system message if provided
 	if payload.SystemPrompt != "" {
 		messages = append(messages, Message{

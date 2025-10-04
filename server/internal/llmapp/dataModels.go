@@ -24,13 +24,13 @@ type (
 	}
 
 	ChatCompletionResponse struct {
-		ID      string   `json:"id"`
-		Object  string   `json:"object"`
-		Created int64    `json:"created"`
-		Model   string   `json:"model"`
+		ID       string   `json:"id"`
+		Object   string   `json:"object"`
+		Created  int64    `json:"created"`
+		Model    string   `json:"model"`
 		SystemFP string   `json:"system_fingerprint"`
-		Choices []Choice `json:"choices"`
-		Usage   Usage    `json:"usage"`
+		Choices  []Choice `json:"choices"`
+		Usage    Usage    `json:"usage"`
 	}
 
 	ChatCompletionError struct {
@@ -42,12 +42,10 @@ type (
 	}
 
 	CompletionChoice struct {
-		Index        int                  `json:"index"`
-		Delta        CompletionDelta      `json:"delta"`
-		FinishReason *string             `json:"finish_reason"`
+		Index        int             `json:"index"`
+		Delta        CompletionDelta `json:"delta"`
+		FinishReason *string         `json:"finish_reason"`
 	}
-
-
 
 	// openai complaint models
 	OpenAIModels struct {
@@ -148,9 +146,9 @@ type (
 	}
 
 	Usage struct {
-		PromptTokens     int16 `json:"prompt_tokens"`
-		CompletionTokens int16 `json:"completion_tokens"`
-		TotalTokens      int16 `json:"total_tokens"`
+		PromptTokens     int `json:"prompt_tokens"`
+		CompletionTokens int `json:"completion_tokens"`
+		TotalTokens      int `json:"total_tokens"`
 	}
 
 	SupportedProvider struct {
@@ -249,6 +247,7 @@ type (
 		requests chan LLMRequest
 		quit     chan bool
 		wg       *sync.WaitGroup
+		pool     *LLMWorkerPool
 	}
 
 	// LLMWorkerPool manages the worker goroutines

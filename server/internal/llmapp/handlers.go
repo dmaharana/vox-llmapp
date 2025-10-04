@@ -163,79 +163,72 @@ func (app *Config) handleStreamResponse(w http.ResponseWriter, r *http.Request, 
 	w.Header().Set("Connection", "keep-alive")
 	w.Header().Set("X-Accel-Buffering", "no") // Disable buffering in Nginx
 
-	// Start response processing in a goroutine
-	go func() {
-		// Send cancel token as the first event
-		cancelTokenData, _ := json.Marshal(map[string]string{"cancelToken": token})
-		fmt.Fprintf(w, "data: %s\n\n", string(cancelTokenData))
-		flusher.Flush()
+	// Send cancel token as the first event
+	cancelTokenData, _ := json.Marshal(map[string]string{"cancelToken": token})
+	fmt.Fprintf(w, "data: %s\n\n", string(cancelTokenData))
+	flusher.Flush()
 
-		for {
-			select {
-			case response, ok := <-responseChan:
-				if !ok {
-					log.Printf("Response channel closed unexpectedly")
-					app.sendErrorResponse(w, http.StatusBadRequest, "server_error", "channel_closed", "Response channel closed unexpectedly")
-					return
-				}
-
-				log.Printf("Response: %+v", response)
-				if response.Error != nil {
-					log.Printf("Error: %+v", response.Error)
-					// Send error response with proper structure
-					app.sendErrorResponse(w, http.StatusBadRequest, response.Error.Type, response.Error.Code, response.Error.Message)
-					flusher.Flush()
-					return
-				}
-
-				// Send response chunk to client in SSE format
-				// Check if the client has disconnected
-				select {
-				case <-ctx.Done():
-					log.Printf("Client disconnected, stopping stream")
-					return
-				default:
-				}
-				jsonData, err := json.Marshal(response.Data)
-				if err != nil {
-					log.Printf("Error marshaling response: %v", err)
-					return
-				}
-				
-				// Write in SSE format
-				fmt.Fprintf(w, "data: %s\n\n", string(jsonData))
-				flusher.Flush()
-				
-				log.Printf("Sent SSE data: %s", string(jsonData))
-
-				if response.IsComplete {
-					log.Printf("Stream completed successfully")
-					// Send completion signal in SSE format
-					fmt.Fprintf(w, "data: [DONE]\n\n")
-					flusher.Flush()
-					return
-				}
-
-			case err := <-errorChan:
-				if err != nil {
-					log.Printf("Error from worker: %v", err)
-					app.sendErrorResponse(w, http.StatusBadRequest, "server_error", "worker_error", err.Error())
-					flusher.Flush()
-				}
+	for {
+		select {
+		case response, ok := <-responseChan:
+			if !ok {
+				log.Printf("Response channel closed unexpectedly")
+				app.sendErrorResponse(w, http.StatusBadRequest, "server_error", "channel_closed", "Response channel closed unexpectedly")
 				return
+			}
 
-			case <-ctx.Done():
-				log.Printf("Stream cancelled by context: %v", ctx.Err())
-				app.sendErrorResponse(w, http.StatusBadRequest, "server_error", "request_cancelled", "Request cancelled or timed out")
+			log.Printf("Response: %+v", response)
+			if response.Error != nil {
+				log.Printf("Error: %+v", response.Error)
+				// Send error response with proper structure
+				app.sendErrorResponse(w, http.StatusBadRequest, response.Error.Type, response.Error.Code, response.Error.Message)
 				flusher.Flush()
 				return
 			}
-		}
-	}()
 
-	// Wait for context cancellation
-	<-ctx.Done()
-	log.Printf("Stream handler exiting")
+			// Send response chunk to client in SSE format
+			// Check if the client has disconnected
+			select {
+			case <-ctx.Done():
+				log.Printf("Client disconnected, stopping stream")
+				return
+			default:
+			}
+			jsonData, err := json.Marshal(response.Data)
+			if err != nil {
+				log.Printf("Error marshaling response: %v", err)
+				return
+			}
+			
+			// Write in SSE format
+			fmt.Fprintf(w, "data: %s\n\n", string(jsonData))
+			flusher.Flush()
+			
+			log.Printf("Sent SSE data: %s", string(jsonData))
+
+			if response.IsComplete {
+				log.Printf("Stream completed successfully")
+				// Send completion signal in SSE format
+				fmt.Fprintf(w, "data: [DONE]\n\n")
+				flusher.Flush()
+				return
+			}
+
+		case err := <-errorChan:
+			if err != nil {
+				log.Printf("Error from worker: %v", err)
+				app.sendErrorResponse(w, http.StatusBadRequest, "server_error", "worker_error", err.Error())
+				flusher.Flush()
+			}
+			return
+
+		case <-ctx.Done():
+			log.Printf("Stream cancelled by context: %v", ctx.Err())
+			app.sendErrorResponse(w, http.StatusBadRequest, "server_error", "request_cancelled", "Request cancelled or timed out")
+			flusher.Flush()
+			return
+		}
+	}
 }
 
 // handleNonStreamResponse processes non-streaming responses from worker

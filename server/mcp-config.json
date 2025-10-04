@@ -1,0 +1,13 @@
+{
+  "mcpServers": {
+    "mem0": {
+      "name": "mem0",
+      "type": "stdio",
+      "command": "/home/titu/sources/go-workspace/mcp-chromem-memory-go/memory-server",
+      "args": [
+        "--db-path",
+        "/home/titu/sources/go-workspace/mcp-chromem-memory-go/test.db"
+      ]
+    }
+  }
+}

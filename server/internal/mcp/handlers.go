@@ -52,8 +52,12 @@ func (h *MCPHandlers) RegisterMCPHandler(w http.ResponseWriter, r *http.Request)
 		return
 	}
 
+	// Set session cookie BEFORE registration to ensure consistency
+	sessionID := h.manager.extractSessionID(r)
+	h.manager.setSessionCookie(w, sessionID)
+	
 	// Register the MCP server
-	if err := h.manager.RegisterMCP(req.Config.Name, req.Config); err != nil {
+	if err := h.manager.RegisterMCP(r, req.Config.Name, req.Config); err != nil {
 		log.Printf("Failed to register MCP server %s: %v", req.Config.Name, err)
 		http.Error(w, fmt.Sprintf("Failed to register MCP server: %v", err), http.StatusInternalServerError)
 		return
@@ -67,7 +71,7 @@ func (h *MCPHandlers) RegisterMCPHandler(w http.ResponseWriter, r *http.Request)
 	var status *MCPConnectionStatus
 	
 	go func() {
-		status = h.manager.GetConnectionStatus()
+		status = h.manager.GetConnectionStatus(r)
 		close(done)
 	}()
 	
@@ -131,14 +135,18 @@ func (h *MCPHandlers) UpdateMCPHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// Set session cookie BEFORE operations to ensure consistency
+	sessionID := h.manager.extractSessionID(r)
+	h.manager.setSessionCookie(w, sessionID)
+
 	// Update the MCP server
-	if err := h.manager.UpdateMCP(req.Config.Name, req.Config); err != nil {
+	if err := h.manager.UpdateMCP(r, req.Config.Name, req.Config); err != nil {
 		http.Error(w, fmt.Sprintf("Failed to update MCP server: %v", err), http.StatusInternalServerError)
 		return
 	}
 
 	// Get the connection status to return
-	status := h.manager.GetConnectionStatus()
+	status := h.manager.GetConnectionStatus(r)
 	
 	w.Header().Set("Content-Type", "application/json")
 	if err := json.NewEncoder(w).Encode(status); err != nil {
@@ -155,14 +163,18 @@ func (h *MCPHandlers) DeleteMCPHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// Set session cookie BEFORE operations to ensure consistency
+	sessionID := h.manager.extractSessionID(r)
+	h.manager.setSessionCookie(w, sessionID)
+
 	// Deregister the MCP server
-	if err := h.manager.DeregisterMCP(name); err != nil {
+	if err := h.manager.DeregisterMCP(r, name); err != nil {
 		http.Error(w, fmt.Sprintf("Failed to deregister MCP server: %v", err), http.StatusInternalServerError)
 		return
 	}
 
 	// Get the connection status to return
-	status := h.manager.GetConnectionStatus()
+	status := h.manager.GetConnectionStatus(r)
 	
 	w.Header().Set("Content-Type", "application/json")
 	if err := json.NewEncoder(w).Encode(status); err != nil {
@@ -182,7 +194,11 @@ func (h *MCPHandlers) GetAllMCPHandler(w http.ResponseWriter, r *http.Request) {
 		}
 	}()
 	
-	status = h.manager.GetConnectionStatus()
+	status = h.manager.GetConnectionStatus(r)
+	
+	// Set session cookie for consistency
+	sessionID := h.manager.extractSessionID(r)
+	h.manager.setSessionCookie(w, sessionID)
 	
 	// Double-check that status is not nil
 	if status == nil {
@@ -266,13 +282,17 @@ func (h *MCPHandlers) GetPromptHandler(w http.ResponseWriter, r *http.Request) {
 
 // RefreshConnectionsHandler handles POST /run/mcp-refresh
 func (h *MCPHandlers) RefreshConnectionsHandler(w http.ResponseWriter, r *http.Request) {
+	// Set session cookie BEFORE operations to ensure consistency
+	sessionID := h.manager.extractSessionID(r)
+	h.manager.setSessionCookie(w, sessionID)
+
 	if err := h.manager.RefreshConnections(); err != nil {
 		http.Error(w, fmt.Sprintf("Failed to refresh connections: %v", err), http.StatusInternalServerError)
 		return
 	}
 
 	// Get the updated connection status
-	status := h.manager.GetConnectionStatus()
+	status := h.manager.GetConnectionStatus(r)
 	
 	w.Header().Set("Content-Type", "application/json")
 	if err := json.NewEncoder(w).Encode(status); err != nil {
@@ -283,7 +303,11 @@ func (h *MCPHandlers) RefreshConnectionsHandler(w http.ResponseWriter, r *http.R
 
 // GetToolsHandler handles GET /run/mcp-tools
 func (h *MCPHandlers) GetToolsHandler(w http.ResponseWriter, r *http.Request) {
-	tools := h.manager.GetAllTools()
+	// Set session cookie for consistency
+	sessionID := h.manager.extractSessionID(r)
+	h.manager.setSessionCookie(w, sessionID)
+
+	tools := h.manager.GetAllTools(r)
 	
 	response := struct {
 		Tools []Tool `json:"tools"`
@@ -300,7 +324,11 @@ func (h *MCPHandlers) GetToolsHandler(w http.ResponseWriter, r *http.Request) {
 
 // GetPromptsHandler handles GET /run/mcp-prompts
 func (h *MCPHandlers) GetPromptsHandler(w http.ResponseWriter, r *http.Request) {
-	prompts := h.manager.GetAllPrompts()
+	// Set session cookie for consistency
+	sessionID := h.manager.extractSessionID(r)
+	h.manager.setSessionCookie(w, sessionID)
+
+	prompts := h.manager.GetAllPrompts(r)
 	
 	response := struct {
 		Prompts []Prompt `json:"prompts"`

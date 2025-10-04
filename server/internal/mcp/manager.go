@@ -1,34 +1,42 @@
 package mcp
 
 import (
+	"crypto/sha256"
+	"encoding/hex"
 	"encoding/json"
 	"fmt"
 	"log"
+	"net/http"
 	"os"
+	"path/filepath"
+	"strings"
 	"sync"
 )
 
 type MCPManager struct {
 	clients    map[string]*MCPClient
 	configPath string
+	userConfigs map[string]map[string]*MCPConfig  // sessionID -> map of configs
 	mu         sync.RWMutex
 }
 
 func NewMCPManager() *MCPManager {
 	return &MCPManager{
-		clients: make(map[string]*MCPClient),
+		clients:     make(map[string]*MCPClient),
+		userConfigs: make(map[string]map[string]*MCPConfig),
 	}
 }
 
 func NewMCPManagerWithConfig(configPath string) *MCPManager {
 	return &MCPManager{
-		clients:    make(map[string]*MCPClient),
-		configPath: configPath,
+		clients:     make(map[string]*MCPClient),
+		configPath:  configPath,
+		userConfigs: make(map[string]map[string]*MCPConfig),
 	}
 }
 
-// RegisterMCP adds a new MCP server configuration and connects to it
-func (m *MCPManager) RegisterMCP(name string, config MCPConfig) error {
+// registerMCPInternal adds a new MCP server configuration and connects to it (internal use without session)
+func (m *MCPManager) registerMCPInternal(name string, config MCPConfig) error {
 	m.mu.Lock()
 	defer m.mu.Unlock()
 
@@ -50,7 +58,7 @@ func (m *MCPManager) RegisterMCP(name string, config MCPConfig) error {
 
 	log.Printf("Successfully registered and connected to MCP server: %s", name)
 	
-	// Auto-save configuration if path is set
+	// Save configuration if path is set (global save)
 	if m.configPath != "" {
 		if err := m.saveConfig(); err != nil {
 			log.Printf("Warning: Failed to save MCP configuration: %v", err)
@@ -60,8 +68,46 @@ func (m *MCPManager) RegisterMCP(name string, config MCPConfig) error {
 	return nil
 }
 
-// UpdateMCP updates an existing MCP server configuration
-func (m *MCPManager) UpdateMCP(name string, config MCPConfig) error {
+// RegisterMCP adds a new MCP server configuration and connects to it for a specific user
+func (m *MCPManager) RegisterMCP(r *http.Request, name string, config MCPConfig) error {
+	sessionID := m.extractSessionID(r)
+	m.mu.Lock()
+	defer m.mu.Unlock()
+
+	// Disconnect existing client if it exists
+	if existingClient, exists := m.clients[name]; exists {
+		existingClient.Disconnect()
+	}
+
+	// Create new client
+	client := NewMCPClient(name, config)
+	m.clients[name] = client
+
+	// Connect to the MCP server
+	if err := client.Connect(); err != nil {
+		client.connection.Status = "error"
+		client.connection.LastError = err.Error()
+		return fmt.Errorf("failed to connect to MCP server %s: %w", name, err)
+	}
+
+	log.Printf("Successfully registered and connected to MCP server: %s", name)
+	
+	// Save user-specific configuration if path is set
+	if m.configPath != "" {
+		// Load existing user configs, add new one, then save
+		userConfigs, _ := m.loadUserConfig(sessionID)
+		userConfigs[name] = &config
+		m.setUserConfigs(sessionID, userConfigs)
+		if err := m.saveUserConfig(sessionID); err != nil {
+			log.Printf("Warning: Failed to save user MCP configuration: %v", err)
+		}
+	}
+	
+	return nil
+}
+
+// updateMCPInternal updates an existing MCP server configuration (internal use without session)
+func (m *MCPManager) updateMCPInternal(name string, config MCPConfig) error {
 	m.mu.Lock()
 	defer m.mu.Unlock()
 
@@ -84,18 +130,57 @@ func (m *MCPManager) UpdateMCP(name string, config MCPConfig) error {
 
 	log.Printf("Successfully updated and reconnected to MCP server: %s", name)
 	
-	// Auto-save configuration if path is set
+	// Auto-save configuration if path is set (global save)
 	if m.configPath != "" {
 		if err := m.saveConfig(); err != nil {
 			log.Printf("Warning: Failed to save MCP configuration: %v", err)
+		}
+	}
+
+	return nil
+}
+
+// UpdateMCP updates an existing MCP server configuration for a specific user
+func (m *MCPManager) UpdateMCP(r *http.Request, name string, config MCPConfig) error {
+	sessionID := m.extractSessionID(r)
+	m.mu.Lock()
+	defer m.mu.Unlock()
+
+	// Disconnect existing client if it exists
+	if existingClient, exists := m.clients[name]; exists {
+		existingClient.Disconnect()
+		delete(m.clients, name)
+	}
+
+	// Create new client with updated config
+	client := NewMCPClient(name, config)
+	m.clients[name] = client
+
+	// Connect to the MCP server
+	if err := client.Connect(); err != nil {
+		client.connection.Status = "error"
+		client.connection.LastError = err.Error()
+		return fmt.Errorf("failed to connect to updated MCP server %s: %w", name, err)
+	}
+
+	log.Printf("Successfully updated and reconnected to MCP server: %s", name)
+	
+	// Update user-specific configuration if path is set
+	if m.configPath != "" {
+		// Load existing user configs, update the one, then save
+		userConfigs, _ := m.loadUserConfig(sessionID)
+		userConfigs[name] = &config
+		m.setUserConfigs(sessionID, userConfigs)
+		if err := m.saveUserConfig(sessionID); err != nil {
+			log.Printf("Warning: Failed to save updated user MCP configuration: %v", err)
 		}
 	}
 	
 	return nil
 }
 
-// DeregisterMCP removes an MCP server configuration and disconnects from it
-func (m *MCPManager) DeregisterMCP(name string) error {
+// deregisterMCPInternal removes an MCP server configuration and disconnects from it (internal use without session)
+func (m *MCPManager) deregisterMCPInternal(name string) error {
 	m.mu.Lock()
 	defer m.mu.Unlock()
 
@@ -111,7 +196,7 @@ func (m *MCPManager) DeregisterMCP(name string) error {
 	delete(m.clients, name)
 	log.Printf("Successfully deregistered MCP server: %s", name)
 	
-	// Auto-save configuration if path is set
+	// Auto-save configuration if path is set (global save)
 	if m.configPath != "" {
 		if err := m.saveConfig(); err != nil {
 			log.Printf("Warning: Failed to save MCP configuration: %v", err)
@@ -121,23 +206,64 @@ func (m *MCPManager) DeregisterMCP(name string) error {
 	return nil
 }
 
-// GetConnectionStatus returns the current status of all MCP connections
-func (m *MCPManager) GetConnectionStatus() *MCPConnectionStatus {
-	log.Printf("GetConnectionStatus: acquiring read lock")
+// DeregisterMCP removes an MCP server configuration and disconnects from it for a specific user
+func (m *MCPManager) DeregisterMCP(r *http.Request, name string) error {
+	sessionID := m.extractSessionID(r)
+	m.mu.Lock()
+	defer m.mu.Unlock()
+
+	client, exists := m.clients[name]
+	if !exists {
+		return fmt.Errorf("MCP server %s not found", name)
+	}
+
+	if err := client.Disconnect(); err != nil {
+		log.Printf("Error disconnecting from MCP server %s: %v", name, err)
+	}
+
+	delete(m.clients, name)
+	log.Printf("Successfully deregistered MCP server: %s", name)
+	
+	// Update user-specific configuration if path is set
+	if m.configPath != "" {
+		// Remove from user configs and save
+		userConfigs, _ := m.loadUserConfig(sessionID)
+		delete(userConfigs, name)
+		m.setUserConfigs(sessionID, userConfigs)
+		if err := m.saveUserConfig(sessionID); err != nil {
+			log.Printf("Warning: Failed to save updated user MCP configuration: %v", err)
+		}
+	}
+	
+	return nil
+}
+
+// GetConnectionStatus returns the current status of all MCP connections for a specific user
+func (m *MCPManager) GetConnectionStatus(r *http.Request) *MCPConnectionStatus {
+	sessionID := m.extractSessionID(r)
+	log.Printf("GetConnectionStatus for session %s: acquiring read lock", sessionID)
 	m.mu.RLock()
 	defer func() {
-		log.Printf("GetConnectionStatus: releasing read lock")
+		log.Printf("GetConnectionStatus for session %s: releasing read lock", sessionID)
 		m.mu.RUnlock()
 	}()
 
-	connections := make([]MCPConnection, 0, len(m.clients))
+	connections := make([]MCPConnection, 0)
 	allTools := make([]Tool, 0)
 	allPrompts := make([]Prompt, 0)
 
-	log.Printf("GetConnectionStatus: processing %d clients", len(m.clients))
+	log.Printf("GetConnectionStatus for session %s: processing %d clients", sessionID, len(m.clients))
+	
+	userConfigs := m.getUserConfigs(sessionID)
+	
 	for name, client := range m.clients {
 		if client == nil {
 			log.Printf("Warning: MCP client %s is nil", name)
+			continue
+		}
+		
+		// Only include connections that this user owns
+		if _, userOwns := userConfigs[name]; !userOwns {
 			continue
 		}
 		
@@ -243,30 +369,42 @@ func (m *MCPManager) RefreshConnections() error {
 	return nil
 }
 
-// GetAllTools returns all tools from all connected MCP servers
-func (m *MCPManager) GetAllTools() []Tool {
+// GetAllTools returns tools from connected MCP servers for a specific user
+func (m *MCPManager) GetAllTools(r *http.Request) []Tool {
+	sessionID := m.extractSessionID(r)
 	m.mu.RLock()
 	defer m.mu.RUnlock()
 
 	var allTools []Tool
-	for _, client := range m.clients {
+	userConfigs := m.getUserConfigs(sessionID)
+	
+	for name, client := range m.clients {
 		if client.connection.Status == "connected" {
-			allTools = append(allTools, client.connection.Tools...)
+			// Only include tools from servers this user owns
+			if _, userOwns := userConfigs[name]; userOwns {
+				allTools = append(allTools, client.connection.Tools...)
+			}
 		}
 	}
 
 	return allTools
 }
 
-// GetAllPrompts returns all prompts from all connected MCP servers
-func (m *MCPManager) GetAllPrompts() []Prompt {
+// GetAllPrompts returns prompts from connected MCP servers for a specific user
+func (m *MCPManager) GetAllPrompts(r *http.Request) []Prompt {
+	sessionID := m.extractSessionID(r)
 	m.mu.RLock()
 	defer m.mu.RUnlock()
 
 	var allPrompts []Prompt
-	for _, client := range m.clients {
+	userConfigs := m.getUserConfigs(sessionID)
+	
+	for name, client := range m.clients {
 		if client.connection.Status == "connected" {
-			allPrompts = append(allPrompts, client.connection.Prompts...)
+			// Only include prompts from servers this user owns
+			if _, userOwns := userConfigs[name]; userOwns {
+				allPrompts = append(allPrompts, client.connection.Prompts...)
+			}
 		}
 	}
 
@@ -300,7 +438,7 @@ func (m *MCPManager) LoadFromConfig(configData []byte) error {
 
 	var errors []string
 	for name, mcpConfig := range config.MCPServers {
-		if err := m.RegisterMCP(name, mcpConfig); err != nil {
+		if err := m.registerMCPInternal(name, mcpConfig); err != nil {
 			errors = append(errors, fmt.Sprintf("%s: %v", name, err))
 			log.Printf("Failed to register MCP server %s: %v", name, err)
 		}
@@ -366,4 +504,145 @@ func (m *MCPManager) saveConfig() error {
 		return nil
 	}
 	return m.saveToFileUnlocked(m.configPath)
+}
+
+// extractSessionID extracts session ID from request headers or generates one
+func (m *MCPManager) extractSessionID(r *http.Request) string {
+	// Try to get session ID from cookie first
+	if cookie, err := r.Cookie("mcp_session_id"); err == nil && cookie.Value != "" {
+		return cookie.Value
+	}
+	
+	// Try to get session ID from header as fallback
+	sessionID := r.Header.Get("X-Session-ID")
+	if sessionID == "" {
+		// Generate a more consistent hash based on user agent and remote address for session isolation
+		userAgent := r.Header.Get("User-Agent")
+		remoteAddr := r.RemoteAddr
+		
+		// Extract just IP from remoteAddr (remove port)
+		if idx := strings.Index(remoteAddr, ":"); idx != -1 {
+			remoteAddr = remoteAddr[:idx]
+		}
+		
+		if remoteAddr == "" {
+			remoteAddr = "unknown"
+		}
+		if userAgent == "" {
+			userAgent = "unknown"
+		}
+		
+		// Use a more stable hash
+		hash := sha256.Sum256([]byte(remoteAddr + "|" + userAgent))
+		sessionID = hex.EncodeToString(hash[:16])
+	}
+	return sessionID
+}
+
+// setSessionCookie sets the session cookie for consistent session management
+func (m *MCPManager) setSessionCookie(w http.ResponseWriter, sessionID string) {
+	cookie := &http.Cookie{
+		Name:     "mcp_session_id",
+		Value:    sessionID,
+		Path:     "/",
+		MaxAge:   86400 * 7, // 7 days
+		HttpOnly: false,   // Allow JavaScript access for debugging (set to true in production)
+		Secure:   false,   // Set to true in production with HTTPS
+		SameSite: http.SameSiteLaxMode, // Lax mode for cross-origin requests via proxy
+	}
+	http.SetCookie(w, cookie)
+	log.Printf("Set session cookie for session %s", sessionID)
+}
+
+// getUserConfigs gets user-specific configurations (must be called with lock held)
+func (m *MCPManager) getUserConfigs(sessionID string) map[string]*MCPConfig {
+	configs, exists := m.userConfigs[sessionID]
+	if !exists {
+		return make(map[string]*MCPConfig)
+	}
+	return configs
+}
+
+// setUserConfigs sets user-specific configurations (must be called with lock held)
+func (m *MCPManager) setUserConfigs(sessionID string, configs map[string]*MCPConfig) {
+	m.userConfigs[sessionID] = configs
+}
+
+// loadUserConfig loads user-specific configuration from file
+func (m *MCPManager) loadUserConfig(sessionID string) (map[string]*MCPConfig, error) {
+	if m.configPath == "" {
+		return make(map[string]*MCPConfig), nil
+	}
+	
+	// Create user-specific config file path
+	userConfigPath := m.getUserConfigPath(sessionID)
+	
+	// Check if user config file exists
+	if _, err := os.Stat(userConfigPath); os.IsNotExist(err) {
+		return make(map[string]*MCPConfig), nil
+	}
+	
+	// Load user config
+	data, err := os.ReadFile(userConfigPath)
+	if err != nil {
+		return nil, fmt.Errorf("failed to read user config file: %w", err)
+	}
+	
+	var config struct {
+		MCPServers map[string]*MCPConfig `json:"mcpServers"`
+	}
+	
+	if err := json.Unmarshal(data, &config); err != nil {
+		return nil, fmt.Errorf("failed to unmarshal user config: %w", err)
+	}
+	
+	if config.MCPServers == nil {
+		return make(map[string]*MCPConfig), nil
+	}
+	
+	return config.MCPServers, nil
+}
+
+// saveUserConfig saves user-specific configuration to file
+func (m *MCPManager) saveUserConfig(sessionID string) error {
+	if m.configPath == "" {
+		return nil
+	}
+	
+	userConfigs := m.getUserConfigs(sessionID)
+	if len(userConfigs) == 0 {
+		return nil
+	}
+	
+	config := struct {
+		MCPServers map[string]*MCPConfig `json:"mcpServers"`
+	}{MCPServers: userConfigs}
+	
+	data, err := json.MarshalIndent(config, "", "  ")
+	if err != nil {
+		return fmt.Errorf("failed to marshal user config: %w", err)
+	}
+	
+	userConfigPath := m.getUserConfigPath(sessionID)
+	if err := os.MkdirAll(filepath.Dir(userConfigPath), 0755); err != nil {
+		return fmt.Errorf("failed to create config directory: %w", err)
+	}
+	
+	if err := os.WriteFile(userConfigPath, data, 0644); err != nil {
+		return fmt.Errorf("failed to write user config file: %w", err)
+	}
+	
+	return nil
+}
+
+// getUserConfigPath returns the path for user-specific config file
+func (m *MCPManager) getUserConfigPath(sessionID string) string {
+	if m.configPath == "" {
+		return ""
+	}
+	
+	// Create user-specific config in a subdirectory
+	configDir := filepath.Dir(m.configPath)
+	userDir := filepath.Join(configDir, "users")
+	return filepath.Join(userDir, fmt.Sprintf("user_%s.json", sessionID))
 }

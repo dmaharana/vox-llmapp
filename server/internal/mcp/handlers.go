@@ -342,3 +342,50 @@ func (h *MCPHandlers) GetPromptsHandler(w http.ResponseWriter, r *http.Request) 
 		return
 	}
 }
+
+// ExportMCPConfigsHandler handles GET /run/mcp-configs/export
+func (h *MCPHandlers) ExportMCPConfigsHandler(w http.ResponseWriter, r *http.Request) {
+	// Set session cookie for consistency
+	sessionID := h.manager.extractSessionID(r)
+	h.manager.setSessionCookie(w, sessionID)
+
+	status := h.manager.GetConnectionStatus(r)
+
+	// Double-check that status is not nil
+	if status == nil {
+		status = &MCPConnectionStatus{
+			Connections: []MCPConnection{},
+			Tools:       []Tool{},
+			Prompts:     []Prompt{},
+		}
+	}
+
+	// Convert MCPConnection to export format
+	exportData := make(map[string]MCPConfig)
+	for _, conn := range status.Connections {
+		exportData[conn.Name] = MCPConfig{
+			Name:     conn.Name,
+			Type:     conn.Type,
+			Command:  conn.Command,
+			Args:     conn.Args,
+			Env:      conn.Env,
+			URL:      conn.URL,
+			Headers:  conn.Headers,
+			Disabled: conn.Disabled,
+		}
+	}
+
+	response := struct {
+		McpServers map[string]MCPConfig `json:"mcpServers"`
+	}{
+		McpServers: exportData,
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	w.Header().Set("Content-Disposition", "attachment; filename=vox-mcp-config.json")
+	if err := json.NewEncoder(w).Encode(response); err != nil {
+		log.Printf("Failed to encode export response: %v", err)
+		http.Error(w, fmt.Sprintf("Failed to encode response: %v", err), http.StatusInternalServerError)
+		return
+	}
+}

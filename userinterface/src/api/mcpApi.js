@@ -128,3 +128,17 @@ export const refreshMCPConnections = async () => {
     throw error;
   }
 };
+
+// Export all MCP configurations as JSON
+export const exportMCPConfigs = async () => {
+  try {
+    const response = await axios.get('/run/mcp-configs/export', {
+      responseType: 'blob',
+      withCredentials: true
+    });
+    return response.data;
+  } catch (error) {
+    console.error('Error exporting MCP configurations:', error);
+    throw error;
+  }
+};

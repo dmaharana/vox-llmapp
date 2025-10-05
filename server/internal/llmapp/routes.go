@@ -124,6 +124,7 @@ func (c *Config) routes() http.Handler {
 	mux.Put("/run/mcp-config", mcpHandlers.UpdateMCPHandler)
 	mux.Delete("/run/mcp-config/{name}", mcpHandlers.DeleteMCPHandler)
 	mux.Get("/run/mcp-configs", mcpHandlers.GetAllMCPHandler)
+	mux.Get("/run/mcp-configs/export", mcpHandlers.ExportMCPConfigsHandler)
 	mux.Post("/run/mcp-tool", mcpHandlers.CallToolHandler)
 	mux.Post("/run/mcp-prompt", mcpHandlers.GetPromptHandler)
 	mux.Post("/run/mcp-refresh", mcpHandlers.RefreshConnectionsHandler)

@@ -21,7 +21,7 @@ import {
   TabPanel,
   useColorModeValue
 } from '@chakra-ui/react';
-import { AddIcon, RepeatIcon } from '@chakra-ui/icons';
+import { AddIcon, RepeatIcon, DownloadIcon } from '@chakra-ui/icons';
 import { useSelector, useDispatch } from 'react-redux';
 import {
   loadMCPConfigs,
@@ -33,6 +33,7 @@ import {
   loadMCPTools,
   loadMCPPrompts
 } from '../../store/mcpSlice';
+import { exportMCPConfigs } from '../../api/mcpApi';
 import MCPServerConfig from './MCPServerConfig';
 import MCPToolsList from './MCPToolsList';
 import MCPPromptsList from './MCPPromptsList';
@@ -192,13 +193,48 @@ const MCPConfiguration = () => {
     }
   };
 
+  const handleExport = async () => {
+    try {
+      const blob = await exportMCPConfigs();
+      const url = window.URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = 'vox-mcp-config.json';
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      window.URL.revokeObjectURL(url);
+      
+      toast({
+        title: 'Success',
+        description: 'MCP configuration exported successfully',
+        status: 'success',
+        duration: 3000,
+        isClosable: true,
+      });
+    } catch (error) {
+      toast({
+        title: 'Error',
+        description: 'Failed to export MCP configuration',
+        status: 'error',
+        duration: 5000,
+        isClosable: true,
+      });
+    }
+  };
+
   const handleJsonImport = () => {
     try {
       const config = JSON.parse(jsonConfig);
       if (config.mcpServers) {
         // Import multiple servers
         Object.entries(config.mcpServers).forEach(([name, serverConfig]) => {
-          dispatch(addMCPServer({ ...serverConfig, name }));
+          // Extract the name from the config if not already set
+          const serverWithNamed = {
+            ...serverConfig,
+            name: serverConfig.name || name
+          };
+          dispatch(addMCPServer(serverWithNamed));
         });
         toast({
           title: 'Success',
@@ -261,6 +297,16 @@ const MCPConfiguration = () => {
             MCP Configuration
           </Text>
           <HStack>
+            <Tooltip label="Export configurations">
+              <IconButton
+                icon={<DownloadIcon />}
+                size="sm"
+                variant="ghost"
+                onClick={handleExport}
+                isDisabled={connections.length === 0}
+                mr={2}
+              />
+            </Tooltip>
             <Tooltip label="Refresh connections">
               <IconButton
                 icon={<RepeatIcon />}

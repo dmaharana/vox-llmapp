@@ -32,6 +32,7 @@ const MCPToolsList = () => {
   const [toolResults, setToolResults] = useState({});
   const [toolInputs, setToolInputs] = useState({});
   const [callingTool, setCallingTool] = useState(null);
+  const [searchTerm, setSearchTerm] = useState('');
   const toast = useToast();
   const bgColor = useColorModeValue('gray.50', 'gray.700');
 
@@ -222,77 +223,104 @@ const MCPToolsList = () => {
           Refresh
         </Button>
       </HStack>
+      
+      {/* Search Input */}
+      {tools.length > 0 && (
+        <FormControl mb={4}>
+          <Input
+            placeholder="Search tools..."
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            size="sm"
+            variant="outline"
+          />
+        </FormControl>
+      )}
 
       <Accordion allowMultiple>
-        {tools.map((tool, index) => {
-          console.log('MCPToolsList - Rendering tool:', tool);
-          
-          // Parse server name and tool name from the format "ServerName: ToolName"
-          const toolNameParts = tool.name.split(': ');
-          const serverName = toolNameParts.length > 1 ? toolNameParts[0] : '';
-          const actualToolName = toolNameParts.length > 1 ? toolNameParts.slice(1).join(': ') : tool.name;
-          
-          return (
-            <AccordionItem key={`${tool.name}-${index}`}>
-              <AccordionButton>
-                <Box flex="1" textAlign="left">
-                  <HStack spacing={2}>
-                    {serverName && (
-                      <Badge colorScheme="purple" fontSize="xs">
-                        {serverName}
-                      </Badge>
+        {tools
+          .filter(tool => {
+            // Filter tools based on search term
+            if (!searchTerm) return true;
+            
+            const toolNameParts = tool.name.split(': ');
+            const actualToolName = toolNameParts.length > 1 ? toolNameParts.slice(1).join(': ') : tool.name;
+            
+            return (
+              tool.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+              actualToolName.toLowerCase().includes(searchTerm.toLowerCase()) ||
+              (tool.description && tool.description.toLowerCase().includes(searchTerm.toLowerCase()))
+            );
+          })
+          .map((tool, index) => {
+            console.log('MCPToolsList - Rendering tool:', tool);
+            
+            // Parse server name and tool name from the format "ServerName: ToolName"
+            const toolNameParts = tool.name.split(': ');
+            const serverName = toolNameParts.length > 1 ? toolNameParts[0] : '';
+            const actualToolName = toolNameParts.length > 1 ? toolNameParts.slice(1).join(': ') : tool.name;
+            
+            return (
+              <AccordionItem key={`${tool.name}-${index}`}>
+                <AccordionButton>
+                  <Box flex="1" textAlign="left">
+                    <HStack spacing={2}>
+                      {serverName && (
+                        <Badge colorScheme="purple" fontSize="xs">
+                          {serverName}
+                        </Badge>
+                      )}
+                      <Text fontWeight="semibold">{actualToolName}</Text>
+                      <Badge colorScheme="blue" size="sm">Tool</Badge>
+                    </HStack>
+                    {tool.description && (
+                      <Text fontSize="sm" color="gray.600" mt={1}>
+                        {tool.description}
+                      </Text>
                     )}
-                    <Text fontWeight="semibold">{actualToolName}</Text>
-                    <Badge colorScheme="blue" size="sm">Tool</Badge>
-                  </HStack>
-                  {tool.description && (
-                    <Text fontSize="sm" color="gray.600" mt={1}>
-                      {tool.description}
-                    </Text>
-                  )}
-                </Box>
-                <AccordionIcon />
-              </AccordionButton>
-              <AccordionPanel pb={4}>
-                <VStack spacing={4} align="stretch">
-                  <Box>
-                    <Text fontWeight="semibold" mb={2}>Parameters:</Text>
-                    {renderToolParameters(tool)}
                   </Box>
+                  <AccordionIcon />
+                </AccordionButton>
+                <AccordionPanel pb={4}>
+                  <VStack spacing={4} align="stretch">
+                    <Box>
+                      <Text fontWeight="semibold" mb={2}>Parameters:</Text>
+                      {renderToolParameters(tool)}
+                    </Box>
 
-                  <Divider />
+                    <Divider />
 
-                  <HStack>
-                    <Button
-                      size="sm"
-                      colorScheme="blue"
-                      onClick={() => handleToolCall(tool.name)}
-                      isLoading={callingTool === tool.name}
-                      loadingText="Calling..."
-                    >
-                      Call Tool
-                    </Button>
-                    {toolResults[tool.name] && (
+                    <HStack>
                       <Button
                         size="sm"
-                        variant="ghost"
-                        onClick={() => setToolResults(prev => {
-                          const newResults = { ...prev };
-                          delete newResults[tool.name];
-                          return newResults;
-                        })}
+                        colorScheme="blue"
+                        onClick={() => handleToolCall(tool.name)}
+                        isLoading={callingTool === tool.name}
+                        loadingText="Calling..."
                       >
-                        Clear Result
+                        Call Tool
                       </Button>
-                    )}
-                  </HStack>
+                      {toolResults[tool.name] && (
+                        <Button
+                          size="sm"
+                          variant="ghost"
+                          onClick={() => setToolResults(prev => {
+                            const newResults = { ...prev };
+                            delete newResults[tool.name];
+                            return newResults;
+                          })}
+                        >
+                          Clear Result
+                        </Button>
+                      )}
+                    </HStack>
 
-                  {renderToolResult(tool.name)}
-                </VStack>
-              </AccordionPanel>
-            </AccordionItem>
-          );
-        })}
+                    {renderToolResult(tool.name)}
+                  </VStack>
+                </AccordionPanel>
+              </AccordionItem>
+            );
+          })}
       </Accordion>
     </Box>
   );

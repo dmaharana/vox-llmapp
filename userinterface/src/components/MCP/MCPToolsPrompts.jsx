@@ -1,4 +1,4 @@
-import React, { useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
 import {
   Box,
   Text,
@@ -11,7 +11,9 @@ import {
   AccordionButton,
   AccordionPanel,
   AccordionIcon,
-  Code
+  Code,
+  FormControl,
+  Input
 } from '@chakra-ui/react';
 import { useSelector, useDispatch } from 'react-redux';
 import { toggleTool, loadMCPTools } from '../../store/mcpSlice';
@@ -26,6 +28,7 @@ const MCPToolsPrompts = () => {
       enabledTools: {}
     };
   });
+  const [searchTerm, setSearchTerm] = useState('');
 
   // Call useEffect at the top level
   useEffect(() => {
@@ -78,37 +81,61 @@ const MCPToolsPrompts = () => {
         <Text fontSize="xl" fontWeight="bold" mb={4}>
           Available Tools ({tools.length})
         </Text>
+        
+        {/* Search Input */}
+        {tools.length > 0 && (
+          <FormControl mb={4}>
+            <Input
+              placeholder="Search tools..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              size="sm"
+              variant="outline"
+            />
+          </FormControl>
+        )}
+        
         <Accordion allowMultiple>
-          {tools.map((tool, index) => (
-            <AccordionItem key={`${tool.name}-${index}`}>
-              <AccordionButton>
-                <HStack flex={1} justify="space-between" align="center">
-                  <HStack>
-                    <Text fontWeight="semibold">{tool.name}</Text>
-                    <Switch
-                      size="sm"
-                      isChecked={enabledTools[tool.name] !== false}
-                      onChange={(e) => {
-                        e.stopPropagation();
-                        handleToolToggle(tool.name);
-                      }}
-                    />
+          {tools
+            .filter(tool => {
+              // Filter tools based on search term
+              if (!searchTerm) return true;
+              
+              return (
+                tool.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                (tool.description && tool.description.toLowerCase().includes(searchTerm.toLowerCase()))
+              );
+            })
+            .map((tool, index) => (
+              <AccordionItem key={`${tool.name}-${index}`}>
+                <AccordionButton>
+                  <HStack flex={1} justify="space-between" align="center">
+                    <HStack>
+                      <Text fontWeight="semibold">{tool.name}</Text>
+                      <Switch
+                        size="sm"
+                        isChecked={enabledTools[tool.name] !== false}
+                        onChange={(e) => {
+                          e.stopPropagation();
+                          handleToolToggle(tool.name);
+                        }}
+                      />
+                    </HStack>
+                    <AccordionIcon />
                   </HStack>
-                  <AccordionIcon />
-                </HStack>
-              </AccordionButton>
-              <AccordionPanel pb={4}>
-                <VStack align="start" spacing={3}>
-                  {tool.description && (
-                    <Text fontSize="sm" color="gray.600">
-                      {tool.description}
-                    </Text>
-                  )}
-                  {renderToolSchema(tool.inputSchema)}
-                </VStack>
-              </AccordionPanel>
-            </AccordionItem>
-          ))}
+                </AccordionButton>
+                <AccordionPanel pb={4}>
+                  <VStack align="start" spacing={3}>
+                    {tool.description && (
+                      <Text fontSize="sm" color="gray.600">
+                        {tool.description}
+                      </Text>
+                    )}
+                    {renderToolSchema(tool.inputSchema)}
+                  </VStack>
+                </AccordionPanel>
+              </AccordionItem>
+            ))}
         </Accordion>
       </Box>
     </VStack>

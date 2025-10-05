@@ -173,6 +173,10 @@ function AddEditProvider({
     }
 
     setModels(models);
+    // When editing, deselect all models after fetching new ones so user can select fresh models
+    if (isEditing) {
+      setSelectedModels([]);
+    }
     setIsLoadingModels(false);
 
     toast({

@@ -307,15 +307,32 @@ func (m *MCPManager) CallTool(toolName string, arguments map[string]interface{})
 	m.mu.RLock()
 	defer m.mu.RUnlock()
 
+	// Handle prefixed tool name (serverName: toolName)
+	var actualToolName string
+	var targetServerName string
+	
+	if parts := strings.SplitN(toolName, ": ", 2); len(parts) == 2 {
+		targetServerName = parts[0]
+		actualToolName = parts[1]
+	} else {
+		// Fallback to original behavior for backward compatibility
+		actualToolName = toolName
+	}
+
 	// Find which server has this tool
-	for _, client := range m.clients {
+	for serverName, client := range m.clients {
 		if client.connection.Status != "connected" {
 			continue
 		}
 
+		// If we have a target server, only check that server
+		if targetServerName != "" && serverName != targetServerName {
+			continue
+		}
+
 		for _, tool := range client.connection.Tools {
-			if tool.Name == toolName {
-				return client.CallTool(toolName, arguments)
+			if tool.Name == actualToolName {
+				return client.CallTool(actualToolName, arguments)
 			}
 		}
 	}
@@ -328,15 +345,32 @@ func (m *MCPManager) GetPrompt(promptName string, arguments map[string]interface
 	m.mu.RLock()
 	defer m.mu.RUnlock()
 
+	// Handle prefixed prompt name (serverName: promptName)
+	var actualPromptName string
+	var targetServerName string
+	
+	if parts := strings.SplitN(promptName, ": ", 2); len(parts) == 2 {
+		targetServerName = parts[0]
+		actualPromptName = parts[1]
+	} else {
+		// Fallback to original behavior for backward compatibility
+		actualPromptName = promptName
+	}
+
 	// Find which server has this prompt
-	for _, client := range m.clients {
+	for serverName, client := range m.clients {
 		if client.connection.Status != "connected" {
 			continue
 		}
 
+		// If we have a target server, only check that server
+		if targetServerName != "" && serverName != targetServerName {
+			continue
+		}
+
 		for _, prompt := range client.connection.Prompts {
-			if prompt.Name == promptName {
-				return client.GetPrompt(promptName, arguments)
+			if prompt.Name == actualPromptName {
+				return client.GetPrompt(actualPromptName, arguments)
 			}
 		}
 	}
@@ -378,15 +412,28 @@ func (m *MCPManager) GetAllTools(r *http.Request) []Tool {
 	var allTools []Tool
 	userConfigs := m.getUserConfigs(sessionID)
 	
+	log.Printf("GetAllTools - sessionID: %s, userConfigs: %+v, total clients: %d", sessionID, userConfigs, len(m.clients))
+	
 	for name, client := range m.clients {
+		log.Printf("GetAllTools - Checking client %s, status: %s, tools count: %d", name, client.connection.Status, len(client.connection.Tools))
 		if client.connection.Status == "connected" {
 			// Only include tools from servers this user owns
 			if _, userOwns := userConfigs[name]; userOwns {
-				allTools = append(allTools, client.connection.Tools...)
+				log.Printf("GetAllTools - User owns %s, adding %d tools", name, len(client.connection.Tools))
+				// Add server name prefix to each tool name
+				for _, tool := range client.connection.Tools {
+					toolCopy := tool
+					toolCopy.Name = fmt.Sprintf("%s: %s", name, tool.Name)
+					log.Printf("GetAllTools - Adding tool: %s (original: %s)", toolCopy.Name, tool.Name)
+					allTools = append(allTools, toolCopy)
+				}
+			} else {
+				log.Printf("GetAllTools - User does not own %s", name)
 			}
 		}
 	}
 
+	log.Printf("GetAllTools - Returning %d tools total", len(allTools))
 	return allTools
 }
 
@@ -399,15 +446,28 @@ func (m *MCPManager) GetAllPrompts(r *http.Request) []Prompt {
 	var allPrompts []Prompt
 	userConfigs := m.getUserConfigs(sessionID)
 	
+	log.Printf("GetAllPrompts - sessionID: %s, userConfigs: %+v, total clients: %d", sessionID, userConfigs, len(m.clients))
+	
 	for name, client := range m.clients {
+		log.Printf("GetAllPrompts - Checking client %s, status: %s, prompts count: %d", name, client.connection.Status, len(client.connection.Prompts))
 		if client.connection.Status == "connected" {
 			// Only include prompts from servers this user owns
 			if _, userOwns := userConfigs[name]; userOwns {
-				allPrompts = append(allPrompts, client.connection.Prompts...)
+				log.Printf("GetAllPrompts - User owns %s, adding %d prompts", name, len(client.connection.Prompts))
+				// Add server name prefix to each prompt name
+				for _, prompt := range client.connection.Prompts {
+					promptCopy := prompt
+					promptCopy.Name = fmt.Sprintf("%s: %s", name, prompt.Name)
+					log.Printf("GetAllPrompts - Adding prompt: %s (original: %s)", promptCopy.Name, prompt.Name)
+					allPrompts = append(allPrompts, promptCopy)
+				}
+			} else {
+				log.Printf("GetAllPrompts - User does not own %s", name)
 			}
 		}
 	}
 
+	log.Printf("GetAllPrompts - Returning %d prompts total", len(allPrompts))
 	return allPrompts
 }
 

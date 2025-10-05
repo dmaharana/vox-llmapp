@@ -39,11 +39,14 @@ const MCPToolsList = () => {
     loadTools();
   }, []);
 
+  console.log('MCPToolsList - Current tools state:', tools);
+
   const loadTools = async () => {
     try {
       setLoading(true);
       setError(null);
       const toolsData = await fetchMCPTools();
+      console.log('MCPToolsList - Raw tools data from API:', toolsData);
       setTools(toolsData);
     } catch (err) {
       console.error('Error loading tools:', err);
@@ -221,61 +224,75 @@ const MCPToolsList = () => {
       </HStack>
 
       <Accordion allowMultiple>
-        {tools.map((tool, index) => (
-          <AccordionItem key={`${tool.name}-${index}`}>
-            <AccordionButton>
-              <Box flex="1" textAlign="left">
-                <HStack>
-                  <Text fontWeight="semibold">{tool.name}</Text>
-                  <Badge colorScheme="blue" size="sm">Tool</Badge>
-                </HStack>
-                {tool.description && (
-                  <Text fontSize="sm" color="gray.600" mt={1}>
-                    {tool.description}
-                  </Text>
-                )}
-              </Box>
-              <AccordionIcon />
-            </AccordionButton>
-            <AccordionPanel pb={4}>
-              <VStack spacing={4} align="stretch">
-                <Box>
-                  <Text fontWeight="semibold" mb={2}>Parameters:</Text>
-                  {renderToolParameters(tool)}
+        {tools.map((tool, index) => {
+          console.log('MCPToolsList - Rendering tool:', tool);
+          
+          // Parse server name and tool name from the format "ServerName: ToolName"
+          const toolNameParts = tool.name.split(': ');
+          const serverName = toolNameParts.length > 1 ? toolNameParts[0] : '';
+          const actualToolName = toolNameParts.length > 1 ? toolNameParts.slice(1).join(': ') : tool.name;
+          
+          return (
+            <AccordionItem key={`${tool.name}-${index}`}>
+              <AccordionButton>
+                <Box flex="1" textAlign="left">
+                  <HStack spacing={2}>
+                    {serverName && (
+                      <Badge colorScheme="purple" fontSize="xs">
+                        {serverName}
+                      </Badge>
+                    )}
+                    <Text fontWeight="semibold">{actualToolName}</Text>
+                    <Badge colorScheme="blue" size="sm">Tool</Badge>
+                  </HStack>
+                  {tool.description && (
+                    <Text fontSize="sm" color="gray.600" mt={1}>
+                      {tool.description}
+                    </Text>
+                  )}
                 </Box>
+                <AccordionIcon />
+              </AccordionButton>
+              <AccordionPanel pb={4}>
+                <VStack spacing={4} align="stretch">
+                  <Box>
+                    <Text fontWeight="semibold" mb={2}>Parameters:</Text>
+                    {renderToolParameters(tool)}
+                  </Box>
 
-                <Divider />
+                  <Divider />
 
-                <HStack>
-                  <Button
-                    size="sm"
-                    colorScheme="blue"
-                    onClick={() => handleToolCall(tool.name)}
-                    isLoading={callingTool === tool.name}
-                    loadingText="Calling..."
-                  >
-                    Call Tool
-                  </Button>
-                  {toolResults[tool.name] && (
+                  <HStack>
                     <Button
                       size="sm"
-                      variant="ghost"
-                      onClick={() => setToolResults(prev => {
-                        const newResults = { ...prev };
-                        delete newResults[tool.name];
-                        return newResults;
-                      })}
+                      colorScheme="blue"
+                      onClick={() => handleToolCall(tool.name)}
+                      isLoading={callingTool === tool.name}
+                      loadingText="Calling..."
                     >
-                      Clear Result
+                      Call Tool
                     </Button>
-                  )}
-                </HStack>
+                    {toolResults[tool.name] && (
+                      <Button
+                        size="sm"
+                        variant="ghost"
+                        onClick={() => setToolResults(prev => {
+                          const newResults = { ...prev };
+                          delete newResults[tool.name];
+                          return newResults;
+                        })}
+                      >
+                        Clear Result
+                      </Button>
+                    )}
+                  </HStack>
 
-                {renderToolResult(tool.name)}
-              </VStack>
-            </AccordionPanel>
-          </AccordionItem>
-        ))}
+                  {renderToolResult(tool.name)}
+                </VStack>
+              </AccordionPanel>
+            </AccordionItem>
+          );
+        })}
       </Accordion>
     </Box>
   );

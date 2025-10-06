@@ -1,4 +1,4 @@
-import { useRef } from "react";
+import { useRef, useState } from "react";
 import { useSelector, useDispatch } from "react-redux";
 import { setSystemPrompt } from "../store/promptSlice";
 import {
@@ -20,6 +20,9 @@ import {
   TabList,
   TabPanel,
   TabPanels,
+  Switch,
+  FormControl,
+  FormLabel,
 } from "@chakra-ui/react";
 import { SettingsIcon } from "@chakra-ui/icons";
 import IncludeHistorySwitch from "./IncludeHistorySwitch";
@@ -36,6 +39,8 @@ import AgentLibrary from "./Agent/AgentLibrary";
 function ChatSettings({
   includeHistory,
   setIncludeHistory,
+  includeTools,
+  setIncludeTools,
   waitingResponse,
   defaultTab,
   isSettingsOpen,
@@ -157,6 +162,19 @@ function ChatSettings({
                           setIncludeHistory={setIncludeHistory}
                           waitingResponse={waitingResponse}
                         />
+                      </Box>
+                      <Box mt={4}>
+                        <FormControl display="flex" alignItems="center" justifyContent="space-between">
+                          <FormLabel htmlFor="includeTools" mb="0">
+                            Enable Tools
+                          </FormLabel>
+                          <Switch
+                            id="includeTools"
+                            isChecked={includeTools}
+                            onChange={(e) => setIncludeTools(e.target.checked)}
+                            isDisabled={waitingResponse}
+                          />
+                        </FormControl>
                       </Box>
                     </Box>
                   </VStack>

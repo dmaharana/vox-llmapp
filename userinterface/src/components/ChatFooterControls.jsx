@@ -9,6 +9,8 @@ import ModelSelect from "./ModelSelect";
 export default function ChatFooterControls({
   includeHistory,
   setIncludeHistory,
+  includeTools,
+  setIncludeTools,
   waitingResponse,
   conversation,
   convHistory,
@@ -35,6 +37,8 @@ export default function ChatFooterControls({
         <ChatSettings
           includeHistory={includeHistory}
           setIncludeHistory={setIncludeHistory}
+          includeTools={includeTools}
+          setIncludeTools={setIncludeTools}
           waitingResponse={waitingResponse}
           defaultTab={chatFooterDefaultSettingsTab}
           isSettingsOpen={isSettingsOpen}
@@ -72,6 +76,8 @@ export default function ChatFooterControls({
 ChatFooterControls.propTypes = {
   includeHistory: PropTypes.bool.isRequired,
   setIncludeHistory: PropTypes.func.isRequired,
+  includeTools: PropTypes.bool.isRequired,
+  setIncludeTools: PropTypes.func.isRequired,
   waitingResponse: PropTypes.bool.isRequired,
   conversation: PropTypes.array.isRequired,
   convHistory: PropTypes.array,

@@ -12,6 +12,7 @@ import { useSelector } from "react-redux";
 import { DEFAULT_MESSAGES } from "./Constants";
 import { UserMsg } from "./UserMsg";
 import { AssistantMsg } from "./AssistantMsg";
+import { ToolCallMessage, PromptCallMessage } from "./Tool/ToolCallMessage";
 import { useEffect, useRef } from "react";
 
 export default function ChatMessages({
@@ -26,10 +27,13 @@ export default function ChatMessages({
   convHistory,
   useColorModeValue,
   model,
+  includeTools,
   chatBodySettingsDefaultTab,
   setSettingsDefaultTab,
   setIsSettingsOpen,
   isSettingsOpen,
+  handleToolCallApprove,
+  handleToolCallReject,
 }) {
   const prompts = useSelector((state) => state.prompt.prompts);
   const systemPrompt = useSelector((state) => state.prompt.systemPrompt);
@@ -78,7 +82,7 @@ export default function ChatMessages({
       {conversation.length > 0 ? (
         conversation.map((m) => (
           <Box key={m.id} w={"100%"}>
-            {m.user && (
+            {m.user && !m.toolCall && !m.promptCall && (
               <UserMsg
                 msg={m.user}
                 msgId={m.id}
@@ -87,6 +91,16 @@ export default function ChatMessages({
                 handleDeleteMessage={handleDeleteMessage}
                 timestamp={m.timestamp}
               />
+            )}
+            {m.toolCall && (
+              <ToolCallMessage 
+                message={m} 
+                onApprove={handleToolCallApprove}
+                onReject={handleToolCallReject}
+              />
+            )}
+            {m.promptCall && (
+              <PromptCallMessage message={m} />
             )}
             {m.assistant && (
               <AssistantMsg
@@ -103,6 +117,7 @@ export default function ChatMessages({
                 systemPrompt={systemPrompt}
                 handleAssistantUpdate={handleAssistantUpdate}
                 timestamp={m.timestamp}
+                includeTools={includeTools}
               />
             )}
           </Box>

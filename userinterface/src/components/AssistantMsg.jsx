@@ -182,6 +182,7 @@ export function AssistantMsg({
   model,
   handleAssistantUpdate,
   timestamp,
+  includeTools,
 }) {
   const { chatMode } = useSelector((state) => state.user);
   const { hasCopied, onCopy } = useClipboard(msg);

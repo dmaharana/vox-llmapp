@@ -7,6 +7,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"llmserver/internal/mcp"
 	"log"
 	"net/http"
 	"strings"
@@ -322,7 +323,18 @@ func (pool *LLMWorkerPool) handleNonStreamResponse(resp *http.Response, request 
 		return
 	}
 
-	// Extract content
+	// Check for tool calls in the response
+	if len(chatResp.Choices) > 0 && len(chatResp.Choices[0].Message.ToolCalls) > 0 {
+		log.Printf("Tool calls detected in response for request %s: %+v", request.ID, chatResp.Choices[0].Message.ToolCalls)
+		// Send tool calls to the frontend for user confirmation
+		toolCalls := chatResp.Choices[0].Message.ToolCalls
+		pool.sendToolCalls(request, toolCalls, chatResp.Model)
+		return
+	} else {
+		log.Printf("No tool calls detected in response for request %s, choices: %d", request.ID, len(chatResp.Choices))
+	}
+
+	// Extract content if no tool calls
 	var content string
 	if len(chatResp.Choices) > 0 {
 		content = chatResp.Choices[0].Message.Content
@@ -374,7 +386,35 @@ func (pool *LLMWorkerPool) buildRequest(payload RequestPayload) RequestData {
 		Messages:    messages,
 		Stream:      payload.Stream,
 		Temperature: 0.7,
+		Tools:       convertMCPToolsToLLM(payload.Tools),
 	}
+}
+
+// ConvertMCPToLLM converts an MCP Tool to an LLM Tool.
+func convertMCPToLLM(mcpTool mcp.Tool) Tool {
+	params := map[string]any{
+		"type":       mcpTool.InputSchema.Type,
+		"properties": mcpTool.InputSchema.Properties,
+		"required":   mcpTool.InputSchema.Required,
+	}
+
+	return Tool{
+		Type: "function",
+		Function: ToolFunction{
+			Name:        mcpTool.Name,
+			Description: mcpTool.Description,
+			Parameters:  params,
+		},
+	}
+}
+
+// convert multiple MCP tools to LLM tools
+func convertMCPToolsToLLM(mcpTools []mcp.Tool) []Tool {
+	llmTools := []Tool{}
+	for _, t := range mcpTools {
+		llmTools = append(llmTools, convertMCPToLLM(t))
+	}
+	return llmTools
 }
 
 // Helper methods for sending responses
@@ -415,6 +455,46 @@ func (pool *LLMWorkerPool) sendContent(request LLMRequest, content, model string
 		log.Printf("Content sent for request %s", request.ID)
 	default:
 		log.Printf("Failed to send content for request %s", request.ID)
+	}
+}
+
+// sendToolCalls sends tool calls to the frontend for user confirmation
+func (pool *LLMWorkerPool) sendToolCalls(request LLMRequest, toolCalls []ToolCall, model string) {
+	// Create tool call data in the format expected by frontend
+	toolCallData := map[string]interface{}{
+		"choices": []map[string]interface{}{
+			{
+				"index": 0,
+				"message": map[string]interface{}{
+					"role":    "assistant",
+					"content": "",
+				},
+				"tool_calls": toolCalls,
+			},
+		},
+		"model": model,
+	}
+
+	toolCallResponse := LLMResponse{
+		ID: request.ID,
+		Data: ResponseData{
+			Response: "Tool call required",
+			Model:    model,
+			Done:     false,
+		},
+		IsStream:   request.RequestPayload.Stream,
+		IsComplete: false,
+	}
+
+	// Store the tool call data for the handler to send as SSE
+	toolCallJSON, _ := json.Marshal(toolCallData)
+	toolCallResponse.Data.Response = string(toolCallJSON)
+
+	select {
+	case request.ResponseChan <- toolCallResponse:
+		log.Printf("Successfully sent tool calls for request %s: %+v", request.ID, toolCalls)
+	default:
+		log.Printf("Failed to send tool calls for request %s - channel full", request.ID)
 	}
 }
 

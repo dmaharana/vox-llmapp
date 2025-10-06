@@ -1,17 +1,17 @@
-import axios from 'axios';
+import axios from "axios";
 
 // Get all MCP server configurations and status
 export const fetchMCPConfigs = async () => {
   try {
-    console.log('Fetching MCP configs, current cookies:', document.cookie);
-    const response = await axios.get('/run/mcp-configs', {
-      withCredentials: true // Ensure cookies are sent
+    // console.log('Fetching MCP configs, current cookies:', document.cookie);
+    const response = await axios.get("/run/mcp-configs", {
+      withCredentials: true, // Ensure cookies are sent
     });
-    console.log('fetchMCPConfigs response.data:', response.data);
-    console.log('fetchMCPConfigs connections:', response.data?.connections);
+    // console.log('fetchMCPConfigs response.data:', response.data);
+    // console.log('fetchMCPConfigs connections:', response.data?.connections);
     return response.data;
   } catch (error) {
-    console.error('Error fetching MCP configs:', error);
+    console.error("Error fetching MCP configs:", error);
     throw error;
   }
 };
@@ -19,28 +19,38 @@ export const fetchMCPConfigs = async () => {
 // Register a new MCP server
 export const registerMCPServer = async (config) => {
   try {
-    console.log('Registering MCP server with config:', config);
-    console.log('Request will be sent to: /run/mcp-config');
-    console.log('Current cookies:', document.cookie);
-    
-    const response = await axios.post('/run/mcp-config', { config }, {
-      withCredentials: true // Ensure cookies are sent and received
-    });
-    
-    console.log('MCP server registration response:', response);
-    console.log('MCP server registration response.data:', response.data);
-    console.log('MCP server registration response.data type:', typeof response.data);
-    console.log('MCP server registration response.data.connections:', response.data?.connections);
-    console.log('Response headers:', response.headers);
-    console.log('Cookies after response:', document.cookie);
-    
+    console.log("Registering MCP server with config:", config);
+    console.log("Request will be sent to: /run/mcp-config");
+    console.log("Current cookies:", document.cookie);
+
+    const response = await axios.post(
+      "/run/mcp-config",
+      { config },
+      {
+        withCredentials: true, // Ensure cookies are sent and received
+      }
+    );
+
+    console.log("MCP server registration response:", response);
+    console.log("MCP server registration response.data:", response.data);
+    console.log(
+      "MCP server registration response.data type:",
+      typeof response.data
+    );
+    console.log(
+      "MCP server registration response.data.connections:",
+      response.data?.connections
+    );
+    console.log("Response headers:", response.headers);
+    console.log("Cookies after response:", document.cookie);
+
     return response.data;
   } catch (error) {
-    console.error('Error registering MCP server:', error);
+    console.error("Error registering MCP server:", error);
     if (error.response) {
-      console.error('Response data:', error.response.data);
-      console.error('Response status:', error.response.status);
-      console.error('Response headers:', error.response.headers);
+      console.error("Response data:", error.response.data);
+      console.error("Response status:", error.response.status);
+      console.error("Response headers:", error.response.headers);
     }
     throw error;
   }
@@ -49,10 +59,10 @@ export const registerMCPServer = async (config) => {
 // Update an existing MCP server
 export const updateMCPServer = async (config) => {
   try {
-    const response = await axios.put('/run/mcp-config', { config });
+    const response = await axios.put("/run/mcp-config", { config });
     return response.data;
   } catch (error) {
-    console.error('Error updating MCP server:', error);
+    console.error("Error updating MCP server:", error);
     throw error;
   }
 };
@@ -63,7 +73,7 @@ export const deleteMCPServer = async (name) => {
     const response = await axios.delete(`/run/mcp-config/${name}`);
     return response.data;
   } catch (error) {
-    console.error('Error deleting MCP server:', error);
+    console.error("Error deleting MCP server:", error);
     throw error;
   }
 };
@@ -71,10 +81,10 @@ export const deleteMCPServer = async (name) => {
 // Get all available tools
 export const fetchMCPTools = async () => {
   try {
-    const response = await axios.get('/run/mcp-tools');
+    const response = await axios.get("/run/mcp-tools");
     return response.data.tools || [];
   } catch (error) {
-    console.error('Error fetching MCP tools:', error);
+    console.error("Error fetching MCP tools:", error);
     return [];
   }
 };
@@ -82,10 +92,10 @@ export const fetchMCPTools = async () => {
 // Get all available prompts
 export const fetchMCPPrompts = async () => {
   try {
-    const response = await axios.get('/run/mcp-prompts');
+    const response = await axios.get("/run/mcp-prompts");
     return response.data.prompts || [];
   } catch (error) {
-    console.error('Error fetching MCP prompts:', error);
+    console.error("Error fetching MCP prompts:", error);
     return [];
   }
 };
@@ -93,13 +103,13 @@ export const fetchMCPPrompts = async () => {
 // Call a tool
 export const callMCPTool = async (toolName, toolArguments) => {
   try {
-    const response = await axios.post('/run/mcp-tool', {
+    const response = await axios.post("/run/mcp-tool", {
       toolName,
-      arguments: toolArguments
+      arguments: toolArguments,
     });
     return response.data;
   } catch (error) {
-    console.error('Error calling MCP tool:', error);
+    console.error("Error calling MCP tool:", error);
     throw error;
   }
 };
@@ -107,13 +117,13 @@ export const callMCPTool = async (toolName, toolArguments) => {
 // Get a prompt
 export const getMCPPrompt = async (promptName, promptArguments) => {
   try {
-    const response = await axios.post('/run/mcp-prompt', {
+    const response = await axios.post("/run/mcp-prompt", {
       promptName,
-      arguments: promptArguments
+      arguments: promptArguments,
     });
     return response.data;
   } catch (error) {
-    console.error('Error getting MCP prompt:', error);
+    console.error("Error getting MCP prompt:", error);
     throw error;
   }
 };
@@ -121,10 +131,10 @@ export const getMCPPrompt = async (promptName, promptArguments) => {
 // Refresh all MCP connections
 export const refreshMCPConnections = async () => {
   try {
-    const response = await axios.post('/run/mcp-refresh');
+    const response = await axios.post("/run/mcp-refresh");
     return response.data;
   } catch (error) {
-    console.error('Error refreshing MCP connections:', error);
+    console.error("Error refreshing MCP connections:", error);
     throw error;
   }
 };
@@ -132,13 +142,13 @@ export const refreshMCPConnections = async () => {
 // Export all MCP configurations as JSON
 export const exportMCPConfigs = async () => {
   try {
-    const response = await axios.get('/run/mcp-configs/export', {
-      responseType: 'blob',
-      withCredentials: true
+    const response = await axios.get("/run/mcp-configs/export", {
+      responseType: "blob",
+      withCredentials: true,
     });
     return response.data;
   } catch (error) {
-    console.error('Error exporting MCP configurations:', error);
+    console.error("Error exporting MCP configurations:", error);
     throw error;
   }
 };

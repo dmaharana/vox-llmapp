@@ -111,10 +111,10 @@ func (c *Config) routes() http.Handler {
 	mux.Get("/api/supported-providers", c.GetSupportedProviders)
 	mux.Get("/api/providers", c.GetDefaultProvider)
 	mux.Get("/api/worker-status", c.GetWorkerPoolStatus)
-	mux.Post("/api/test-chat", c.TestChatResponse)
+	// mux.Post("/api/test-chat", c.TestChatResponse)
 
 	mux.Post("/api/chat", c.ChatResponse)
-	
+	mux.Post("/api/tool-call-response", c.HandleToolCallResponse)
 
 	mux.Delete("/api/cancel", c.CancelRequest)
 
@@ -151,7 +151,7 @@ func (c *Config) sessionMiddleware(next http.Handler) http.Handler {
 func (c *Config) StartServer() error {
 	// Load MCP configurations on startup
 	c.LoadMCPConfig("mcp-config.json")
-	
+
 	// Start worker pool before server
 	c.StartWorkers()
 	log.Println("Worker pool started successfully")
@@ -274,6 +274,7 @@ func (c *Config) startHTTPServer() error {
 func (c *Config) GetShutdownChan() chan struct{} {
 	return c.shutdownChan
 }
+
 // LoadMCPConfig loads MCP configuration from file if it exists
 func (c *Config) LoadMCPConfig(configPath string) {
 	if configPath == "" {

@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect } from "react";
 import {
   Box,
   FormControl,
@@ -12,55 +12,80 @@ import {
   Text,
   useToast,
   Select,
-  Badge
-} from '@chakra-ui/react';
-import { DeleteIcon, EditIcon, CheckIcon, CloseIcon } from '@chakra-ui/icons';
+  Badge,
+} from "@chakra-ui/react";
+import { DeleteIcon, EditIcon, CheckIcon, CloseIcon } from "@chakra-ui/icons";
 
-const MCPServerConfig = ({ server, onSave, onDelete, onCancel, isNew = false }) => {
+const MCPServerConfig = ({
+  server,
+  onSave,
+  onDelete,
+  onCancel,
+  isNew = false,
+  onImportFromFile,
+}) => {
   const [isEditing, setIsEditing] = useState(isNew);
-  const [config, setConfig] = useState(server || {
-    name: '',
-    type: 'stdio',
-    command: '',
-    args: [],
-    env: {},
-    url: '',
-    headers: {},
-    disabled: false
-  });
-  const [argsText, setArgsText] = useState(server?.args?.join(' ') || '');
+  const [config, setConfig] = useState(
+    server || {
+      name: "",
+      type: "stdio",
+      command: "",
+      args: [],
+      env: {},
+      url: "",
+      headers: {},
+      disabled: false,
+    }
+  );
+  const [argsText, setArgsText] = useState(server?.args?.join(" ") || "");
   const [envText, setEnvText] = useState(
-    server?.env ? Object.entries(server.env).map(([k, v]) => `${k}=${v}`).join('\n') : ''
+    server?.env
+      ? Object.entries(server.env)
+          .map(([k, v]) => `${k}=${v}`)
+          .join("\n")
+      : ""
   );
   const [headersText, setHeadersText] = useState(
-    server?.headers ? Object.entries(server.headers).map(([k, v]) => `${k}=${v}`).join('\n') : ''
+    server?.headers
+      ? Object.entries(server.headers)
+          .map(([k, v]) => `${k}=${v}`)
+          .join("\n")
+      : ""
   );
   const toast = useToast();
 
   // Update form fields when server prop changes or when entering edit mode
   useEffect(() => {
     if (server && !isNew) {
-      console.log('MCPServerConfig - server object:', server);
-      console.log('MCPServerConfig - server.command:', server.command);
-      console.log('MCPServerConfig - server.args:', server.args);
+      // console.log('MCPServerConfig - server object:', server);
+      // console.log('MCPServerConfig - server.command:', server.command);
+      // console.log('MCPServerConfig - server.args:', server.args);
       setConfig(server);
-      setArgsText(server.args?.join(' ') || '');
+      setArgsText(server.args?.join(" ") || "");
       setEnvText(
-        server.env ? Object.entries(server.env).map(([k, v]) => `${k}=${v}`).join('\n') : ''
+        server.env
+          ? Object.entries(server.env)
+              .map(([k, v]) => `${k}=${v}`)
+              .join("\n")
+          : ""
       );
       setHeadersText(
-        server.headers ? Object.entries(server.headers).map(([k, v]) => `${k}=${v}`).join('\n') : ''
+        server.headers
+          ? Object.entries(server.headers)
+              .map(([k, v]) => `${k}=${v}`)
+              .join("\n")
+          : ""
       );
     }
   }, [server, isNew]);
 
   const handleSave = () => {
-    console.log('Saving config:', config);
+    console.log("Saving config:", config);
     if (!config.name.trim()) {
       toast({
-        title: 'Error',
-        description: 'Server name is required',
-        status: 'error',
+        title: "Error",
+        description: "Server name is required",
+        status: "error",
         duration: 3000,
         isClosable: true,
       });
@@ -68,23 +93,23 @@ const MCPServerConfig = ({ server, onSave, onDelete, onCancel, isNew = false }) 
     }
 
     // Validate based on server type
-    if (config.type === 'stdio') {
+    if (config.type === "stdio") {
       if (!config.command.trim()) {
         toast({
-          title: 'Error',
-          description: 'Command is required for stdio servers',
-          status: 'error',
+          title: "Error",
+          description: "Command is required for stdio servers",
+          status: "error",
           duration: 3000,
           isClosable: true,
         });
         return;
       }
-    } else if (config.type === 'http') {
+    } else if (config.type === "http") {
       if (!config.url.trim()) {
         toast({
-          title: 'Error',
-          description: 'URL is required for HTTP servers',
-          status: 'error',
+          title: "Error",
+          description: "URL is required for HTTP servers",
+          status: "error",
           duration: 3000,
           isClosable: true,
         });
@@ -98,10 +123,10 @@ const MCPServerConfig = ({ server, onSave, onDelete, onCancel, isNew = false }) 
     // Parse env from text
     const env = {};
     if (envText.trim()) {
-      envText.split('\n').forEach(line => {
-        const [key, ...valueParts] = line.split('=');
+      envText.split("\n").forEach((line) => {
+        const [key, ...valueParts] = line.split("=");
         if (key && valueParts.length > 0) {
-          env[key.trim()] = valueParts.join('=').trim();
+          env[key.trim()] = valueParts.join("=").trim();
         }
       });
     }
@@ -109,19 +134,20 @@ const MCPServerConfig = ({ server, onSave, onDelete, onCancel, isNew = false }) 
     // Parse headers from text (for HTTP servers)
     const headers = {};
     if (headersText.trim()) {
-      headersText.split('\n').forEach(line => {
-        const [key, ...valueParts] = line.split('=');
+      headersText.split("\n").forEach((line) => {
+        const [key, ...valueParts] = line.split("=");
         if (key && valueParts.length > 0) {
-          headers[key.trim()] = valueParts.join('=').trim();
+          headers[key.trim()] = valueParts.join("=").trim();
         }
       });
     }
 
     const finalConfig = {
       ...config,
-      args: config.type === 'stdio' ? args : [],
+      disabled: config.disabled ?? false, // Ensure disabled defaults to false (enabled) if undefined
+      args: config.type === "stdio" ? args : [],
       env,
-      headers: config.type === 'http' ? headers : {}
+      headers: config.type === "http" ? headers : {},
     };
 
     onSave(finalConfig);
@@ -135,31 +161,47 @@ const MCPServerConfig = ({ server, onSave, onDelete, onCancel, isNew = false }) 
       setIsEditing(false);
       // Reset to original values
       setConfig(server);
-      setArgsText(server?.args?.join(' ') || '');
+      setArgsText(server?.args?.join(" ") || "");
       setEnvText(
-        server?.env ? Object.entries(server.env).map(([k, v]) => `${k}=${v}`).join('\n') : ''
+        server?.env
+          ? Object.entries(server.env)
+              .map(([k, v]) => `${k}=${v}`)
+              .join("\n")
+          : ""
       );
       setHeadersText(
-        server?.headers ? Object.entries(server.headers).map(([k, v]) => `${k}=${v}`).join('\n') : ''
+        server?.headers
+          ? Object.entries(server.headers)
+              .map(([k, v]) => `${k}=${v}`)
+              .join("\n")
+          : ""
       );
     }
   };
 
   const getStatusColor = (status) => {
     switch (status) {
-      case 'connected': return 'green.500';
-      case 'disconnected': return 'gray.500';
-      case 'error': return 'red.500';
-      default: return 'gray.500';
+      case "connected":
+        return "green.500";
+      case "disconnected":
+        return "gray.500";
+      case "error":
+        return "red.500";
+      default:
+        return "gray.500";
     }
   };
 
   const getStatusText = (status) => {
     switch (status) {
-      case 'connected': return 'Connected';
-      case 'disconnected': return 'Disconnected';
-      case 'error': return 'Error';
-      default: return 'Unknown';
+      case "connected":
+        return "Connected";
+      case "disconnected":
+        return "Disconnected";
+      case "error":
+        return "Error";
+      default:
+        return "Unknown";
     }
   };
 
@@ -169,9 +211,14 @@ const MCPServerConfig = ({ server, onSave, onDelete, onCancel, isNew = false }) 
         <HStack justify="space-between" align="start">
           <VStack align="start" spacing={2} flex={1}>
             <HStack>
-              <Text fontWeight="bold" fontSize="lg">{server.name}</Text>
-              <Badge colorScheme={server.type === 'http' ? 'blue' : 'green'} size="sm">
-                {server.type?.toUpperCase() || 'STDIO'}
+              <Text fontWeight="bold" fontSize="lg">
+                {server.name}
+              </Text>
+              <Badge
+                colorScheme={server.type === "http" ? "blue" : "green"}
+                size="sm"
+              >
+                {server.type?.toUpperCase() || "STDIO"}
               </Badge>
               <Box
                 w={3}
@@ -183,13 +230,13 @@ const MCPServerConfig = ({ server, onSave, onDelete, onCancel, isNew = false }) 
                 {getStatusText(server.status)}
               </Text>
             </HStack>
-            {server.type === 'http' ? (
+            {server.type === "http" ? (
               <Text fontSize="sm" color="gray.600">
                 URL: {server.url}
               </Text>
             ) : (
               <Text fontSize="sm" color="gray.600">
-                Command: {server.command} {server.args?.join(' ')}
+                Command: {server.command} {server.args?.join(" ")}
               </Text>
             )}
             {server.lastError && (
@@ -233,9 +280,16 @@ const MCPServerConfig = ({ server, onSave, onDelete, onCancel, isNew = false }) 
       <VStack spacing={4} align="stretch">
         <HStack justify="space-between">
           <Text fontWeight="bold" fontSize="lg">
-            {isNew ? 'Add New MCP Server' : 'Edit MCP Server'}
+            {isNew ? "Add New MCP Server" : "Edit MCP Server"}
           </Text>
           <HStack>
+            <IconButton
+              icon={<EditIcon />}
+              size="sm"
+              variant="ghost"
+              onClick={toggleFileUpload}
+              title="Import server configuration from file"
+            />
             <IconButton
               icon={<CheckIcon />}
               size="sm"
@@ -268,12 +322,22 @@ const MCPServerConfig = ({ server, onSave, onDelete, onCancel, isNew = false }) 
               const newType = e.target.value;
               setConfig({ ...config, type: newType });
               // Clear type-specific fields when switching
-              if (newType === 'stdio') {
-                setConfig(prev => ({ ...prev, type: newType, url: '', headers: {} }));
-                setHeadersText('');
-              } else if (newType === 'http') {
-                setConfig(prev => ({ ...prev, type: newType, command: '', args: [] }));
-                setArgsText('');
+              if (newType === "stdio") {
+                setConfig((prev) => ({
+                  ...prev,
+                  type: newType,
+                  url: "",
+                  headers: {},
+                }));
+                setHeadersText("");
+              } else if (newType === "http") {
+                setConfig((prev) => ({
+                  ...prev,
+                  type: newType,
+                  command: "",
+                  args: [],
+                }));
+                setArgsText("");
               }
             }}
           >
@@ -285,13 +349,15 @@ const MCPServerConfig = ({ server, onSave, onDelete, onCancel, isNew = false }) 
           </Text>
         </FormControl>
 
-        {config.type === 'stdio' && (
+        {config.type === "stdio" && (
           <>
             <FormControl isRequired>
               <FormLabel>Command</FormLabel>
               <Input
                 value={config.command}
-                onChange={(e) => setConfig({ ...config, command: e.target.value })}
+                onChange={(e) =>
+                  setConfig({ ...config, command: e.target.value })
+                }
                 placeholder="e.g., uvx, python, node"
               />
               <Text fontSize="xs" color="gray.500" mt={1}>
@@ -313,7 +379,7 @@ const MCPServerConfig = ({ server, onSave, onDelete, onCancel, isNew = false }) 
           </>
         )}
 
-        {config.type === 'http' && (
+        {config.type === "http" && (
           <>
             <FormControl isRequired>
               <FormLabel>URL</FormLabel>
@@ -360,7 +426,9 @@ const MCPServerConfig = ({ server, onSave, onDelete, onCancel, isNew = false }) 
             <FormLabel mb={0}>Disabled</FormLabel>
             <Switch
               isChecked={config.disabled}
-              onChange={(e) => setConfig({ ...config, disabled: e.target.checked })}
+              onChange={(e) =>
+                setConfig({ ...config, disabled: e.target.checked })
+              }
             />
           </HStack>
         </FormControl>

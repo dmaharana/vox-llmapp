@@ -3,6 +3,7 @@ import { useSelector, useDispatch } from "react-redux";
 import { setPrompts, setSystemPrompt } from "../store/promptSlice";
 import { setActiveProvider } from "../store/providerSlice";
 import { initializeMCP } from "../store/mcpInit";
+import { callMCPTool } from "../api/mcpApi";
 import {
   Box,
   useColorMode,
@@ -10,9 +11,10 @@ import {
   Button,
   HStack,
   VStack,
-  useDisclosure,
   IconButton,
   Tooltip,
+  Text,
+  Badge,
 } from "@chakra-ui/react";
 import { BeatLoader } from "react-spinners";
 import generateUUID from "./scripts/utils";
@@ -42,8 +44,7 @@ function generateChatTitle(conversation) {
   const sentenceEnd = text.indexOf(".");
   if (sentenceEnd !== -1 && sentenceEnd < 50) {
     text = text.slice(0, sentenceEnd + 1);
-  }
-  else {
+  } else {
     const words = text.split(/\s+/).slice(0, 8);
     text = words.join(" ");
     if (words.length >= 8) text += "...";
@@ -58,12 +59,13 @@ export default function ChatScreen() {
   const prompts = useSelector((state) => state.prompt.prompts);
   const systemPrompt = useSelector((state) => state.prompt.systemPrompt);
   const { providers, activeProvider } = useSelector((state) => state.provider);
+  const { tools, enabledTools } = useSelector((state) => state.mcp);
   const [conversation, setConversation] = useState([]);
-  // const { isOpen: isSettingsOpen, onOpen: onSettingsOpen, onClose: onSettingsClose } = useDisclosure();
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
   const [query, setQuery] = useState("");
   const [model, setModel] = useState("");
   const [includeHistory, setIncludeHistory] = useState(true);
+  const [includeTools, setIncludeTools] = useState(true);
   const [convHistory, setConvHistory] = useState([]);
 
   const [allChats, setAllChats] = useState([]);
@@ -75,6 +77,387 @@ export default function ChatScreen() {
     return savedWidth ? parseInt(savedWidth) : 300;
   });
   const [isResizing, setIsResizing] = useState(false);
+
+  // Handle MCP tool calls within chat
+  const handleToolCall = (toolName, args, result) => {
+    const newMessageId = conversation.length > 0 ? conversation[conversation.length - 1].id + 1 : 1;
+    
+    const toolCallMessage = {
+      id: newMessageId,
+      user: `Called MCP tool: ${toolName}`,
+      toolCall: {
+        toolName,
+        args,
+        result
+      },
+      timestamp: new Date().toISOString(),
+    };
+
+    setConversation(prev => [...prev, toolCallMessage]);
+  };
+
+  // Handle MCP prompt calls within chat
+  const handlePromptCall = (promptName, args, result) => {
+    const newMessageId = conversation.length > 0 ? conversation[conversation.length - 1].id + 1 : 1;
+    
+    const promptCallMessage = {
+      id: newMessageId,
+      user: `Used MCP prompt: ${promptName}`,
+      promptCall: {
+        promptName,
+        args,
+        result
+      },
+      timestamp: new Date().toISOString(),
+    };
+
+    setConversation(prev => [...prev, promptCallMessage]);
+  };
+
+  // Handle tool call approval
+  const handleToolCallApprove = async (messageId, toolName, args) => {
+    try {
+      // Parse the arguments if they're a JSON string (from LLM response)
+      let parsedArgs = args;
+      if (typeof args === 'string') {
+        try {
+          parsedArgs = JSON.parse(args);
+        } catch (parseError) {
+          console.error('Error parsing tool arguments:', parseError);
+          // If parsing fails, use the string as-is
+        }
+      }
+      
+      const result = await callMCPTool(toolName, parsedArgs);
+      
+      // Update the tool call message with the result and capture the updated conversation
+      const updatedConversation = conversation.map(msg =>
+        msg.id === messageId
+          ? {
+              ...msg,
+              toolCall: {
+                ...msg.toolCall,
+                result: result,
+              }
+            }
+          : msg
+      );
+      setConversation(updatedConversation);
+      
+      // Check if there are no follow-up tool calls and send result back to backend for further processing
+      if (activeProvider && activeProvider.api_key) {
+        try {
+          // Check if this tool result should trigger a follow-up response from the LLM
+          // We'll send the tool result back to the backend to see if the LLM wants to continue
+          const currentActiveTools = filterTools(tools, enabledTools);
+          const toolResponseReqBody = {
+            model,
+            prompt: `Tool "${toolName}" returned: ${JSON.stringify(result)}`,
+            stream: true, // Use streaming since we want to handle both tool calls and responses
+            includeHistory: includeHistory,
+            includeTools: includeTools,
+            tools: currentActiveTools,
+            systemPrompt: systemPrompt,
+            providerUrl: activeProvider.endpoint,
+            providerName: activeProvider.provider_name,
+            providerApiKey: activeProvider.api_key,
+          };
+
+          // Only include conversation if there are previous messages (excluding the current tool call)
+          const conversationWithoutToolCall = updatedConversation.filter(msg => !msg.toolCall || msg.toolCall.result !== result);
+          if (conversationWithoutToolCall.length > 0 && includeHistory) {
+            // Transform to role-based format for backend
+            const formattedConversation = conversationWithoutToolCall.map(msg => {
+              const formattedMsg = [];
+              
+              if (msg.user && msg.user !== "Thinking...") {
+                formattedMsg.push({
+                  role: "user",
+                  content: msg.user,
+                  timestamp: msg.timestamp,
+                  model: msg.model,
+                  systemPrompt: msg.systemPrompt
+                });
+              }
+              
+              if (msg.assistant && msg.assistant !== "Thinking..." && msg.assistant !== "") {
+                formattedMsg.push({
+                  role: "assistant", 
+                  content: msg.assistant,
+                  timestamp: msg.timestamp,
+                  model: msg.model,
+                  resTime: msg.resTime
+                });
+              }
+              
+              return formattedMsg;
+            }).flat();
+            
+            toolResponseReqBody.conversation = formattedConversation;
+          }
+
+          console.log("Tool result request body:", toolResponseReqBody);
+
+          const toolResponse = await fetch("/api/chat", {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+              "X-Api-Key": activeProvider.api_key,
+            },
+            body: JSON.stringify(toolResponseReqBody),
+          });
+
+          if (toolResponse.ok) {
+            const toolResponseData = await toolResponse.json();
+            console.log("Tool response from backend:", toolResponseData);
+            
+            // Check if the backend response contains tool calls
+            let hasToolCalls = false;
+            if (toolResponseData.response && typeof toolResponseData.response === "string") {
+              try {
+                const nestedData = JSON.parse(toolResponseData.response);
+                hasToolCalls = nestedData.choices && nestedData.choices[0] && nestedData.choices[0].tool_calls;
+                
+                // If there are tool calls, add them to conversation like in the streaming logic
+                if (hasToolCalls) {
+                  const toolCalls = nestedData.choices[0].tool_calls;
+                  console.log("Backend wants to make more tool calls:", toolCalls);
+                  
+                  setConversation((prev) => {
+                    const updatedConv = [...prev];
+                    
+                    // Add tool call messages to conversation
+                    toolCalls.forEach((toolCall, index) => {
+                      const toolCallId = updatedConversation.length + 1 + index; // Use sequential IDs
+                      updatedConv.push({
+                        id: toolCallId,
+                        user: `AI wants to use tool: ${toolCall.function.name}`,
+                        toolCall: {
+                          toolName: toolCall.function.name,
+                          args: toolCall.function.arguments,
+                          result: "Pending user confirmation...",
+                        },
+                        timestamp: new Date().toISOString(),
+                      });
+                    });
+                    
+                    return updatedConv;
+                  });
+                }
+              } catch (parseError) {
+                console.log("Could not parse nested response for tool calls, treating as regular response");
+                // If parsing fails, treat as regular text response
+                hasToolCalls = false;
+              }
+            }
+            
+            // Only add assistant message if there are no follow-up tool calls
+            if (toolResponseData.response && !hasToolCalls) {
+              const assistantMessage = {
+                id: updatedConversation.length + 1,
+                user: "assistant",
+                assistant: toolResponseData.response,
+                timestamp: new Date().toISOString(),
+              };
+              setConversation(prev => [...prev, assistantMessage]);
+            }
+          } else {
+            console.error("Failed to get response from backend after tool call");
+          }
+        } catch (toolError) {
+          console.error("Error sending tool result to backend:", toolError);
+        }
+      }
+    } catch (error) {
+      // Update with error message
+      const errorMessage = error.message || "Tool call failed";
+      const updatedConversationWithErrors = conversation.map(msg =>
+        msg.id === messageId
+          ? {
+              ...msg,
+              toolCall: {
+                ...msg.toolCall,
+                result: { error: errorMessage },
+              }
+            }
+          : msg
+      );
+      setConversation(updatedConversationWithErrors);
+      
+      // Also send error back to backend for processing
+      if (activeProvider && activeProvider.api_key) {
+        try {
+          const currentActiveTools = filterTools(tools, enabledTools);
+          const toolResponseReqBody = {
+            model,
+            prompt: `Tool "${toolName}" failed: ${errorMessage}`,
+            stream: true, // Use streaming since we want to handle both tool calls and responses
+            includeHistory: includeHistory,
+            includeTools: includeTools,
+            tools: currentActiveTools,
+            systemPrompt: systemPrompt,
+            providerUrl: activeProvider.endpoint,
+            providerName: activeProvider.provider_name,
+            providerApiKey: activeProvider.api_key,
+          };
+
+          // Only include conversation if there are previous messages (excluding the current tool call)
+          const conversationWithoutToolCall = updatedConversationWithErrors.filter(msg => {
+            return !msg.toolCall || !msg.toolCall.result || !msg.toolCall.result.error || msg.toolCall.result.error !== errorMessage;
+          });
+          if (conversationWithoutToolCall.length > 0 && includeHistory) {
+            // Transform to role-based format for backend
+            const formattedConversation = conversationWithoutToolCall.map(msg => {
+              const formattedMsg = [];
+              
+              if (msg.user && msg.user !== "Thinking...") {
+                formattedMsg.push({
+                  role: "user",
+                  content: msg.user,
+                  timestamp: msg.timestamp,
+                  model: msg.model,
+                  systemPrompt: msg.systemPrompt
+                });
+              }
+              
+              if (msg.assistant && msg.assistant !== "Thinking..." && msg.assistant !== "") {
+                formattedMsg.push({
+                  role: "assistant", 
+                  content: msg.assistant,
+                  timestamp: msg.timestamp,
+                  model: msg.model,
+                  resTime: msg.resTime
+                });
+              }
+              
+              return formattedMsg;
+            }).flat();
+            
+            toolResponseReqBody.conversation = formattedConversation;
+          }
+          if (conversationWithoutToolCall.length > 0 && includeHistory) {
+            // Transform to role-based format for backend
+            const formattedConversation = conversationWithoutToolCall.map(msg => {
+              const formattedMsg = [];
+              
+              if (msg.user && msg.user !== "Thinking...") {
+                formattedMsg.push({
+                  role: "user",
+                  content: msg.user,
+                  timestamp: msg.timestamp,
+                  model: msg.model,
+                  systemPrompt: msg.systemPrompt
+                });
+              }
+              
+              if (msg.assistant && msg.assistant !== "Thinking..." && msg.assistant !== "") {
+                formattedMsg.push({
+                  role: "assistant", 
+                  content: msg.assistant,
+                  timestamp: msg.timestamp,
+                  model: msg.model,
+                  resTime: msg.resTime
+                });
+              }
+              
+              return formattedMsg;
+            }).flat();
+            
+            toolResponseReqBody.conversation = formattedConversation;
+          }
+          if (conversationWithoutToolCall.length > 0 && includeHistory) {
+            toolResponseReqBody.conversation = conversationWithoutToolCall;
+          }
+
+          console.log("Tool error request body:", toolResponseReqBody);
+
+          const toolResponse = await fetch("/api/chat", {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+              "X-Api-Key": activeProvider.api_key,
+            },
+            body: JSON.stringify(toolResponseReqBody),
+          });
+
+          if (toolResponse.ok) {
+            const toolResponseData = await toolResponse.json();
+            console.log("Tool error response from backend:", toolResponseData);
+            
+            // Check if the backend response contains tool calls
+            let hasToolCalls = false;
+            if (toolResponseData.response && typeof toolResponseData.response === "string") {
+              try {
+                const nestedData = JSON.parse(toolResponseData.response);
+                hasToolCalls = nestedData.choices && nestedData.choices[0] && nestedData.choices[0].tool_calls;
+                
+                // If there are tool calls, add them to conversation
+                if (hasToolCalls) {
+                  const toolCalls = nestedData.choices[0].tool_calls;
+                  console.log("Backend wants to make more tool calls after error:", toolCalls);
+                  
+                  setConversation((prev) => {
+                    const updatedConv = [...prev];
+                    
+                    // Add tool call messages to conversation
+                    toolCalls.forEach((toolCall, index) => {
+                      const toolCallId = updatedConversationWithErrors.length + 1 + index;
+                      updatedConv.push({
+                        id: toolCallId,
+                        user: `AI wants to use tool: ${toolCall.function.name}`,
+                        toolCall: {
+                          toolName: toolCall.function.name,
+                          args: toolCall.function.arguments,
+                          result: "Pending user confirmation...",
+                        },
+                        timestamp: new Date().toISOString(),
+                      });
+                    });
+                    
+                    return updatedConv;
+                  });
+                }
+              } catch (parseError) {
+                console.log("Could not parse nested response for tool calls, treating as regular response");
+                // If parsing fails, treat as regular text response
+                hasToolCalls = false;
+              }
+            }
+            
+            // Only add assistant message if there are no follow-up tool calls
+            if (toolResponseData.response && !hasToolCalls) {
+              const assistantMessage = {
+                id: updatedConversationWithErrors.length + 1,
+                user: "assistant",
+                assistant: toolResponseData.response,
+                timestamp: new Date().toISOString(),
+              };
+              setConversation(prev => [...prev, assistantMessage]);
+            }
+          }
+        } catch (toolError) {
+          console.error("Error sending tool error to backend:", toolError);
+        }
+      }
+    }
+  };
+
+  // Handle tool call rejection
+  const handleToolCallReject = (messageId) => {
+    setConversation(prev =>
+      prev.map(msg =>
+        msg.id === messageId
+          ? {
+              ...msg,
+              toolCall: {
+                ...msg.toolCall,
+                result: "Tool call rejected by user",
+              }
+            }
+          : msg
+      )
+    );
+  };
 
   const chatBodySettingsDefaultTab = "prompts";
   const chatFooterSettingsDefaultTab = "profile";
@@ -145,8 +528,7 @@ export default function ChatScreen() {
       document.addEventListener("mouseup", handleMouseUp);
       document.body.style.cursor = "col-resize";
       document.body.style.userSelect = "none";
-    }
-    else {
+    } else {
       document.removeEventListener("mousemove", handleMouseMove);
       document.removeEventListener("mouseup", handleMouseUp);
       document.body.style.cursor = "";
@@ -169,17 +551,14 @@ export default function ChatScreen() {
         const parsedPrompt = JSON.parse(savedSystemPrompt);
         if (parsedPrompt && parsedPrompt.trim() !== "") {
           dispatch(setSystemPrompt(parsedPrompt));
-        }
-        else {
+        } else {
           dispatch(setSystemPrompt(DEFAULT_MESSAGES.SYSTEM_PROMPT));
         }
-      }
-      catch (e) {
+      } catch (e) {
         console.error("Failed to parse saved system prompt", e);
         dispatch(setSystemPrompt(DEFAULT_MESSAGES.SYSTEM_PROMPT));
       }
-    }
-    else {
+    } else {
       dispatch(setSystemPrompt(DEFAULT_MESSAGES.SYSTEM_PROMPT));
     }
   }, [dispatch]);
@@ -213,7 +592,7 @@ export default function ChatScreen() {
   );
   const [waitingResponse, setWaitingResponse] = useState(false);
   const [currentMsgId, setCurrentMsgId] = useState(1);
-  const [cancelToken, setCancelToken] = useState();
+  const [cancelToken, setCancelToken] = useState("");
 
   const { colorMode, toggleColorMode } = useColorMode();
   const bgMain = useColorModeValue("gray.50", "gray.700");
@@ -249,8 +628,7 @@ export default function ChatScreen() {
         setActiveChatId(chats[0].id);
         setConversation(chats[0].conversation);
       }
-    }
-    else {
+    } else {
       const newId = generateUUID();
       const initialChat = {
         id: newId,
@@ -285,8 +663,7 @@ export default function ChatScreen() {
                 }
               : chat
           );
-        }
-        else {
+        } else {
           const newChat = {
             id: activeChatId,
             title: generateChatTitle(conversation),
@@ -295,8 +672,7 @@ export default function ChatScreen() {
           };
           updated = [newChat, ...prev];
         }
-      }
-      else {
+      } else {
         updated = prev;
       }
 
@@ -346,8 +722,7 @@ export default function ChatScreen() {
               : item
           )
         );
-      }
-      else {
+      } else {
         setConvHistory([
           {
             id: id,
@@ -455,8 +830,7 @@ export default function ChatScreen() {
 
     if (conversation.length > 0) {
       setConversation([...conversation, newMessage]);
-    }
-    else {
+    } else {
       setConversation([newMessage]);
     }
     setQuery("");
@@ -472,16 +846,14 @@ export default function ChatScreen() {
     for (let i = start; i < data.length; i++) {
       if (data[i] === "{") {
         open++;
-      }
-      else if (data[i] === "}") {
+      } else if (data[i] === "}") {
         open--;
         if (open === 0) {
           try {
             const jsonObject = JSON.parse(data.substring(start, i + 1));
             result.push(jsonObject);
             start = i + 1;
-          }
-          catch (error) {
+          } catch (error) {
             console.error("Error parsing JSON:", error);
           }
         }
@@ -491,10 +863,37 @@ export default function ChatScreen() {
     return result;
   }
 
+  // get enabled tools from the tools array
+  function filterTools(tools, enabledTools) {
+    return tools.filter((tool) => {
+      console.log(
+        "Checking tool:",
+        tool.name,
+        "Enabled:",
+        enabledTools[tool.name]
+      );
+      if (enabledTools[tool.name] !== false) {
+        return true;
+      }
+      return false;
+    });
+  }
+
   const callLlmService = async (message) => {
     const query = message.user;
     const msgId = message.id;
     const startTime = new Date().getTime();
+    const activeTools = filterTools(tools, enabledTools);
+    console.log(
+      "Include tools:",
+      enabledTools,
+      "tools:",
+      tools,
+      "activeTools:",
+      activeTools
+    );
+    // if there are tools then set stream to false for now
+    const stream = activeTools.length > 0 ? false : true;
 
     // Check if provider is selected
     if (!activeProvider) {
@@ -520,20 +919,53 @@ export default function ChatScreen() {
     let reqBody = {
       model: model,
       prompt: query,
-      stream: true,
+      stream: stream,
       includeHistory: includeHistory,
+      includeTools: includeTools,
+      tools: activeTools,
       systemPrompt: systemPrompt,
       providerUrl: activeProvider.endpoint,
       providerName: activeProvider.provider_name,
       providerApiKey: activeProvider.api_key,
     };
 
+    console.log("Request body:", reqBody);
     if (conversation.length > 0 && includeHistory) {
+      // Transform frontend message format to backend-compatible format
+      const formattedConversation = conversation.map(msg => {
+        const formattedMsg = [];
+        
+        // Add user message if exists
+        if (msg.user && msg.user !== "Thinking...") {
+          formattedMsg.push({
+            role: "user",
+            content: msg.user,
+            timestamp: msg.timestamp,
+            model: msg.model,
+            systemPrompt: msg.systemPrompt
+          });
+        }
+        
+        // Add assistant message if exists and not thinking
+        if (msg.assistant && msg.assistant !== "Thinking..." && msg.assistant !== "") {
+          formattedMsg.push({
+            role: "assistant", 
+            content: msg.assistant,
+            timestamp: msg.timestamp,
+            model: msg.model,
+            resTime: msg.resTime
+          });
+        }
+        
+        return formattedMsg;
+      }).flat();
+      
       reqBody = {
         ...reqBody,
-        conversation: conversation,
+        conversation: formattedConversation,
       };
     }
+    console.log("Request body with conversation:", reqBody);
 
     try {
       setWaitingResponse(true);
@@ -567,6 +999,104 @@ export default function ChatScreen() {
         return;
       }
 
+      // Check if this is a non-streaming response (for tool calls)
+      const contentType = response.headers.get("content-type");
+      console.log("Response content-type:", contentType);
+      if (contentType && contentType.includes("application/json")) {
+        // Non-streaming response - could be tool call or regular response
+        const responseData = await response.json();
+        console.log("Non-streaming response:", responseData);
+
+        // Check for tool calls in the nested response field
+        if (
+          responseData.response &&
+          typeof responseData.response === "string"
+        ) {
+          try {
+            console.log(
+              "Attempting to parse nested response:",
+              responseData.response
+            );
+            const nestedData = JSON.parse(responseData.response);
+            console.log("Parsed nested data:", nestedData);
+
+            if (
+              nestedData.choices &&
+              nestedData.choices[0] &&
+              nestedData.choices[0].tool_calls
+            ) {
+              const toolCalls = nestedData.choices[0].tool_calls;
+              console.log("Received tool calls from nested data:", toolCalls);
+              // Use the cancelToken from the request or look for it in response
+              const token = cancelToken || responseData.cancelToken || "";
+              console.log(
+                "Setting tool call token:",
+                token,
+                "from cancelToken:",
+                cancelToken,
+                "or responseData.cancelToken:",
+                responseData.cancelToken
+              );
+              // Add tool calls directly to conversation instead of showing modal
+              setConversation((prev) => {
+                        const updatedConv = prev.map((m) =>
+                          m.id === msgId
+                            ? {
+                                ...m,
+                                assistant: "The AI wants to use tools. Processing...",
+                              }
+                            : m
+                        );
+                        
+                        // Add tool call messages to conversation
+                        toolCalls.forEach((toolCall, index) => {
+                          const toolCallId = msgId + 0.1 + index; // Use decimal IDs for tool calls
+                          updatedConv.push({
+                            id: toolCallId,
+                            user: `AI wants to use tool: ${toolCall.function.name}`,
+                            toolCall: {
+                              toolName: toolCall.function.name,
+                              args: toolCall.function.arguments,
+                              result: "Pending user confirmation...",
+                            },
+                            timestamp: new Date().toISOString(),
+                          });
+                        });
+                        
+                        return updatedConv;
+                      });
+                      setWaitingResponse(false);
+                      return;
+            }
+          } catch (e) {
+            console.error(
+              "Error parsing nested tool call response:",
+              e,
+              "Response data:",
+              responseData.response
+            );
+          }
+        }
+
+        // Regular non-streaming response
+        const endTime = new Date().getTime();
+        const resTime = (endTime - startTime) / 1000;
+        setConversation((p) =>
+          p.map((m) =>
+            m.id === msgId
+              ? {
+                  ...m,
+                  assistant: responseData.response || "",
+                  resTime: `${resTime.toFixed(2)}s`,
+                  timestamp: new Date().toISOString(),
+                }
+              : m
+          )
+        );
+        setWaitingResponse(false);
+        return;
+      }
+
       // Process the streaming response
       const reader = response.body.getReader();
       const decoder = new TextDecoder();
@@ -586,9 +1116,11 @@ export default function ChatScreen() {
 
         // Split by lines and process each SSE line
         const lines = chunkValue.split("\n");
+        console.log("SSE lines:", lines);
 
         for (const line of lines) {
           const trimmedLine = line.trim();
+          console.log("Processing line:", trimmedLine);
 
           // Handle completion signal
           if (trimmedLine === "data: [DONE]") {
@@ -602,6 +1134,7 @@ export default function ChatScreen() {
             if (jsonStr && jsonStr !== "[DONE]") {
               try {
                 const jsonData = JSON.parse(jsonStr);
+                console.log("Parsed JSON data:", jsonData);
 
                 if (jsonData.cancelToken && !cancelTokenReceived) {
                   setCancelToken(jsonData.cancelToken);
@@ -625,8 +1158,89 @@ export default function ChatScreen() {
                     )
                   );
                 }
-              }
-              catch (error) {
+
+                // Check for tool calls
+                if (
+                  jsonData.response &&
+                  typeof jsonData.response === "string" &&
+                  jsonData.response.includes("Tool call required")
+                ) {
+                  try {
+                    // Extract tool calls from the response
+                    const toolCallData = JSON.parse(jsonData.response);
+                    if (
+                      toolCallData.choices &&
+                      toolCallData.choices[0] &&
+                      toolCallData.choices[0].tool_calls
+                    ) {
+                      const toolCalls = toolCallData.choices[0].tool_calls;
+                      console.log("Received tool calls:", toolCalls);
+                      
+                      // Add tool calls directly to conversation instead of showing modal
+                      setConversation((prev) => {
+                        const updatedConv = prev.map((m) =>
+                          m.id === msgId
+                            ? {
+                                ...m,
+                                assistant: "The AI wants to use tools. Processing...",
+                              }
+                            : m
+                        );
+                        
+                        // Add tool call messages to conversation
+                        toolCalls.forEach((toolCall, index) => {
+                          const toolCallId = msgId + 0.1 + index; // Use decimal IDs for tool calls
+                          updatedConv.push({
+                            id: toolCallId,
+                            user: `AI wants to use tool: ${toolCall.function.name}`,
+                            toolCall: {
+                              toolName: toolCall.function.name,
+                              args: toolCall.function.arguments,
+                              result: "Pending user confirmation...",
+                            },
+                            timestamp: new Date().toISOString(),
+                          });
+                        });
+                        
+                        return updatedConv;
+                      });
+                      
+                      // Don't continue processing this response as normal text
+                      done = true;
+                      break;
+                    }
+                  } catch (e) {
+                    console.error("Error parsing tool call response:", e);
+                  }
+                }
+                
+                // Handle role-based responses from backend
+                if (jsonData.response && typeof jsonData.response === "object") {
+                  const responseObj = jsonData.response;
+                  
+                  // Handle assistant responses
+                  if (responseObj.role === "assistant" && responseObj.content) {
+                    setConversation((prev) => {
+                      const updatedConv = prev.map((m) =>
+                        m.id === msgId
+                          ? {
+                              ...m,
+                              assistant: responseObj.content,
+                              model: responseObj.model || model,
+                              resTime: responseObj.resTime || "",
+                            }
+                          : m
+                      );
+                      return updatedConv;
+                    });
+                  }
+                  // Handle user responses (if any)
+                  else if (responseObj.role === "user" && responseObj.content) {
+                    // This would be rare in streaming but handle it
+                    console.log("Received user role in streaming response:", responseObj);
+                  }
+                }
+              } catch (error) {
                 console.error("Error parsing JSON:", error, "Data:", jsonStr);
               }
             }
@@ -651,11 +1265,9 @@ export default function ChatScreen() {
       setWaitingResponse(false);
       setCancelToken(null);
       setCurrentMsgId(-1);
-    }
-    catch (error) {
+    } catch (error) {
       console.error(error);
-    }
-    finally {
+    } finally {
       setWaitingResponse(false);
       setCancelToken(null);
 
@@ -679,6 +1291,8 @@ export default function ChatScreen() {
       setCurrentMsgId(-1);
     }
   };
+
+  
 
   const handleKeyPress = (e) => {
     if (e.key === "Enter" && e.shiftKey) {
@@ -716,8 +1330,7 @@ export default function ChatScreen() {
       if (updated.length > 0) {
         setActiveChatId(updated[0].id);
         setConversation(updated[0].conversation);
-      }
-      else {
+      } else {
         setActiveChatId(null);
         setConversation([]);
       }
@@ -726,8 +1339,8 @@ export default function ChatScreen() {
 
   const handleModelSelect = (model) => {
     setModel(model.modelName);
-    const provider = providers.find(p => p.id === model.providerId);
-    if(provider) {
+    const provider = providers.find((p) => p.id === model.providerId);
+    if (provider) {
       dispatch(setActiveProvider(provider));
     }
   };
@@ -917,10 +1530,14 @@ export default function ChatScreen() {
                 convHistory={convHistory}
                 useColorModeValue={useColorModeValue}
                 model={model}
+                includeTools={includeTools}
+                setIncludeTools={setIncludeTools}
                 setIsSettingsOpen={setIsSettingsOpen}
                 isSettingsOpen={isSettingsOpen}
                 chatBodySettingsDefaultTab={chatBodySettingsDefaultTab}
                 setSettingsDefaultTab={setSettingsDefaultTab}
+                handleToolCallApprove={handleToolCallApprove}
+                handleToolCallReject={handleToolCallReject}
               />
 
               <ChatInput
@@ -930,11 +1547,15 @@ export default function ChatScreen() {
                 handleSubmit={handleSubmit}
                 handleKeyPress={handleKeyPress}
                 handleStopGeneration={handleStopGeneration}
+                onToolCall={handleToolCall}
+                onPromptCall={handlePromptCall}
               />
 
               <ChatFooterControls
                 includeHistory={includeHistory}
                 setIncludeHistory={setIncludeHistory}
+                includeTools={includeTools}
+                setIncludeTools={setIncludeTools}
                 waitingResponse={waitingResponse}
                 conversation={conversation}
                 convHistory={convHistory}
@@ -953,6 +1574,8 @@ export default function ChatScreen() {
           </Box>
         </Box>
       </HStack>
+
+      {/* Tool call functionality is now integrated directly into the chat */}
     </Box>
   );
 }

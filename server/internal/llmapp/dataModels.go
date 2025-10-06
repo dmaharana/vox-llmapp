@@ -1,6 +1,9 @@
 package llmapp
 
-import "sync"
+import (
+	"llmserver/internal/mcp"
+	"sync"
+)
 
 type (
 	StreamChatCompletionResponse struct {
@@ -16,6 +19,7 @@ type (
 		Index        int             `json:"index"`
 		Delta        CompletionDelta `json:"delta"`
 		FinishReason *string         `json:"finish_reason"`
+		ToolCalls    []ToolCall      `json:"tool_calls,omitempty"`
 	}
 
 	CompletionDelta struct {
@@ -45,6 +49,8 @@ type (
 		Index        int             `json:"index"`
 		Delta        CompletionDelta `json:"delta"`
 		FinishReason *string         `json:"finish_reason"`
+		Message      Message         `json:"message"`
+		ToolCalls    []ToolCall      `json:"tool_calls,omitempty"`
 	}
 
 	// openai complaint models
@@ -93,6 +99,7 @@ type (
 		// Options     RequestOptions `json:"options,omitempty"`
 		Temperature float32 `json:"temperature,omitempty"`
 		Seed        int     `json:"seed,omitempty"`
+		Tools       []Tool  `json:"tools,omitempty"`
 	}
 
 	RequestOptions struct {
@@ -116,6 +123,8 @@ type (
 		Temperature    float32        `json:"temperature,omitempty"`
 		NumContext     int            `json:"num_ctx,omitempty"`
 		CancelToken    string         `json:"cancelToken,omitempty"`
+		IncludeTools   bool           `json:"includeTools,omitempty"`
+		Tools          []mcp.Tool     `json:"tools,omitempty"`
 	}
 
 	Conversation struct {
@@ -132,12 +141,13 @@ type (
 		CreatedAt   string   `json:"created_at"`
 		Done        bool     `json:"done"`
 		Usage       Usage    `json:"usage"`
-		CancelToken string   `json:"cancelToken,omitempty"`
+		CancelToken string   `json:"cancelToken"`
 	}
 
 	Message struct {
-		Role    string `json:"role,omitempty"`
-		Content string `json:"content,omitempty"`
+		Role      string     `json:"role,omitempty"`
+		Content   string     `json:"content,omitempty"`
+		ToolCalls []ToolCall `json:"tool_calls,omitempty"`
 	}
 
 	Choice struct {
@@ -159,7 +169,31 @@ type (
 		APIKey       string `json:"api_key"`
 	}
 
-	// LLMResponse represents a response sent back through the channel
+	// Tool represents a function/tool that can be called by the LLM
+	Tool struct {
+		Type     string       `json:"type"`
+		Function ToolFunction `json:"function"`
+	}
+
+	// ToolFunction represents the function definition for LLM tool calls
+	ToolFunction struct {
+		Name        string                 `json:"name"`
+		Description string                 `json:"description"`
+		Parameters  map[string]interface{} `json:"parameters"`
+	}
+
+	// ToolCall represents a tool call from the LLM
+	ToolCall struct {
+		Index    int              `json:"index"`
+		ID       string           `json:"id"`
+		Function ToolCallFunction `json:"function"`
+	}
+
+	// ToolCallFunction represents the function being called
+	ToolCallFunction struct {
+		Name      string      `json:"name"`
+		Arguments interface{} `json:"arguments"`
+	}
 	LLMResponse struct {
 		ID         string
 		Data       ResponseData
@@ -238,7 +272,8 @@ type (
 		ResponseChan   chan LLMResponse
 		ErrorChan      chan error
 		CancelChan     chan bool
-		CancelToken    string `json:"cancel_token"`
+		CancelToken    string          `json:"cancel_token"`
+		MCPManager     *mcp.MCPManager `json:"-"`
 	}
 
 	// LLMWorker represents a single worker

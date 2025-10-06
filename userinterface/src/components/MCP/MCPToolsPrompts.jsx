@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState } from "react";
 import {
   Box,
   Text,
@@ -13,22 +13,24 @@ import {
   AccordionIcon,
   Code,
   FormControl,
-  Input
-} from '@chakra-ui/react';
-import { useSelector, useDispatch } from 'react-redux';
-import { toggleTool, loadMCPTools } from '../../store/mcpSlice';
+  Input,
+} from "@chakra-ui/react";
+import { useSelector, useDispatch } from "react-redux";
+import { toggleTool, loadMCPTools } from "../../store/mcpSlice";
 
 const MCPToolsPrompts = () => {
   const dispatch = useDispatch();
-  const { tools, enabledTools } = useSelector(state => {
-    console.log('MCPToolsPrompts - Full state:', state);
-    console.log('MCPToolsPrompts - Tools:', state.mcp?.tools);
-    return state.mcp || {
-      tools: [],
-      enabledTools: {}
-    };
+  const { tools, enabledTools } = useSelector((state) => {
+    // console.log('MCPToolsPrompts - Full state:', state);
+    // console.log('MCPToolsPrompts - Tools:', state.mcp?.tools);
+    return (
+      state.mcp || {
+        tools: [],
+        enabledTools: {},
+      }
+    );
   });
-  const [searchTerm, setSearchTerm] = useState('');
+  const [searchTerm, setSearchTerm] = useState("");
 
   // Call useEffect at the top level
   useEffect(() => {
@@ -41,10 +43,12 @@ const MCPToolsPrompts = () => {
 
   const renderToolSchema = (schema) => {
     if (!schema || !schema.properties) return null;
-    
+
     return (
       <Box mt={2}>
-        <Text fontSize="sm" fontWeight="semibold" mb={2}>Parameters:</Text>
+        <Text fontSize="sm" fontWeight="semibold" mb={2}>
+          Parameters:
+        </Text>
         <VStack align="start" spacing={1}>
           {Object.entries(schema.properties).map(([key, prop]) => (
             <HStack key={key} spacing={2}>
@@ -52,11 +56,15 @@ const MCPToolsPrompts = () => {
               <Text fontSize="xs" color="gray.600">
                 {prop.type}
                 {schema.required?.includes(key) && (
-                  <Badge ml={1} size="xs" colorScheme="red">required</Badge>
+                  <Badge ml={1} size="xs" colorScheme="red">
+                    required
+                  </Badge>
                 )}
               </Text>
               {prop.description && (
-                <Text fontSize="xs" color="gray.500">- {prop.description}</Text>
+                <Text fontSize="xs" color="gray.500">
+                  - {prop.description}
+                </Text>
               )}
             </HStack>
           ))}
@@ -81,7 +89,7 @@ const MCPToolsPrompts = () => {
         <Text fontSize="xl" fontWeight="bold" mb={4}>
           Available Tools ({tools.length})
         </Text>
-        
+
         {/* Search Input */}
         {tools.length > 0 && (
           <FormControl mb={4}>
@@ -94,16 +102,19 @@ const MCPToolsPrompts = () => {
             />
           </FormControl>
         )}
-        
+
         <Accordion allowMultiple>
           {tools
-            .filter(tool => {
+            .filter((tool) => {
               // Filter tools based on search term
               if (!searchTerm) return true;
-              
+
               return (
                 tool.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                (tool.description && tool.description.toLowerCase().includes(searchTerm.toLowerCase()))
+                (tool.description &&
+                  tool.description
+                    .toLowerCase()
+                    .includes(searchTerm.toLowerCase()))
               );
             })
             .map((tool, index) => (

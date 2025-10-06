@@ -35,6 +35,20 @@ func NewMCPManagerWithConfig(configPath string) *MCPManager {
 	}
 }
 
+// GetConnectedClients returns all connected MCP clients
+func (m *MCPManager) GetConnectedClients() []*MCPClient {
+	m.mu.RLock()
+	defer m.mu.RUnlock()
+	
+	var clients []*MCPClient
+	for _, client := range m.clients {
+		if client.isConnected {
+			clients = append(clients, client)
+		}
+	}
+	return clients
+}
+
 // registerMCPInternal adds a new MCP server configuration and connects to it (internal use without session)
 func (m *MCPManager) registerMCPInternal(name string, config MCPConfig) error {
 	m.mu.Lock()

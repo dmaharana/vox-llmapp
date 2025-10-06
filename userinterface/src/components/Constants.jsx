@@ -2,13 +2,16 @@ export const chatApi = "/api/chat";
 export const listModelsApi = "/api/models";
 
 export const DEFAULT_MESSAGES = {
+  APP_TITLE: "Vox",
   SYSTEM_PROMPT:
     "You are a helpful assistant. Answer as concisely as possible.",
   ASSISTANT_PROMPT: "Assistant is typing...",
   CHAT_HISTORY_ON_MSG: "Chat mode on, all previous messages are included.",
   CHAT_HISTORY_OFF_MSG:
-    "Chat mode off, only current message is included to generate response. Sytem prompt will be prepended to the query.",
+    "Chat mode off, only current message is included to generate response. System prompt will be prepended to the query.",
 
+  UpdateSystemPrompt: "Click to update System Prompt",
+  chatTextBoxDefaultMessage: "Press Enter to send | Shift+Enter for new line",
   resTimeMessage: "Response time in seconds",
   reSubmitMessage: "Regenerate response",
   copyMessage: "Copy to clipboard",
@@ -18,6 +21,9 @@ export const DEFAULT_MESSAGES = {
   clearChatMessage: "Clear chat",
   clearChatConfirmMessage: "Are you sure you want to clear the chat?",
   noResponseMessage: "Something went wrong. Please try again.",
+
+  editProviderMessage: "Edit provider",
+  deleteProviderMessage: "Delete provider",
 
   convUploadErrorTitle: "Failed to parse the file.",
   convUploadErrorMessage: "Please upload a valid JSON file.",
@@ -33,8 +39,17 @@ export const DEFAULT_MESSAGES = {
   exportPrompts: "Export all prompts as JSON",
   importPrompts: "Import prompts from JSON file",
 
+  exportProviders: "Export all providers as JSON",
+  importProviders: "Import providers from JSON file",
+
   assistantRole: "assistant",
   userRole: "user",
+
+  addPromptMessage: "Please add a prompt, click on the + button",
+  addPromptNameMessage: "Please enter a name for the prompt, like 'General' or 'Creative' or 'Formal' etc.",
+  addPromptContentMessage: "Please enter a content for the prompt, like 'You are a helpful assistant.'",
+
+  addProviderMessage: "Please add a provider, click on the + button",
 };
 
 export const DEFAULT_FILENAMES = {

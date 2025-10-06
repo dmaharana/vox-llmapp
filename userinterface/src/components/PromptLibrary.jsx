@@ -1,19 +1,12 @@
 import { useState, useEffect, useRef } from "react";
+import { useSelector, useDispatch } from "react-redux";
+import { setPrompts, setSystemPrompt } from "../store/promptSlice";
 import ShowAlert from "./ShowAlert";
 import {
-  Textarea,
-  Input,
   Box,
   VStack,
   HStack,
   useDisclosure,
-  Modal,
-  ModalOverlay,
-  ModalContent,
-  ModalHeader,
-  ModalFooter,
-  ModalBody,
-  ModalCloseButton,
   Button,
   AlertDialog,
   AlertDialogOverlay,
@@ -22,53 +15,54 @@ import {
   AlertDialogBody,
   AlertDialogFooter,
 } from "@chakra-ui/react";
-import { AddIcon, EditIcon, DeleteIcon } from "@chakra-ui/icons";
 import { PromptSearch } from "./PromptLibrary/PromptSearch";
 import { ImportExportButtons } from "./PromptLibrary/ImportExportButtons";
 import { PromptItem } from "./PromptLibrary/PromptItem";
+import { AddPromptForm } from "./PromptLibrary/AddPromptForm";
 import generateUUID from "./scripts/utils";
+import { DEFAULT_MESSAGES } from "./Constants";
 
-export default function PromptLibrary({
-  systemPrompt,
-  setSystemPrompt,
-  isOpen,
-  prompts,
-  setPrompts,
-  onClose,
-}) {
+export default function PromptLibrary({ isOpen, onClose, isEmbedded = false }) {
   const {
     isOpen: isDeleteDialogOpen,
     onOpen: onDeleteDialogOpen,
     onClose: onDeleteDialogClose,
   } = useDisclosure();
-  const cancelRef = useRef();
+  const {
+    isOpen: isPromptFormOpen,
+    onOpen: onPromptFormOpen,
+    onClose: onPromptFormClose,
+  } = useDisclosure();
+  const dispatch = useDispatch();
+  const prompts = useSelector((state) => state.prompt.prompts);
+  const systemPrompt = useSelector((state) => state.prompt.systemPrompt);
+
+  const cancelRef = useRef(null);
   const fileInputRef = useRef();
   const [promptToDelete, setPromptToDelete] = useState(null);
-  const [newPromptName, setNewPromptName] = useState("");
-  const [newPromptContent, setNewPromptContent] = useState("");
   const [searchQuery, setSearchQuery] = useState("");
-  const [showAddPrompt, setShowAddPrompt] = useState(false);
   const [editingPrompt, setEditingPrompt] = useState(null);
-  const [editName, setEditName] = useState("");
-  const [editContent, setEditContent] = useState("");
   const initialLoadComplete = useRef(false);
   const [importStatus, setImportStatus] = useState(null);
-  const [importMessage, setImportMessage] = useState(""); // Corrected typo here
+  const [importMessage, setImportMessage] = useState("");
   const [showImportAlert, setShowImportAlert] = useState(false);
+  const enableDownload = prompts.length > 0;
 
   useEffect(() => {
     const savedPrompts = localStorage.getItem("prompts");
     if (savedPrompts) {
       const parsedPrompts = JSON.parse(savedPrompts);
       if (parsedPrompts.length > 0) {
-        setPrompts(parsedPrompts);
+        // Ensure all prompts have the starred property and sort them
+        const updatedPrompts = parsedPrompts.map(p => ({
+          ...p,
+          starred: p.starred || false
+        })).sort(sortPrompts);
+        dispatch(setPrompts(updatedPrompts));
         return;
       }
     }
 
-    console.log("No prompts found in localStorage, fetching from server...");
-
-    // Fetch default prompts from server if localStorage is empty or has empty array
     fetch("/api/prompts")
       .then((response) => {
         if (!response.ok) throw new Error("Failed to fetch prompts");
@@ -81,14 +75,14 @@ export default function PromptLibrary({
           id: prompt.id || generateUUID(),
           name: String(prompt.name || "Unnamed Prompt"),
           content: String(prompt.content || ""),
-        }));
+          starred: false,
+        })).sort(sortPrompts);
         localStorage.setItem("prompts", JSON.stringify(promptsWithIds));
-        setPrompts(promptsWithIds);
+        dispatch(setPrompts(promptsWithIds));
       })
       .catch((error) => console.error("Prompt fetch error:", error));
-  }, []);
+  }, [dispatch]);
 
-  // Mark initial load complete after first valid prompts load
   useEffect(() => {
     if (prompts.length > 0 && !initialLoadComplete.current) {
       initialLoadComplete.current = true;
@@ -104,7 +98,6 @@ export default function PromptLibrary({
     }
   }, [showImportAlert]);
 
-  // Save prompts to localStorage whenever prompts state changes after initial load
   useEffect(() => {
     if (initialLoadComplete.current) {
       localStorage.setItem("prompts", JSON.stringify(prompts));
@@ -117,7 +110,7 @@ export default function PromptLibrary({
   };
 
   const confirmDelete = () => {
-    setPrompts((prev) => prev.filter((p) => p.id !== promptToDelete));
+    dispatch(setPrompts(prompts.filter((p) => p.id !== promptToDelete)));
     onDeleteDialogClose();
     setPromptToDelete(null);
   };
@@ -152,9 +145,10 @@ export default function PromptLibrary({
           id: prompt.id || generateUUID(),
           name: String(prompt.name || "Unnamed Prompt"),
           content: String(prompt.content || ""),
-        }));
+          starred: Boolean(prompt.starred || false),
+        })).sort(sortPrompts);
 
-        setPrompts(validatedPrompts);
+        dispatch(setPrompts(validatedPrompts));
         setImportStatus("success");
         setImportMessage("Prompts imported successfully!");
         setShowImportAlert(true);
@@ -168,157 +162,171 @@ export default function PromptLibrary({
     reader.readAsText(file);
   };
 
-  const handleAddPrompt = async () => {
-    if (newPromptName && newPromptContent) {
+  const handleSavePrompt = (name, content, id = null) => {
+    if (id) {
+      // Editing existing prompt
+      dispatch(
+        setPrompts(
+          prompts.map((p) =>
+            p.id === id ? { ...p, name, content } : p
+          ).sort(sortPrompts),
+        ),
+      );
+      setEditingPrompt(null);
+    } else {
+      // Adding new prompt
       const newPrompt = {
         id: generateUUID(),
-        name: newPromptName,
-        content: newPromptContent,
+        name,
+        content,
+        starred: false,
       };
-      setPrompts((prev) => [...prev, newPrompt]);
-      setNewPromptName("");
-      setNewPromptContent("");
+
+      // add the new prompt to the prompts array and sort
+      const updatedPrompts = [...prompts, newPrompt].sort(sortPrompts);
+
+      dispatch(setPrompts(updatedPrompts));
     }
   };
 
-  return (
-    <Modal
-      isOpen={isOpen}
-      onClose={onClose}
-      size="xl"
-      scrollBehavior="inside"
-      blockScrollOnMount={false}
-    >
-      <ModalOverlay />
-      <ModalContent>
-        <ModalHeader>System Prompts Library</ModalHeader>
-        <ModalCloseButton />
-        <ModalBody pb={6}>
-          <Box maxH="60vh" overflowY="auto" pr={2}>
-            <PromptSearch
+  const handleToggleStar = (promptId) => {
+    const updatedPrompts = prompts.map((p) =>
+      p.id === promptId ? { ...p, starred: !p.starred } : p
+    ).sort(sortPrompts);
+    dispatch(setPrompts(updatedPrompts));
+  };
+
+  const sortPrompts = (a, b) => {
+    // First sort by starred status (starred prompts come first)
+    if (a.starred && !b.starred) return -1;
+    if (!a.starred && b.starred) return 1;
+    // Then sort by name
+    return a.name.localeCompare(b.name);
+  };
+
+  const handleEditPrompt = (prompt) => {
+    setEditingPrompt(prompt);
+    onPromptFormOpen();
+  };
+
+  const handleAddNewPrompt = () => {
+    setEditingPrompt(null);
+    onPromptFormOpen();
+  };
+
+  const content = (
+    <Box maxH="30vh" overflowY="auto" pr={2}>
+      <PromptSearch
+        searchQuery={searchQuery}
+        setSearchQuery={setSearchQuery}
+        showAddPrompt={isPromptFormOpen}
+        setShowAddPrompt={handleAddNewPrompt}
+      />
+
+      <AddPromptForm
+        isOpen={isPromptFormOpen}
+        onClose={() => {
+          onPromptFormClose();
+          setEditingPrompt(null);
+        }}
+        initialPrompt={editingPrompt}
+        onSave={handleSavePrompt}
+        prompts={prompts}
+      />
+
+      <VStack spacing={4} align="stretch">
+        {prompts
+          ?.filter((prompt) => {
+            const query = searchQuery.toLowerCase();
+            return (
+              prompt.name.toLowerCase().includes(query) ||
+              prompt.content.toLowerCase().includes(query)
+            );
+          })
+          .sort(sortPrompts)
+          .map((prompt) => (
+            <PromptItem
+              key={prompt.id}
+              prompt={prompt}
               searchQuery={searchQuery}
-              setSearchQuery={setSearchQuery}
-              showAddPrompt={showAddPrompt}
-              setShowAddPrompt={setShowAddPrompt}
+              onEdit={handleEditPrompt}
+              onDelete={(id) => handleDeletePrompt(id)}
+              onUse={(content) => {
+                dispatch(setSystemPrompt(content));
+                if (!isEmbedded) {
+                  onClose();
+                }
+              }}
+              onToggleStar={handleToggleStar}
             />
-
-            {showAddPrompt ? (
-              <Box pb={4}>
-                <Input
-                  placeholder="Prompt name"
-                  value={newPromptName}
-                  onChange={(e) => setNewPromptName(e.target.value)}
-                  mb={3}
-                />
-                <Textarea
-                  placeholder="Prompt content"
-                  value={newPromptContent}
-                  onChange={(e) => setNewPromptContent(e.target.value)}
-                  mb={3}
-                />
-                <Box display="flex" justifyContent="flex-end">
-                  <Button
-                    leftIcon={<AddIcon />}
-                    colorScheme="blue"
-                    onClick={handleAddPrompt}
-                    isDisabled={!newPromptName || !newPromptContent}
-                    mt={3}
-                  >
-                    Add Prompt
-                  </Button>
-                </Box>
-              </Box>
-            ) : null}
-
-            <VStack spacing={4} align="stretch">
-              {prompts
-                ?.filter((prompt) => {
-                  const query = searchQuery.toLowerCase();
-                  return (
-                    prompt.name.toLowerCase().includes(query) ||
-                    prompt.content.toLowerCase().includes(query)
-                  );
-                })
-                .map((prompt) => (
-                  <PromptItem
-                    key={prompt.id}
-                    prompt={prompt}
-                    searchQuery={searchQuery}
-                    isEditing={editingPrompt === prompt.id}
-                    onEdit={(id) => {
-                      setEditingPrompt(id);
-                      setEditName(prompt.name);
-                      setEditContent(prompt.content);
-                    }}
-                    onSaveEdit={(id, name, content) => {
-                      setPrompts((prev) =>
-                        prev.map((p) =>
-                          p.id === id ? { ...p, name, content } : p
-                        )
-                      );
-                      setEditingPrompt(null);
-                    }}
-                    onDelete={handleDeletePrompt}
-                    onUse={(content) => {
-                      setSystemPrompt(content);
-                      onClose();
-                    }}
-                  />
-                ))}
-            </VStack>
-          </Box>
-        </ModalBody>
-
-        {showImportAlert && (
-          <ShowAlert
-            status={importStatus}
-            title={
-              importStatus === "success" ? "Import Successful" : "Import Error"
-            }
-            message={importMessage}
-            resetStates={() => setShowImportAlert(false)}
-          />
-        )}
-
-        <ModalFooter>
-          <HStack spacing={3}>
-            <ImportExportButtons
-              handleExportPrompts={handleExportPrompts}
-              handleImportPrompts={handleImportPrompts}
-              fileInputRef={fileInputRef}
-            />
-            <Button colorScheme="blue" onClick={onClose}>
-              Close
-            </Button>
-          </HStack>
-        </ModalFooter>
-      </ModalContent>
-
-      <AlertDialog
-        isOpen={isDeleteDialogOpen}
-        leastDestructiveRef={cancelRef}
-        onClose={onDeleteDialogClose}
-      >
-        <AlertDialogOverlay>
-          <AlertDialogContent>
-            <AlertDialogHeader fontSize="lg" fontWeight="bold">
-              Delete Prompt
-            </AlertDialogHeader>
-            <AlertDialogBody>
-              Are you sure you want to delete this prompt? This action cannot be
-              undone.
-            </AlertDialogBody>
-            <AlertDialogFooter>
-              <Button ref={cancelRef} onClick={onDeleteDialogClose}>
-                Cancel
-              </Button>
-              <Button colorScheme="red" onClick={confirmDelete} ml={3}>
-                Delete
-              </Button>
-            </AlertDialogFooter>
-          </AlertDialogContent>
-        </AlertDialogOverlay>
-      </AlertDialog>
-    </Modal>
+          ))}
+      </VStack>
+    </Box>
   );
+
+  {
+    showImportAlert && (
+      <ShowAlert
+        status={importStatus}
+        title={
+          importStatus === "success" ? "Import Successful" : "Import Error"
+        }
+        message={importMessage}
+        resetStates={() => setShowImportAlert(false)}
+      />
+    );
+  }
+
+  if (isEmbedded) {
+    return (
+      <>
+        {content}
+
+        <Box mt={4}>
+          <HStack spacing={3} justify="flex-end">
+            <ImportExportButtons
+              exportLabel={DEFAULT_MESSAGES.exportPrompts}
+              importLabel={DEFAULT_MESSAGES.importPrompts}
+              handleExport={handleExportPrompts}
+              handleImport={handleImportPrompts}
+              fileInputRef={fileInputRef}
+              enableDownload={enableDownload}
+            />
+          </HStack>
+        </Box>
+
+        <AlertDialog
+          isOpen={isDeleteDialogOpen}
+          leastDestructiveRef={cancelRef}
+          onClose={onDeleteDialogClose}
+          motionPreset="slideInBottom"
+          isCentered
+        >
+          <AlertDialogOverlay>
+            <AlertDialogContent>
+              <AlertDialogHeader fontSize="lg" fontWeight="bold">
+                Delete Prompt
+              </AlertDialogHeader>
+              <AlertDialogBody>
+                Are you sure you want to delete this prompt? This action cannot
+                be undone.
+              </AlertDialogBody>
+              <AlertDialogFooter>
+                <Button
+                  ref={cancelRef}
+                  onClick={onDeleteDialogClose}
+                  colorScheme="gray"
+                >
+                  Cancel
+                </Button>
+                <Button colorScheme="red" onClick={confirmDelete} ml={3}>
+                  Delete
+                </Button>
+              </AlertDialogFooter>
+            </AlertDialogContent>
+          </AlertDialogOverlay>
+        </AlertDialog>
+      </>
+    );
+  }
 }

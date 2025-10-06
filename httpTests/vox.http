@@ -1,0 +1,5 @@
+@server = http://localhost:8011
+
+### get prompts
+
+GET {{server}}/api/prompts

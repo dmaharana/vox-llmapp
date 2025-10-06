@@ -14,11 +14,18 @@ import {
   PopoverFooter,
   Tooltip,
   useDisclosure,
+  useColorModeValue,
 } from "@chakra-ui/react";
 import { DEFAULT_MESSAGES } from "./Constants";
 
 function ClearChat({ handleClearChat, waitingResponse }) {
   const { isOpen, onToggle, onClose } = useDisclosure();
+  
+  // Dark mode support
+  const popoverBg = useColorModeValue("gray.50", "gray.800");
+  const popoverBorderColor = useColorModeValue("red", "red.300");
+  const headerColor = useColorModeValue("gray.800", "white");
+  const bodyColor = useColorModeValue("gray.600", "gray.200");
   return (
     // <Box
     //   p={2}
@@ -51,15 +58,15 @@ function ClearChat({ handleClearChat, waitingResponse }) {
         </Tooltip>
       </PopoverTrigger>
       <PopoverContent
-        bg={"gray.50"}
+        bg={popoverBg}
         borderRadius={"md"}
-        boxShadow="red 0px 0px 1px"
-        borderColor="red"
+        boxShadow={`${popoverBorderColor} 0px 0px 1px`}
+        borderColor={popoverBorderColor}
         borderWidth={2}
       >
-        <PopoverHeader fontWeight="semibold">Confirmation</PopoverHeader>
+        <PopoverHeader fontWeight="semibold" color={headerColor}>Confirmation</PopoverHeader>
         <PopoverCloseButton />
-        <PopoverBody>{DEFAULT_MESSAGES.clearChatConfirmMessage}</PopoverBody>
+        <PopoverBody color={bodyColor}>{DEFAULT_MESSAGES.clearChatConfirmMessage}</PopoverBody>
         <PopoverFooter display="flex" justifyContent="flex-end">
           <ButtonGroup size="sm">
             <Button variant="outline" onClick={onClose}>

@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Textarea, Tooltip } from "@chakra-ui/react";
+import { Textarea, Tooltip, useColorModeValue } from "@chakra-ui/react";
 import {
   Avatar,
   Box,
@@ -16,6 +16,8 @@ import {
   ChevronUpIcon,
   CloseIcon,
 } from "@chakra-ui/icons";
+import { useSelector } from "react-redux";
+import { formatDate } from "./scripts/utils";
 
 import { DEFAULT_MESSAGES } from "./Constants";
 
@@ -25,30 +27,62 @@ export function UserMsg({
   handleQueryUpdate,
   waitingResponse,
   handleDeleteMessage,
+  timestamp,
 }) {
   const [isEditing, setIsEditing] = useState(false);
   const { hasCopied, onCopy } = useClipboard(msg);
   const [isExpanded, setIsExpanded] = useState(false);
   const standardTextLen = 200;
 
+  const { userName, avatarImage, avatarType } = useSelector((state) => state.user);
+
+  const userBg = useColorModeValue("green.50", "gray.600");
+  const userAvatarText = useColorModeValue("gray.200", "gray.800");
+  const userAvatarName = useColorModeValue("gray.600", "gray.300");
+  const userAvatarBg = useColorModeValue("orange.600", "orange.300");
+  const userTextColor = useColorModeValue("black", "white");
+
   const toggleExpand = () => {
     setIsExpanded(!isExpanded);
   };
 
-  const name = "User";
   return (
-    <Box bg={"green.50"} p={2} borderRadius={"md"} mb={2} w={"100%"}>
+    <Box
+      bg={userBg}
+      color={userTextColor}
+      p={2}
+      borderRadius={"md"}
+      mb={2}
+      w={"100%"}
+    >
       <HStack>
-        <Avatar size={"sm"} name="Me" mb={2} mr={3} />
+        <Avatar 
+          size={"sm"} 
+          name={userName} 
+          src={avatarType === "custom" ? avatarImage : null}
+          mb={2} 
+          mr={3} 
+          bg={userAvatarBg} 
+          color={userAvatarText} 
+        />
         <Box w={"100%"} align={"start"}>
+          <HStack w={"100%"} justifyContent={"space-between"} mb={1}>
+            <Text
+              fontWeight={"bold"}
+              fontSize={"xs"}
+              color={useColorModeValue("gray.600", "gray.300")}
+            >
+              You • {formatDate(timestamp)}
+            </Text>
+          </HStack>
           <Text
             fontWeight={"bold"}
             mb={1}
             fontSize={"xs"}
-            color={"gray.600"}
+            color={userAvatarName}
             align={"start"}
           >
-            {name}
+            {userName}
           </Text>
           {isEditing ? (
             <Textarea

@@ -13,6 +13,7 @@ import {
   HStack,
   Tooltip,
   useDisclosure,
+  useColorModeValue,
 } from "@chakra-ui/react";
 import { DEFAULT_FILENAMES } from "./Constants";
 
@@ -21,6 +22,9 @@ function DownloadChat({ conversation, waitingResponse, convHistory }) {
   // download conversation as a csv and json
 
   const { isOpen, onToggle, onClose } = useDisclosure();
+
+  const popoverBg = useColorModeValue("gray.50", "gray.700");
+  const borderClr = useColorModeValue("green.500", "green.300");
 
   const csvHeader = "id,model,systemPrompt,user,assistant,resTime";
   const handleDownloadCsv = (conversation) => {
@@ -83,10 +87,10 @@ function DownloadChat({ conversation, waitingResponse, convHistory }) {
       </PopoverTrigger>
       <PopoverContent
         w="220px"
-        bg={"gray.50"}
-        borderRadius={"md"}
-        boxShadow="green 0px 0px 1px"
-        borderColor="green"
+        bg={popoverBg}
+        borderRadius="md"
+        boxShadow={`0 0 4px ${borderClr}`}
+        borderColor={borderClr}
         borderWidth={2}
       >
         <PopoverCloseButton />

@@ -8,6 +8,11 @@ import {
   Text,
   Tooltip,
   useClipboard,
+  useColorModeValue,
+  Textarea,
+  Card,
+  CardBody,
+  Collapse,
 } from "@chakra-ui/react";
 import {
   CopyIcon,
@@ -17,13 +22,151 @@ import {
   RepeatIcon,
   RepeatClockIcon,
   ViewOffIcon,
+  EditIcon,
 } from "@chakra-ui/icons";
+import { SiDreamstime } from "react-icons/si";
+import { useSelector } from "react-redux";
+import { formatDate } from "./scripts/utils";
+
 import ReactMarkdown from "markdown-to-jsx";
 import ChakraUIRenderer from "chakra-ui-markdown-renderer";
 import { DEFAULT_MESSAGES } from "./Constants";
 
-import avatarImage from "../assets/assistant.png"; // Update the path to point to your avatar image
+import avatarImage from "../assets/informal/assistant.png"; // Default avatar
+import avatarImage1 from "../assets/informal/assistant1.png";
+import avatarImage2 from "../assets/informal/assistant2.png";
+import avatarImage3 from "../assets/informal/assistant3.png";
+import avatarImage4 from "../assets/informal/assistant4.png";
+import avatarImage5 from "../assets/informal/assistant5.png";
+import avatarImage6 from "../assets/informal/assistant6.png";
+import avatarImage7 from "../assets/formal/assistant.png"; // Default avatar
+import avatarImage8 from "../assets/formal/assistant1.png";
+import avatarImage9 from "../assets/formal/assistant2.png";
+import avatarImage10 from "../assets/formal/assistant3.png";
+import avatarImage11 from "../assets/formal/assistant4.png";
+import avatarImage12 from "../assets/formal/assistant5.png";
+import avatarImage13 from "../assets/formal/assistant6.png";
+
 import AssistantHistory from "./AssistantHistory";
+
+// Function to parse content with think tags
+const parseThinkContent = (content) => {
+  const segments = [];
+  let currentIndex = 0;
+  const regex = /<think>([\s\S]*?)<\/think>/g;
+
+  let match;
+  while ((match = regex.exec(content)) !== null) {
+    // Add text before the think tag if exists
+    if (match.index > currentIndex) {
+      segments.push({
+        type: "text",
+        content: content.slice(currentIndex, match.index),
+      });
+    }
+
+    // Add the think content
+    segments.push({
+      type: "think",
+      content: match[1].trim(),
+    });
+
+    currentIndex = match.index + match[0].length;
+  }
+
+  // Add remaining text if exists
+  if (currentIndex < content.length) {
+    segments.push({
+      type: "text",
+      content: content.slice(currentIndex),
+    });
+  }
+
+  return segments;
+};
+
+/**
+ * Strips all <think>...</think> tags and their content from a string.
+ * Used as a global safeguard before rendering markdown.
+ */
+function stripThinkTags(markdown) {
+  return markdown.replace(/<think>[\s\S]*?<\/think>/gi, "");
+}
+
+const ThinkBlock = ({ content }) => {
+  const thinkBg = useColorModeValue("blue.50", "blue.900");
+  const thinkBorder = useColorModeValue("blue.200", "blue.700");
+  const thinkText = useColorModeValue("blue.800", "blue.100");
+  const [isExpanded, setIsExpanded] = useState(false);
+
+  return (
+    <>
+    <Button onClick={() => setIsExpanded(!isExpanded)} size="xs" variant="ghost">
+      {isExpanded ? "Collapse Thinking" : "Expand Thinking"}
+    </Button>
+    <Collapse in={isExpanded}>
+    <Card
+      bg={thinkBg}
+      borderColor={thinkBorder}
+      borderWidth="1px"
+      borderStyle="solid"
+      borderRadius="md"
+      mb={3}
+      shadow="sm"
+    >
+      <CardBody p={3}>
+        <HStack align="flex-start" spacing={3}>
+          <SiDreamstime color={thinkText} size={20} />
+          {/* <Box color={thinkText}>💭</Box> */}
+          <Box color={thinkText} fontSize="sm" fontStyle="italic" flex="1">
+            <ReactMarkdown components={ChakraUIRenderer()}>
+              {stripThinkTags(content)}
+            </ReactMarkdown>
+          </Box>
+        </HStack>
+      </CardBody>
+    </Card>
+      </Collapse>
+    </>
+  );
+};
+
+const MessageContent = ({ content }) => {
+  const segments = parseThinkContent(content);
+  return (
+    <>
+      {segments.map((segment, index) =>
+        segment.type === "think" ? (
+          <ThinkBlock key={index} content={segment.content} />
+        ) : (
+          <ReactMarkdown key={index} components={ChakraUIRenderer()}>
+            {stripThinkTags(segment.content)}
+          </ReactMarkdown>
+        ),
+      )}
+    </>
+  );
+};
+
+const avatarImagesInformal = [
+  avatarImage,
+  avatarImage1,
+  avatarImage2,
+  avatarImage3,
+  avatarImage4,
+  avatarImage5,
+  avatarImage6,
+];
+
+const avatarImagesFormal = [
+  avatarImage7,
+  avatarImage8,
+  avatarImage9,
+  avatarImage10,
+  avatarImage11,
+  avatarImage12,
+  avatarImage13,
+];
 
 export function AssistantMsg({
   msg,
@@ -35,26 +178,57 @@ export function AssistantMsg({
   currentMsgId,
   defaultMsg,
   chatHistory,
+  systemPrompt,
+  model,
+  handleAssistantUpdate,
+  timestamp,
+  includeTools,
 }) {
+  const { chatMode } = useSelector((state) => state.user);
   const { hasCopied, onCopy } = useClipboard(msg);
 
+  const assistantBg = useColorModeValue("gray.50", "gray.700");
+  const assistantTextColor = useColorModeValue("black", "white");
+
+  let avatarImages = chatMode === "formal" ? avatarImagesFormal : avatarImagesInformal;
+
   const conversation = chatHistory?.find(
-    (conv) => conv.id === convId
+    (conv) => conv.id === convId,
   )?.messages;
   const count = conversation?.filter(
-    (msg) => msg.role === DEFAULT_MESSAGES.assistantRole
+    (msg) => msg.role === DEFAULT_MESSAGES.assistantRole,
   )?.length;
   const [isExpanded, setIsExpanded] = useState(false);
   const [isMsgExpanded, setIsMsgExpanded] = useState(waitingResponse);
+  const [isEditing, setIsEditing] = useState(false);
   const maxContentLength = 200;
-
+  
+  // Get the avatar for the model
+  const getAvatarForModel = (modelName) => {
+    if (!modelName) return avatarImages[0]; // fallback
+    let hash = 0;
+    for (let i = 0; i < modelName.length; i++) {
+      hash = modelName.charCodeAt(i) + ((hash << 5) - hash);
+    }
+    const index = Math.abs(hash) % avatarImages.length;
+    return avatarImages[index];
+  };
+  const currentAvatar = getAvatarForModel(model);
+  
   return (
-    <Box bg={"gray.50"} p={2} borderRadius={"md"} mb={2} w={"100%"}>
+    <Box
+      bg={assistantBg}
+      color={assistantTextColor}
+      p={2}
+      borderRadius={"md"}
+      mb={2}
+      w={"100%"}
+    >
       <HStack>
         <Avatar
           size={"sm"}
           name="Assistant"
-          src={avatarImage}
+          src={currentAvatar}
           mb={2}
           mr={3}
           bg={"red"}
@@ -64,45 +238,58 @@ export function AssistantMsg({
             fontWeight={"bold"}
             mb={1}
             fontSize={"xs"}
-            color={"gray.600"}
+            color={useColorModeValue("gray.600", "gray.300")}
             align={"start"}
           >
-            {name}
+            {name} • {formatDate(timestamp)}
           </Text>
-          <ReactMarkdown
-            components={ChakraUIRenderer()}
-            skiphtml="true"
-            align="left"
-            sx={{
-              p: "20px",
-              borderRadius: "10px",
-            }}
-          >
-            {msg.length <= maxContentLength || isMsgExpanded
-              ? msg
-              : msg.substring(0, maxContentLength) + "..."}
-          </ReactMarkdown>
+          {isEditing ? (
+            <Textarea
+              value={msg}
+              onChange={(e) => handleAssistantUpdate(convId, e.target.value)}
+              onBlur={() => setIsEditing(false)}
+            />
+          ) : (
+            <>
+              <Box
+                align="left"
+                sx={{
+                  p: "20px",
+                  borderRadius: "10px",
+                }}
+              >
+                <MessageContent
+                  content={
+                    msg.length <= maxContentLength || isMsgExpanded
+                      ? msg
+                      : msg.substring(0, maxContentLength) + "..."
+                  }
+                />
+              </Box>
 
-          {String(msg).length > maxContentLength && (
-            <Button
-              size="xs"
-              colorScheme="blue"
-              variant="ghost"
-              onClick={() => setIsMsgExpanded(!isMsgExpanded)}
-            >
-              {isMsgExpanded ? (
-                <Tooltip label={DEFAULT_MESSAGES.collapseMessage}>
-                  <ChevronUpIcon />
-                </Tooltip>
-              ) : (
-                <Tooltip label={DEFAULT_MESSAGES.expandMessage}>
-                  <ChevronDownIcon />
-                </Tooltip>
+              {String(msg).length > maxContentLength && (
+                <Button
+                  size="xs"
+                  colorScheme="blue"
+                  variant="ghost"
+                  onClick={() => setIsMsgExpanded(!isMsgExpanded)}
+                >
+                  {isMsgExpanded ? (
+                    <Tooltip label={DEFAULT_MESSAGES.collapseMessage}>
+                      <ChevronUpIcon />
+                    </Tooltip>
+                  ) : (
+                    <Tooltip label={DEFAULT_MESSAGES.expandMessage}>
+                      <ChevronDownIcon />
+                    </Tooltip>
+                  )}
+                </Button>
               )}
-            </Button>
+            </>
           )}
         </Box>
       </HStack>
+
       <HStack spacing={1} justifyContent={"flex-end"}>
         {typeof count === "undefined" ? null : (
           <Button
@@ -148,14 +335,22 @@ export function AssistantMsg({
           variant="ghost"
         />
 
-        {currentMsgId !== convId ? (
-          <Tooltip label={DEFAULT_MESSAGES.resTimeMessage}>
-            <Text fontSize="sm" fontWeight="bold" color="blue">
-              {resTime}
-            </Text>
-          </Tooltip>
-        ) : null}
-
+        <Button
+          size="xs"
+          colorScheme="blue"
+          isDisabled={waitingResponse}
+          onClick={() => setIsEditing(!isEditing)}
+          leftIcon={
+            isEditing ? (
+              <CheckIcon />
+            ) : (
+              <Tooltip label={DEFAULT_MESSAGES.editMessage}>
+                <EditIcon />
+              </Tooltip>
+            )
+          }
+          variant="ghost"
+        />
         {waitingResponse && currentMsgId === convId ? null : (
           <Button
             size="xs"
@@ -176,6 +371,14 @@ export function AssistantMsg({
             variant="ghost"
           />
         )}
+
+        {currentMsgId !== convId ? (
+          <Tooltip label={DEFAULT_MESSAGES.resTimeMessage}>
+            <Text fontSize="sm" fontWeight="bold" color="blue">
+              {resTime}
+            </Text>
+          </Tooltip>
+        ) : null}
       </HStack>
       {isExpanded && <br />}
       {isExpanded && (

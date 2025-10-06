@@ -1,0 +1,29 @@
+{
+  "mcpServers": {
+    "filesystem": {
+      "name": "filesystem",
+      "command": "uvx",
+      "args": ["mcp-server-filesystem", "/tmp"],
+      "env": {
+        "PYTHONPATH": "/usr/local/lib/python3.9/site-packages"
+      },
+      "disabled": false
+    },
+    "brave-search": {
+      "name": "brave-search",
+      "command": "uvx",
+      "args": ["mcp-server-brave-search"],
+      "env": {
+        "BRAVE_API_KEY": "your-api-key-here"
+      },
+      "disabled": true
+    },
+    "git": {
+      "name": "git",
+      "command": "uvx",
+      "args": ["mcp-server-git", "--repository", "/path/to/repo"],
+      "env": {},
+      "disabled": false
+    }
+  }
+}

@@ -18,10 +18,21 @@ import ChakraUIRenderer from "chakra-ui-markdown-renderer";
 import ReactMarkdown from "markdown-to-jsx";
 import { DEFAULT_MESSAGES } from "./Constants";
 
+/**
+ * Strips all <think>...</think> tags and their content from a string.
+ * Used as a global safeguard before rendering markdown.
+ */
+function stripThinkTags(markdown) {
+  return markdown.replace(/<think>[\s\S]*?<\/think>/gi, "");
+}
+
 function AssistantHistoryMessage({ msg, count, index }) {
-  const { hasCopied, onCopy } = useClipboard(msg.content);
+  const strippedContent = stripThinkTags(msg.content);
+  const { hasCopied, onCopy } = useClipboard(strippedContent);
   const [isMsgExpanded, setIsMsgExpanded] = useState(false);
   const standardTextLen = 200;
+
+  const isTruncated = msg.content.length > standardTextLen;
 
   return (
     <>
@@ -46,12 +57,12 @@ function AssistantHistoryMessage({ msg, count, index }) {
             borderRadius: "10px",
           }}
         >
-          {msg.content.length >= standardTextLen && !isMsgExpanded
-            ? msg.content.substring(0, standardTextLen + 3) + "..."
-            : msg.content}
+          {isTruncated && !isMsgExpanded
+            ? `${strippedContent.substring(0, standardTextLen)}...`
+            : strippedContent}
         </ReactMarkdown>
 
-        {msg.content.length >= standardTextLen && (
+        {isTruncated && (
           <Button
             size="xs"
             colorScheme="blue"
@@ -79,7 +90,7 @@ function AssistantHistoryMessage({ msg, count, index }) {
         <Button
           size="xs"
           colorScheme="blue"
-          onClick={() => onCopy(msg.content)}
+          onClick={onCopy}
           ml={2}
           isDisabled={hasCopied}
           // align={"end"}
